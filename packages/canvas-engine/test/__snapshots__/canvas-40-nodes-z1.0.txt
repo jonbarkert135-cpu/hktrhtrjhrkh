@@ -1,0 +1,97 @@
+snapshot canvas-40-nodes-z1.0
+viewport 0,0 @1.00 1440x900
+lod dom (dom)
+painted nodes=0 edges=20 promoted=34
+dom n_000000 note     x=26 y=543 w=280 h=180 sel=1
+dom n_000001 image    x=954 y=783 w=180 h=160 sel=1
+dom n_000002 image    x=736 y=396 w=340 h=140
+dom n_000003 image    x=677 y=500 w=220 h=140
+dom n_000004 note     x=1364 y=312 w=180 h=140
+dom n_000005 person   x=25 y=780 w=220 h=120
+dom n_000006 image    x=1051 y=623 w=200 h=180
+dom n_000007 image    x=531 y=713 w=280 h=160
+dom n_000008 website  x=1075 y=521 w=320 h=140
+dom n_000009 note     x=1096 y=350 w=240 h=160
+dom n_000010 note     x=647 y=875 w=300 h=140
+dom n_000011 person   x=1301 y=372 w=320 h=160
+dom n_000013 image    x=180 y=579 w=320 h=100
+dom n_000014 image    x=603 y=180 w=220 h=180
+dom n_000015 image    x=145 y=738 w=320 h=140
+dom n_000016 website  x=328 y=679 w=320 h=180
+dom n_000017 note     x=563 y=109 w=260 h=180
+dom n_000021 website  x=1361 y=141 w=200 h=140
+dom n_000022 website  x=735 y=575 w=240 h=160
+dom n_000023 note     x=926 y=1 w=200 h=160
+dom n_000024 note     x=569 y=554 w=180 h=120
+dom n_000025 note     x=21 y=331 w=280 h=140
+dom n_000026 note     x=156 y=609 w=200 h=140
+dom n_000027 person   x=428 y=526 w=240 h=140
+dom n_000029 person   x=665 y=591 w=240 h=120
+dom n_000030 image    x=1369 y=312 w=240 h=140
+dom n_000032 person   x=832 y=833 w=280 h=160
+dom n_000033 website  x=1337 y=7 w=280 h=100
+dom n_000034 image    x=919 y=879 w=200 h=140
+dom n_000035 note     x=288 y=566 w=260 h=120
+dom n_000036 image    x=921 y=288 w=240 h=160
+dom n_000037 note     x=832 y=371 w=240 h=100
+dom n_000038 person   x=458 y=273 w=320 h=160
+dom n_000039 note     x=1400 y=609 w=320 h=100
+edge e_000000 n_000016->n_000020 straight
+edge e_000001 n_000011->n_000027 straight
+edge e_000002 n_000013->n_000033 straight
+edge e_000003 n_000017->n_000017 straight
+edge e_000004 n_000014->n_000002 straight
+edge e_000005 n_000018->n_000014 straight
+edge e_000006 n_000013->n_000008 straight
+edge e_000007 n_000031->n_000034 straight
+edge e_000008 n_000007->n_000018 straight
+edge e_000009 n_000013->n_000028 straight
+edge e_000010 n_000007->n_000035 straight
+edge e_000011 n_000030->n_000002 straight
+edge e_000012 n_000033->n_000003 straight
+edge e_000013 n_000018->n_000022 straight
+edge e_000014 n_000008->n_000029 straight
+edge e_000015 n_000017->n_000032 straight
+edge e_000016 n_000016->n_000023 straight
+edge e_000017 n_000032->n_000024 straight
+edge e_000018 n_000037->n_000008 straight
+edge e_000019 n_000016->n_000002 straight
+--- draw calls ---
+target 1440x900 dpr 1
+camera 0,0 @1.00
+clear rgba(14,17,22,1)
+save
+camera 0,0 @1.00
+line 488,769->687,993 rgba(120,130,145,1) w=1 dash=-
+line 1461,452->548,596 rgba(120,130,145,1) w=1 dash=-
+line 340,629->1477,57 rgba(120,130,145,1) w=1 dash=-
+line 693,199->693,199 rgba(120,130,145,1) w=1 dash=-
+line 713,270->906,466 rgba(120,130,145,1) w=1 dash=-
+line 1588,983->713,270 rgba(120,130,145,1) w=1 dash=-
+line 340,629->1235,591 rgba(120,130,145,1) w=1 dash=-
+line 1690,785->1019,949 rgba(120,130,145,1) w=1 dash=-
+line 671,793->1588,983 rgba(120,130,145,1) w=1 dash=-
+line 340,629->1137,1050 rgba(120,130,145,1) w=1 dash=-
+line 671,793->418,626 rgba(120,130,145,1) w=1 dash=-
+line 1489,382->906,466 rgba(120,130,145,1) w=1 dash=-
+line 1477,57->787,570 rgba(120,130,145,1) w=1 dash=-
+line 1588,983->855,655 rgba(120,130,145,1) w=1 dash=-
+line 1235,591->785,651 rgba(120,130,145,1) w=1 dash=-
+line 693,199->972,913 rgba(120,130,145,1) w=1 dash=-
+line 488,769->1026,81 rgba(120,130,145,1) w=1 dash=-
+line 972,913->659,614 rgba(120,130,145,1) w=1 dash=-
+line 952,421->1235,591 rgba(120,130,145,1) w=1 dash=-
+line 488,769->906,466 rgba(120,130,145,1) w=1 dash=-
+roundRect 26,543 280x180 r=8 fill=- stroke=rgba(80,160,255,1) w=1.50
+roundRect 954,783 180x160 r=8 fill=- stroke=rgba(80,160,255,1) w=1.50
+rect 26,543 1108x400 r=0 fill=- stroke=rgba(80,160,255,1) w=1.50
+rect 22,539 8x8 r=0 fill=rgba(14,17,22,1) stroke=rgba(80,160,255,1) w=1.50
+rect 576,539 8x8 r=0 fill=rgba(14,17,22,1) stroke=rgba(80,160,255,1) w=1.50
+rect 1130,539 8x8 r=0 fill=rgba(14,17,22,1) stroke=rgba(80,160,255,1) w=1.50
+rect 1130,739 8x8 r=0 fill=rgba(14,17,22,1) stroke=rgba(80,160,255,1) w=1.50
+rect 1130,939 8x8 r=0 fill=rgba(14,17,22,1) stroke=rgba(80,160,255,1) w=1.50
+rect 576,939 8x8 r=0 fill=rgba(14,17,22,1) stroke=rgba(80,160,255,1) w=1.50
+rect 22,939 8x8 r=0 fill=rgba(14,17,22,1) stroke=rgba(80,160,255,1) w=1.50
+rect 22,739 8x8 r=0 fill=rgba(14,17,22,1) stroke=rgba(80,160,255,1) w=1.50
+restore
+calls 35 frames 1

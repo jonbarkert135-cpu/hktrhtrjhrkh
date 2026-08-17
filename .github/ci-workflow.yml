@@ -139,9 +139,10 @@ jobs:
       - uses: ./.github/actions/bootstrap
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm bench
-      # RECORD-ONLY in P1: bench/baseline.json is empty and the engine metrics are still null.
-      # P2 records the first real baseline and switches compare.mjs to --enforce (5 % gate, N1).
-      - run: node bench/compare.mjs --results=bench-results.json --baseline=bench/baseline.json
+      # P2: the engine metrics are real, so the absolute N1 budgets are enforced. The 5 % delta gate
+      # only bites once bench/baseline.json holds numbers recorded on a CI runner — comparing a CI
+      # run against a developer laptop would fail for hardware reasons, not for regressions.
+      - run: node bench/compare.mjs --results=bench-results.json --baseline=bench/baseline.json --enforce
       - uses: actions/upload-artifact@v4
         with: { name: bench-results, path: bench-results.json, retention-days: 30 }
 

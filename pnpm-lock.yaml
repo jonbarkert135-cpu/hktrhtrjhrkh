@@ -96,6 +96,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@nexus/canvas-engine':
+        specifier: workspace:*
+        version: link:../../packages/canvas-engine
       '@nexus/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -180,6 +183,13 @@ importers:
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.32.0)(tsx@4.23.12)
 
   bench:
+    dependencies:
+      '@nexus/canvas-engine':
+        specifier: workspace:*
+        version: link:../packages/canvas-engine
+      '@nexus/domain':
+        specifier: workspace:*
+        version: link:../packages/domain
     devDependencies:
       '@playwright/test':
         specifier: ^1.49.1
@@ -214,6 +224,28 @@ importers:
       typescript:
         specifier: 5.7.2
         version: 5.7.2
+
+  packages/canvas-engine:
+    dependencies:
+      '@nexus/domain':
+        specifier: workspace:*
+        version: link:../domain
+    devDependencies:
+      '@nexus/config':
+        specifier: workspace:*
+        version: link:../config
+      '@vitest/coverage-v8':
+        specifier: ^3.2.4
+        version: 3.2.7(vitest@3.2.7(@types/node@22.20.1)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.32.0)(tsx@4.23.12))
+      eslint:
+        specifier: ^9.17.0
+        version: 9.39.5(jiti@2.7.0)
+      typescript:
+        specifier: 5.7.2
+        version: 5.7.2
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.32.0)(tsx@4.23.12)
 
   packages/config:
     dependencies:

@@ -7,6 +7,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
+  "dependencies": {
+    "@nexus/canvas-engine": "workspace:*",
+    "@nexus/domain": "workspace:*"
+  },
   "devDependencies": {
     "@playwright/test": "^1.49.1",
     "@types/node": "^22.10.2",

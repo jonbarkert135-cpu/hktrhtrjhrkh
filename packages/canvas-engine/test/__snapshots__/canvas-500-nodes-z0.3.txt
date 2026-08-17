@@ -1,0 +1,699 @@
+snapshot canvas-500-nodes-z0.3
+viewport 0,0 @0.30 1440x900
+lod glyph (glyph)
+painted nodes=284 edges=40 promoted=0
+edge e_000000 n_000423->n_000314 straight
+edge e_000001 n_000283->n_000123 straight
+edge e_000002 n_000033->n_000012 straight
+edge e_000003 n_000023->n_000046 straight
+edge e_000004 n_000229->n_000091 straight
+edge e_000005 n_000130->n_000140 straight
+edge e_000006 n_000393->n_000288 straight
+edge e_000007 n_000065->n_000384 straight
+edge e_000008 n_000059->n_000125 straight
+edge e_000009 n_000143->n_000236 straight
+edge e_000010 n_000208->n_000303 straight
+edge e_000011 n_000045->n_000238 straight
+edge e_000012 n_000036->n_000064 straight
+edge e_000013 n_000276->n_000262 straight
+edge e_000014 n_000052->n_000115 straight
+edge e_000015 n_000495->n_000238 straight
+edge e_000016 n_000491->n_000280 straight
+edge e_000017 n_000247->n_000415 straight
+edge e_000018 n_000128->n_000227 straight
+edge e_000019 n_000263->n_000249 straight
+edge e_000020 n_000225->n_000191 straight
+edge e_000021 n_000119->n_000210 straight
+edge e_000022 n_000479->n_000290 straight
+edge e_000023 n_000168->n_000362 straight
+edge e_000024 n_000413->n_000100 straight
+edge e_000025 n_000281->n_000244 straight
+edge e_000026 n_000352->n_000337 straight
+edge e_000027 n_000061->n_000172 straight
+edge e_000028 n_000176->n_000072 straight
+edge e_000029 n_000331->n_000230 straight
+edge e_000030 n_000220->n_000053 straight
+edge e_000031 n_000286->n_000328 straight
+edge e_000032 n_000302->n_000343 straight
+edge e_000033 n_000376->n_000326 straight
+edge e_000034 n_000455->n_000070 straight
+edge e_000035 n_000057->n_000377 straight
+edge e_000036 n_000127->n_000258 straight
+edge e_000037 n_000228->n_000229 straight
+edge e_000038 n_000163->n_000295 straight
+edge e_000039 n_000235->n_000375 straight
+--- draw calls ---
+target 1440x900 dpr 1
+camera 0,0 @0.30
+clear rgba(14,17,22,1)
+save
+camera 0,0 @0.30
+line 4062,1184->5429,2542 rgba(120,130,145,1) w=3.33 dash=-
+line 3500,917->1279,2806 rgba(120,130,145,1) w=3.33 dash=-
+line 5712,1456->4431,2360 rgba(120,130,145,1) w=3.33 dash=-
+line 3796,1577->1392,592 rgba(120,130,145,1) w=3.33 dash=-
+line 1793,1643->258,1424 rgba(120,130,145,1) w=3.33 dash=-
+line 3959,699->6006,3195 rgba(120,130,145,1) w=3.33 dash=-
+line 3581,1453->5912,2581 rgba(120,130,145,1) w=3.33 dash=-
+line 2157,1504->585,2626 rgba(120,130,145,1) w=3.33 dash=-
+line 4240,2446->2985,1502 rgba(120,130,145,1) w=3.33 dash=-
+line 2009,1958->4608,3735 rgba(120,130,145,1) w=3.33 dash=-
+line 1381,1939->1311,1790 rgba(120,130,145,1) w=3.33 dash=-
+line 469,1954->3116,3098 rgba(120,130,145,1) w=3.33 dash=-
+line 1841,574->2441,439 rgba(120,130,145,1) w=3.33 dash=-
+line 1210,682->4608,3616 rgba(120,130,145,1) w=3.33 dash=-
+line 5696,261->3437,2796 rgba(120,130,145,1) w=3.33 dash=-
+line 6028,2840->3116,3098 rgba(120,130,145,1) w=3.33 dash=-
+line 3987,1056->4099,2711 rgba(120,130,145,1) w=3.33 dash=-
+line 1755,188->4627,2390 rgba(120,130,145,1) w=3.33 dash=-
+line 3429,3006->1495,3470 rgba(120,130,145,1) w=3.33 dash=-
+line 3446,1065->4923,3509 rgba(120,130,145,1) w=3.33 dash=-
+line 1558,96->4939,569 rgba(120,130,145,1) w=3.33 dash=-
+line 4295,336->3416,3938 rgba(120,130,145,1) w=3.33 dash=-
+line 3199,2146->4982,1319 rgba(120,130,145,1) w=3.33 dash=-
+line 5131,1174->2914,3357 rgba(120,130,145,1) w=3.33 dash=-
+line 4862,3878->5542,1358 rgba(120,130,145,1) w=3.33 dash=-
+line 2756,1851->3782,904 rgba(120,130,145,1) w=3.33 dash=-
+line 1018,2574->4680,1446 rgba(120,130,145,1) w=3.33 dash=-
+line 2831,3460->4340,2948 rgba(120,130,145,1) w=3.33 dash=-
+line 476,4056->3051,3207 rgba(120,130,145,1) w=3.33 dash=-
+line 6003,1943->3004,1549 rgba(120,130,145,1) w=3.33 dash=-
+line 5385,149->840,357 rgba(120,130,145,1) w=3.33 dash=-
+line 1963,2941->2773,1871 rgba(120,130,145,1) w=3.33 dash=-
+line 3529,2313->4398,900 rgba(120,130,145,1) w=3.33 dash=-
+line 1497,2065->3185,3221 rgba(120,130,145,1) w=3.33 dash=-
+line 1735,1658->5298,2040 rgba(120,130,145,1) w=3.33 dash=-
+line 5558,3701->1913,3657 rgba(120,130,145,1) w=3.33 dash=-
+line 1506,2967->2956,1311 rgba(120,130,145,1) w=3.33 dash=-
+line 122,2374->1793,1643 rgba(120,130,145,1) w=3.33 dash=-
+line 4800,1046->583,167 rgba(120,130,145,1) w=3.33 dash=-
+line 1828,3496->4377,594 rgba(120,130,145,1) w=3.33 dash=-
+roundRect 3816,128 280x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3816,128 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4548,1929 180x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4548,1929 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 838,567 200x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 838,567 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1972,1725 200x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1972,1725 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 2162,1735 r=10 rgba(80,160,255,1)
+roundRect 4041,2090 180x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4041,2090 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1723,2725 240x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1723,2725 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4281,2290 300x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4281,2290 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4509,616 220x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4509,616 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 4719,626 r=10 rgba(80,160,255,1)
+roundRect 1137,297 260x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1137,297 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3208,1357 300x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3208,1357 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2980,929 240x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2980,929 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4542,508 280x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4542,508 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2136,2024 180x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2136,2024 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1486,2854 200x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1486,2854 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3656,1497 280x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3656,1497 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1405,2053 320x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1405,2053 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1759,98 340x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1759,98 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1715,2613 340x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1715,2613 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1757,2617 300x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1757,2617 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3806,813 220x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3806,813 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1681,494 320x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1681,494 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2777,2343 260x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2777,2343 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4348,1618 200x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4348,1618 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2916,1430 320x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2916,1430 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3811,1046 180x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3811,1046 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 349,1874 240x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 349,1874 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1272,542 240x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1272,542 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 1502,552 r=10 rgba(80,160,255,1)
+roundRect 4710,2755 320x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4710,2755 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4347,1879 320x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4347,1879 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3874,708 240x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3874,708 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3486,537 340x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3486,537 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 710,287 260x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 710,287 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3533,2054 260x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3533,2054 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3409,1510 200x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3409,1510 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4110,2376 260x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4110,2376 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3589,778 280x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3589,778 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 97,546 280x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 97,546 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2281,359 320x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2281,359 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2027,1424 260x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2027,1424 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 176,1329 280x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 176,1329 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1964,1719 240x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1964,1719 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 47,922 300x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 47,922 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1888,480 340x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1888,480 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 2218,490 r=10 rgba(80,160,255,1)
+roundRect 3870,1218 260x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3870,1218 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2970,2239 220x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2970,2239 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 418,979 320x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 418,979 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2344,65 240x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2344,65 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1578,2909 280x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1578,2909 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1110,2045 240x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1110,2045 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3369,479 200x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3369,479 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 3559,489 r=10 rgba(80,160,255,1)
+roundRect 3854,313 320x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3854,313 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 354,1050 320x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 354,1050 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2665,1816 200x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2665,1816 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 2855,1826 r=10 rgba(80,160,255,1)
+roundRect 4545,1194 300x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4545,1194 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 118,1364 280x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 118,1364 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 388,1374 r=10 rgba(80,160,255,1)
+roundRect 3913,977 280x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3913,977 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4013,1062 320x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4013,1062 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2960,244 340x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2960,244 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1517,2039 280x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1517,2039 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2839,1777 320x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2839,1777 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 3149,1787 r=10 rgba(80,160,255,1)
+roundRect 4794,436 280x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4794,436 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 5064,446 r=10 rgba(80,160,255,1)
+roundRect 4704,198 220x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4704,198 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4448,1558 260x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4448,1558 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3831,1726 220x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3831,1726 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1753,1144 200x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1753,1144 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4235,2429 200x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4235,2429 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3391,295 320x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3391,295 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 3701,305 r=10 rgba(80,160,255,1)
+roundRect 3307,2716 260x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3307,2716 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 3557,2726 r=10 rgba(80,160,255,1)
+roundRect 312,1212 220x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 312,1212 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4195,256 200x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4195,256 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1414,1895 260x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1414,1895 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1189,2746 180x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1189,2746 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2845,1422 280x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2845,1422 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1406,2897 200x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1406,2897 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 1596,2907 r=10 rgba(80,160,255,1)
+roundRect 3309,2936 240x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3309,2936 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3859,629 200x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3859,629 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1270,291 320x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1270,291 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 1580,301 r=10 rgba(80,160,255,1)
+roundRect 945,1128 320x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 945,1128 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1601,640 260x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1601,640 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3618,693 220x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3618,693 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1879,1888 260x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1879,1888 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3212,2834 340x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3212,2834 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2890,1473 260x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2890,1473 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1642,2168 260x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1642,2168 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1118,2249 200x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1118,2249 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3659,321 300x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3659,321 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3728,1139 280x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3728,1139 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 3998,1149 r=10 rgba(80,160,255,1)
+roundRect 1530,568 200x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1530,568 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4058,410 300x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4058,410 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2637,1848 240x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2637,1848 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2956,1529 240x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2956,1529 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2646,1293 280x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2646,1293 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2053,2618 220x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2053,2618 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4700,986 200x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4700,986 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2873,2455 180x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2873,2455 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3908,1777 280x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3908,1777 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1747,2415 200x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1747,2415 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4063,1319 280x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4063,1319 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3894,1239 300x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3894,1239 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4210,2888 260x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4210,2888 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3980,1014 320x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3980,1014 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1267,1 320x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1267,1 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1345,2822 340x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1345,2822 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2406,1662 300x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2406,1662 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3153,639 260x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3153,639 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4353,2410 220x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4353,2410 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 4563,2420 r=10 rgba(80,160,255,1)
+roundRect 1434,1045 220x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1434,1045 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2506,1442 340x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2506,1442 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1318,2952 260x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1318,2952 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4442,1196 260x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4442,1196 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1374,284 240x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1374,284 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4799,489 280x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4799,489 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3563,1658 340x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3563,1658 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 513,1210 220x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 513,1210 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 662,2029 320x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 662,2029 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 240,2728 200x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 240,2728 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1261,1849 240x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1261,1849 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 894,1678 220x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 894,1678 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3769,1242 320x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3769,1242 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3580,355 180x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3580,355 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2955,2179 300x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2955,2179 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2811,2279 260x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2811,2279 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4572,1219 260x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4572,1219 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3946,529 200x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3946,529 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2241,1529 240x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2241,1529 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3197,130 200x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3197,130 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1398,46 320x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1398,46 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3258,509 320x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3258,509 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 22,2324 200x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 22,2324 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1693,1583 200x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1693,1583 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 1883,1593 r=10 rgba(80,160,255,1)
+roundRect 2884,1479 240x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2884,1479 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 3114,1489 r=10 rgba(80,160,255,1)
+roundRect 3789,1860 220x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3789,1860 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2623,2175 280x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2623,2175 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2876,1838 260x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2876,1838 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 63,2351 320x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 63,2351 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3662,834 240x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3662,834 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2094,26 200x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2094,26 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1635,108 240x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1635,108 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 1865,118 r=10 rgba(80,160,255,1)
+roundRect 1931,1117 260x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1931,1117 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3530,1573 220x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3530,1573 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3728,42 280x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3728,42 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3526,1650 320x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3526,1650 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2336,2300 320x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2336,2300 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2846,1241 220x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2846,1241 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 251,2664 220x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 251,2664 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3164,2686 260x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3164,2686 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3296,975 300x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3296,975 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 715,495 340x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 715,495 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1928,715 180x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1928,715 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 734,2987 200x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 734,2987 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 287,2863 280x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 287,2863 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3862,2964 220x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3862,2964 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3818,1400 180x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3818,1400 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1060,602 300x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1060,602 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2002,187 180x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2002,187 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4115,2693 300x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4115,2693 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3949,2651 300x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3949,2651 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2656,1771 200x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2656,1771 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 2846,1781 r=10 rgba(80,160,255,1)
+roundRect 3400,867 200x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3400,867 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 3590,877 r=10 rgba(80,160,255,1)
+roundRect 1843,2891 240x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1843,2891 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3208,944 320x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3208,944 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 3518,954 r=10 rgba(80,160,255,1)
+roundRect 1688,2123 260x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1688,2123 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1522,2278 300x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1522,2278 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1732,1402 240x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1732,1402 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4169,1021 200x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4169,1021 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 433,87 300x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 433,87 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2488,2592 320x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2488,2592 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 231,1354 260x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 231,1354 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 101,537 240x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 101,537 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3389,2243 280x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3389,2243 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1221,1700 180x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1221,1700 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3526,2241 200x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3526,2241 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4518,1302 180x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4518,1302 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4637,412 300x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4637,412 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 804,2107 180x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 804,2107 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 574,1834 260x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 574,1834 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3121,989 280x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3121,989 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 3391,999 r=10 rgba(80,160,255,1)
+roundRect 4730,1174 300x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4730,1174 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3593,2287 320x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3593,2287 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 763,1201 240x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 763,1201 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 993,1211 r=10 rgba(80,160,255,1)
+roundRect 1139,2241 180x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1139,2241 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2673,1801 200x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2673,1801 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1012,2805 300x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1012,2805 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 19,956 260x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 19,956 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 880,1933 240x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 880,1933 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4042,414 300x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4042,414 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1148,726 240x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1148,726 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4520,1356 320x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4520,1356 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 4830,1366 r=10 rgba(80,160,255,1)
+roundRect 4374,1917 320x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4374,1917 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1609,2654 260x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1609,2654 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 1859,2664 r=10 rgba(80,160,255,1)
+roundRect 4288,820 220x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4288,820 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1151,152 240x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1151,152 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4169,1350 180x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4169,1350 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 4339,1360 r=10 rgba(80,160,255,1)
+roundRect 3424,2204 280x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3424,2204 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 3694,2214 r=10 rgba(80,160,255,1)
+roundRect 1119,607 180x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1119,607 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 1289,617 r=10 rgba(80,160,255,1)
+roundRect 2344,2237 320x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2344,2237 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 848,2514 340x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 848,2514 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 1178,2524 r=10 rgba(80,160,255,1)
+roundRect 439,2862 280x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 439,2862 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 731,1135 280x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 731,1135 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 282,2615 220x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 282,2615 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1368,663 300x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1368,663 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 1658,673 r=10 rgba(80,160,255,1)
+roundRect 4135,1814 340x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4135,1814 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 4465,1824 r=10 rgba(80,160,255,1)
+roundRect 1662,1538 320x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1662,1538 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1545,2398 220x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1545,2398 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2112,2514 220x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2112,2514 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1522,2035 240x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1522,2035 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3235,2843 200x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3235,2843 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4156,1438 300x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4156,1438 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3755,151 200x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3755,151 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2601,737 260x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2601,737 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2104,286 320x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2104,286 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2465,1254 300x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2465,1254 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 2755,1264 r=10 rgba(80,160,255,1)
+roundRect 2999,124 320x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2999,124 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 3309,134 r=10 rgba(80,160,255,1)
+roundRect 2665,1007 260x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2665,1007 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4247,504 260x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4247,504 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1337,1975 320x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1337,1975 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3694,554 220x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3694,554 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 475,2566 220x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 475,2566 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2016,2923 200x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2016,2923 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3871,363 220x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3871,363 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2709,1024 240x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2709,1024 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1129,735 220x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1129,735 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4505,1300 260x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4505,1300 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1454,983 320x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1454,983 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3421,1373 320x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3421,1373 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1634,1531 320x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1634,1531 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 387,2901 220x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 387,2901 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2215,555 260x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2215,555 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1539,1567 220x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1539,1567 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1279,2593 240x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1279,2593 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2924,2210 260x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2924,2210 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3357,1298 300x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3357,1298 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2570,2102 180x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2570,2102 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2080,1666 320x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2080,1666 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3041,328 220x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3041,328 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3051,2161 200x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3051,2161 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3194,866 260x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3194,866 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4527,2330 200x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4527,2330 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2529,1181 200x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2529,1181 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 2719,1191 r=10 rgba(80,160,255,1)
+roundRect 2077,2605 200x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2077,2605 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4112,1519 220x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4112,1519 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2763,1168 220x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2763,1168 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3922,1104 280x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3922,1104 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2961,1619 200x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2961,1619 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1933,1203 340x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1933,1203 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2343,1364 240x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2343,1364 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3355,2857 240x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3355,2857 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4774,507 200x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4774,507 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2096,1075 300x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2096,1075 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2311,2394 300x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2311,2394 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 2601,2404 r=10 rgba(80,160,255,1)
+roundRect 4467,249 200x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4467,249 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3845,335 180x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3845,335 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1466,1177 240x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1466,1177 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2582,2844 180x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2582,2844 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 247,840 280x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 247,840 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2347,851 260x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2347,851 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1279,2155 260x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1279,2155 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2091,2869 320x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2091,2869 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1404,1617 240x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1404,1617 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4518,2020 260x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4518,2020 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2227,2550 260x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2227,2550 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1181,262 180x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1181,262 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 783,506 240x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 783,506 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3124,1540 240x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3124,1540 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2984,1185 260x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2984,1185 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 1585,1568 300x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 1585,1568 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3851,39 260x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3851,39 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3887,1545 280x180 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3887,1545 6.67x180 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3063,1707 280x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3063,1707 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3317,370 320x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3317,370 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 3627,380 r=10 rgba(80,160,255,1)
+roundRect 3874,1588 280x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3874,1588 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3514,1769 280x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3514,1769 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2426,1085 220x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2426,1085 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4505,255 340x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4505,255 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3029,2096 340x100 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3029,2096 6.67x100 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2545,556 300x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2545,556 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 524,2691 280x160 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 524,2691 6.67x160 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4156,1651 320x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4156,1651 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4097,1024 340x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4097,1024 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 2035,859 340x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 2035,859 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 3877,986 220x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 3877,986 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+roundRect 4731,19 300x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4731,19 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 5021,29 r=10 rgba(80,160,255,1)
+roundRect 4040,1144 320x140 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4040,1144 6.67x140 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 4350,1154 r=10 rgba(80,160,255,1)
+roundRect 4189,2027 320x120 r=26.67 fill=rgba(24,28,34,1) stroke=rgba(60,66,74,1) w=3.33
+rect 4189,2027 6.67x120 r=0 fill=rgba(80,160,255,1) stroke=- w=1
+dot 4499,2037 r=10 rgba(80,160,255,1)
+restore
+calls 651 frames 1

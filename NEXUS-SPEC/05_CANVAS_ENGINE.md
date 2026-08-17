@@ -530,6 +530,11 @@ implemented as a multi-node move intent instead (§7.9).
 
 ### 6.2 Spatial index: choice and justification
 
+> **Implementation note (P2).** Shipped as `src/scene/index-grid.ts` (`createGridIndex`). The cell
+> constant is exported from `src/constants.ts` as `INDEX_CELL_SIZE` (value 512), not `GRID_CELL`, and
+> `20_ROADMAP.md` §4's `spatial/rbush-index.ts` / "R-tree" wording is superseded by this section: no
+> rbush dependency exists.
+
 | Candidate | Build | Query (viewport) | Update (drag, 1 node) | Notes |
 |---|---|---|---|---|
 | Linear scan | — | O(n) | O(1) | 5,000 AABB tests ≈ 0.35 ms/frame on the reference machine — survivable alone, but hit-test + marquee + routing all need queries, so it multiplies |
@@ -611,6 +616,12 @@ rebuilt on drag**; a full rebuild happens only on `setScene` and on `bulk` patch
 of nodes, and then it runs in `index.worker.ts` for n > 2,000 (§9.1).
 
 ### 6.5 Query APIs
+
+> **Implementation note (P2).** The frozen interface in `src/types.ts` is `SceneQuery`:
+> `nodesIn(rect)`, `nodesContainedIn(rect)`, `nodeAt(point)`, `node(id)`, `edge(id)`, `sceneBounds`,
+> `nodeCount`. The `inRect`/`hitTest`/`marquee`/`nearestHandle`/`bounds` names below are the older
+> sketch; handle hit-testing lives in the engine facade (`handleAt`) and edge hit-testing arrives
+> with the edge index in P5.
 
 ```ts
 export interface SceneQuery {
@@ -695,6 +706,13 @@ Rules that keep this within budget:
   `engine.metrics()`; `bench/` and the in-app debug overlay (`Ctrl+Alt+P`) read the same buffer.
 
 ### 6.8 LOD levels
+
+> **Implementation note (P2).** Two rules cooperate. During a camera gesture the *tier* is frozen at
+> the value it had when the gesture started (this section) **and** the zoom used for glyph detail is
+> quantized to `LOD_ZOOM_QUANTUM` (`20_ROADMAP.md` req 7); both are released `LOD_SETTLE_MS` after
+> the last camera event. Outside a gesture the ladder applies with a ±`LOD_HYSTERESIS` dead-band.
+> The dot threshold is `LOD_THRESHOLDS.glyph = 0.18` (the roadmap's "0.2" is prose, not the
+> constant), and the text LRU is `TEXT_CACHE_LIMIT = 2000` entries, not 4,000.
 
 | Level | Zoom range | Canvas draws per node | DOM | Approx. cost / node |
 |---|---|---|---|---|

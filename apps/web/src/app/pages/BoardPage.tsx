@@ -1,5 +1,5 @@
-import { PlaceholderSurface } from '../canvas/PlaceholderSurface';
+import { CanvasHost } from '../canvas/CanvasHost';
 
 export default function BoardPage() {
-  return <PlaceholderSurface />;
+  return <CanvasHost />;
 }
