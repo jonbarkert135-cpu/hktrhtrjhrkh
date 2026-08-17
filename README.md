@@ -97,10 +97,12 @@ solution in the spec before code is written. No `TODO` markers survive CI.
 
 ## CI, in short
 
-Every PR runs the eleven jobs above. Two of them are deliberately **record-only in P1** and say so
-in the workflow: `visual` (no stable surface to diff until the canvas engine lands in P2) and
-`bench` (the baseline is empty and engine metrics are recorded as `null`, never fabricated). Both
-become enforcing gates in P2.
+Every PR runs the eleven jobs above. Since P2 the `bench` job runs `compare.mjs --enforce`: the
+absolute N1 budgets gate immediately, and the 5 % regression gate starts as soon as a baseline
+recorded on a CI runner exists (`bench/baseline.json` is still empty on purpose — a developer-machine
+number would make every CI run look like a regression). `visual` starts diffing now that the canvas
+engine paints a stable surface. Caveat: none of this has executed yet, because the workflow file
+cannot be pushed to `.github/workflows/` (see below).
 
 ## Legal & ethical scope
 
@@ -122,3 +124,14 @@ git mv .github/ci-workflow.yml .github/workflows/ci.yml && git commit -m "ci: ac
 ```
 
 (or grants the App the `workflows` permission, after which the file moves back automatically in the next PR).
+
+### OPEN TASK FOR THE AI AGENT (check on every run)
+
+1. Check whether `.github/workflows/ci.yml` exists on `main`.
+2. If it does **not**, retry moving `.github/ci-workflow.yml` there. If the push is rejected again
+   (`refusing to allow a GitHub App to create or update workflow ... without workflows permission`),
+   say so plainly in the phase report: **no gate has run on GitHub**, only local gates.
+3. If it **does** exist, delete the duplicate `.github/ci-workflow.yml`, delete this section, and
+   note in the PR that CI is now the source of truth for the e2e, visual, bench and container jobs.
+
+Status: as of the P2 PR the workflow file is still `.github/ci-workflow.yml`; CI has never run.

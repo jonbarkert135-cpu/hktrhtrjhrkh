@@ -41,7 +41,7 @@ describe('AppRoutes auth guard', () => {
     session.mockReturnValue({ data: { user: { name: 'Ana' } }, isPending: false });
     go('/');
     render(<AppRoutes />);
-    expect(await screen.findByTestId('placeholder-surface')).toBeInTheDocument();
+    expect(await screen.findByTestId('canvas-surface')).toBeInTheDocument();
   });
 
   it('bounces an authenticated user off /login to the next param', async () => {
@@ -56,7 +56,7 @@ describe('AppRoutes auth guard', () => {
     session.mockReturnValue({ data: { user: { name: 'Ana' } }, isPending: false });
     go('/nope');
     render(<AppRoutes />);
-    expect(await screen.findByTestId('placeholder-surface')).toBeInTheDocument();
+    expect(await screen.findByTestId('canvas-surface')).toBeInTheDocument();
     expect(window.location.pathname).toBe('/');
   });
 });

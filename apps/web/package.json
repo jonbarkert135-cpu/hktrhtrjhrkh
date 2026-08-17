@@ -12,6 +12,7 @@
     "lint": "eslint src"
   },
   "dependencies": {
+    "@nexus/canvas-engine": "workspace:*",
     "@nexus/config": "workspace:*",
     "@nexus/domain": "workspace:*",
     "@nexus/ui": "workspace:*",

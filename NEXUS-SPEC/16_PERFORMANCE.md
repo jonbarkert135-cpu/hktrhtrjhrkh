@@ -140,6 +140,17 @@ Postgres p95 ≤ 25 ms per query, no endpoint issuing more than 4 queries per re
 
 ## 4. The benchmark harness
 
+> **Implementation note (P2).** The harness now has two halves. `bench/engine.bench.ts` drives the
+> real engine loop in Node against the recording target and produces measured numbers for
+> `pan-zoom-5000`, `pan-zoom-5000-p99`, `first-interactive-5000`, `select-all-5000` and
+> `drag-200-selected` (plus a hit-test p95 note); `bench/canvas.bench.ts` still drives a real
+> Chromium and its values override the headless ones when a dev server is reachable, because only
+> the browser run includes rasterization, DOM layout and memory. Scenes come from `bench/scenes.ts`
+> (`makeBoard`, fixed seeds). `pnpm bench` accepts `BENCH_SKIP_BROWSER=1` for the headless half
+> alone. `bench/compare.mjs` runs with `--enforce` from P2: absolute N1 budgets gate immediately,
+> while the 5 % delta gate starts once a baseline recorded **on a CI runner** exists — comparing a CI
+> run against a developer machine would fail for hardware reasons, not for regressions.
+
 ### 4.1 Layout
 
 ```text

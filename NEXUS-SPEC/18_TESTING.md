@@ -274,6 +274,13 @@ That makes it testable in plain Node, which is the reason the boundary exists.
 
 ### 5.1 Recording renderer
 
+> **Implementation note (P2).** The shipped seam is `RenderTarget` → `DrawContext` in
+> `packages/canvas-engine/src/types.ts` (`clear`, `save`/`restore`, `setCamera`, `rect`, `roundRect`,
+> `line`, `dot`, `text`, `measureText`); `createRecordingTarget()` and `createManualClock()` are
+> exported from `@nexus/canvas-engine/testing` together with the pointer-script runner. The
+> `begin/drawGrid/drawEdge/mountDomNode` sketch below predates that interface. `makeBoard` takes an
+> options object: `makeBoard({ nodes, edges, seed })`.
+
 Instead of asserting pixels, we assert the **draw-command stream**. The engine takes a
 `RenderTarget` interface; tests inject `createRecordingTarget()`:
 

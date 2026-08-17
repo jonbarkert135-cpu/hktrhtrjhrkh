@@ -241,6 +241,17 @@ any dependency that duplicates a frozen stack choice (`00_MASTER.md` §2).
 
 # P2 — Canvas engine
 
+**Status: DONE** — implemented in `phase/p02-canvas` (PR #3). `packages/canvas-engine` ships camera,
+grid spatial index, culling, hybrid renderer (canvas + DOM overlay + LOD), interaction FSM,
+selection, snapping, minimap, scheduler and the headless testing harness; `apps/web` hosts it in
+`src/app/canvas/` and the P1 placeholder surface is deleted. Local gates green: typecheck, lint,
+294 engine tests + 39 web tests, coverage 96.8 % lines / 95.3 % branches on the engine, build
+(144.1 KB gzip initial JS), check:gates, depcruise. Headless bench (`BENCH_SKIP_BROWSER=1 pnpm bench`)
+records pan-zoom-5000 p95 **1.7 ms**, p99 2.6 ms, first-interactive 5.5 ms, select-all-5000 6.4 ms,
+drag-200-selected p95 2.1 ms — measured in Node without GPU or DOM; the browser numbers, memory and
+the visual/e2e suites still need CI, which is not running yet (see the repo README open task).
+Deviations from §4 are documented in `packages/canvas-engine/README.md`.
+
 ## 1 Objective
 Implement `packages/canvas-engine`: camera, spatial index, hybrid renderer (Canvas2D for edges,
 grid, LOD nodes and marquee; DOM overlay for visible near-zoom nodes), the interaction finite state
