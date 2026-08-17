@@ -1,4 +1,5 @@
 # NEXUS — 09 BACKEND
+
 ## Services, APIs, jobs, files, observability
 
 **Scope**
@@ -13,12 +14,12 @@ All request/response shapes below are zod schemas that exist verbatim in the cod
 
 ## 1. Service inventory
 
-| Service | Entry | Port | Public? | Replicas (prod) | Health |
-|---|---|---|---|---|---|
-| `apps/api` | `src/main.ts` | 3000 | yes (behind ingress) | ≥ 3 | `/healthz` (liveness), `/readyz` (db+redis+s3) |
-| `apps/sync` | `src/main.ts` | 1234 | yes (WSS only) | ≥ 3 | `/healthz`, `/readyz` (db+redis) |
-| `apps/worker` | `src/main.ts` | 3100 (metrics only) | no | ≥ 2 per queue group | `/healthz`, `/metrics` |
-| `apps/runner` | see `10_INTEGRATIONS.md` §5 | 3200 (mTLS) | no | ≥ 2 | `/healthz` |
+| Service       | Entry                       | Port                | Public?              | Replicas (prod)     | Health                                         |
+| ------------- | --------------------------- | ------------------- | -------------------- | ------------------- | ---------------------------------------------- |
+| `apps/api`    | `src/main.ts`               | 3001                | yes (behind ingress) | ≥ 3                 | `/healthz` (liveness), `/readyz` (db+redis+s3) |
+| `apps/sync`   | `src/main.ts`               | 1234                | yes (WSS only)       | ≥ 3                 | `/healthz`, `/readyz` (db+redis)               |
+| `apps/worker` | `src/main.ts`               | 3100 (metrics only) | no                   | ≥ 2 per queue group | `/healthz`, `/metrics`                         |
+| `apps/runner` | see `10_INTEGRATIONS.md` §5 | 3200 (mTLS)         | no                   | ≥ 2                 | `/healthz`                                     |
 
 Shared code: `packages/db` (Prisma + repositories + projection), `packages/domain` (schemas,
 serializers, proposal logic), `packages/platform` (env, logger, metrics, authz, ssrf, flags),
@@ -75,12 +76,13 @@ same `services/*` function (ADR-006). Controllers contain validation, mapping an
 
 ```ts
 export interface AuthContext {
-  txId: string;                       // uuid v7, echoed in the `x-nexus-tx` response header
+  txId: string; // uuid v7, echoed in the `x-nexus-tx` response header
   user: { id: string; email: string } | null;
   session: { id: string; expiresAt: Date } | null;
-  orgId: string | null;               // resolved per request from input or the active org cookie
-  role: OrgRole | null;               // 'owner'|'admin'|'member'|'guest'
-  ip: string; userAgent: string;
+  orgId: string | null; // resolved per request from input or the active org cookie
+  role: OrgRole | null; // 'owner'|'admin'|'member'|'guest'
+  ip: string;
+  userAgent: string;
   flags: Flags;
 }
 ```
@@ -91,12 +93,12 @@ authz(procedure) → handler → response mapping → error mapper`.
 tRPC procedure builders:
 
 ```ts
-export const publicProcedure  = t.procedure.use(logging);
-export const authedProcedure  = publicProcedure.use(requireSession);
-export const orgProcedure     = authedProcedure.use(requireOrg('member'));
-export const projectProcedure = orgProcedure.use(requireProject('viewer'));   // reads input.projectId
-export const editorProcedure  = orgProcedure.use(requireProject('editor'));
-export const adminProcedure   = orgProcedure.use(requireOrg('admin'));
+export const publicProcedure = t.procedure.use(logging);
+export const authedProcedure = publicProcedure.use(requireSession);
+export const orgProcedure = authedProcedure.use(requireOrg('member'));
+export const projectProcedure = orgProcedure.use(requireProject('viewer')); // reads input.projectId
+export const editorProcedure = orgProcedure.use(requireProject('editor'));
+export const adminProcedure = orgProcedure.use(requireOrg('admin'));
 ```
 
 `requireProject(role)` resolves `projectId` from `input.projectId` or from `input.boardId`
@@ -106,13 +108,20 @@ export const adminProcedure   = orgProcedure.use(requireOrg('admin'));
 
 ```ts
 export const Id = z.string().uuid();
-export const Cursor = z.string().max(256);                       // opaque, base64url
-export const Page = z.object({ cursor: Cursor.optional(), limit: z.number().int().min(1).max(200).default(50) });
+export const Cursor = z.string().max(256); // opaque, base64url
+export const Page = z.object({
+  cursor: Cursor.optional(),
+  limit: z.number().int().min(1).max(200).default(50),
+});
 export const PageOf = <T extends z.ZodTypeAny>(item: T) =>
-  z.object({ items: z.array(item), nextCursor: Cursor.nullable(), total: z.number().int().optional() });
+  z.object({
+    items: z.array(item),
+    nextCursor: Cursor.nullable(),
+    total: z.number().int().optional(),
+  });
 export const Timestamps = z.object({ createdAt: z.date(), updatedAt: z.date() });
 export const Provenance = z.object({
-  source: z.string().max(2048),           // url or 'user'
+  source: z.string().max(2048), // url or 'user'
   tool: z.string().max(64).nullable(),
   runId: Id.nullable(),
   observedAt: z.date(),
@@ -155,6 +164,20 @@ auth.revokeApiToken: mutation({ id: Id }) => Ok
 ```
 
 Login/logout/OAuth callbacks are Better-Auth HTTP routes at `/auth/*`, not tRPC.
+
+The mount point is `/auth`, **not** Better-Auth's default `/api/auth`. Both sides must say so:
+the server passes `basePath: '/auth'` (`apps/api/src/auth/index.ts`) and the browser client passes
+`basePath: AUTH_BASE_PATH` (`apps/web/src/lib/auth.ts`). If only one side is configured, every
+auth call 404s and the UI surfaces it as a generic "couldn't reach the server" banner — the
+failure mode that broke e2e J01 in CI run 32071533040.
+
+**Signup creates the personal org.** Authorization is org-scoped end to end (`orgProcedure`), so a
+user without a membership is authenticated but allowed nothing: every project/board call answers
+`FORBIDDEN`. A Better-Auth `databaseHooks.user.create.after` hook calls
+`ensurePersonalOrg()` (`apps/api/src/auth/personal-org.ts`), which creates one organization named
+after the user plus an `owner` membership, inside the same request as the account. The helper is
+idempotent (an existing membership wins), so replays and OAuth account linking never create a
+second org. Multi-org invites and `auth.switchOrg` still arrive in P7.
 
 ### 3.2 `projects`
 
@@ -522,49 +545,55 @@ Every `admin.*` call writes an audit row: `{actor, action, target, before, after
 
 ### 4.1 Principles
 
-* Base path `/api/v1`. The version is in the path; `v1` is stable for the life of the major
+- Base path `/api/v1`. The version is in the path; `v1` is stable for the life of the major
   release. Breaking changes ship as `/api/v2` with ≥ 6 months of `v1` overlap and a
   `Sunset` response header on the deprecated version.
-* Authentication: `Authorization: Bearer <api-token>` (scoped tokens from `auth.createApiToken`)
+- Authentication: `Authorization: Bearer <api-token>` (scoped tokens from `auth.createApiToken`)
   or a session cookie for same-origin browser calls. Tokens are `nxs_` + 32 random bytes base62,
   stored argon2id-hashed.
-* Scopes: `boards:read`, `boards:write`, `nodes:read`, `nodes:propose`, `files:read`,
+- Scopes: `boards:read`, `boards:write`, `nodes:read`, `nodes:propose`, `files:read`,
   `files:write`, `runs:read`, `runs:start`, `search:read`, `exports:read`, `admin:read`.
   A token never exceeds the granting user's own permissions (intersection is evaluated per request).
-* Content type `application/json; charset=utf-8`. Timestamps are RFC 3339 UTC. IDs are UUIDv7.
-* Errors use RFC 9457 `application/problem+json`:
+- Content type `application/json; charset=utf-8`. Timestamps are RFC 3339 UTC. IDs are UUIDv7.
+- Errors use RFC 9457 `application/problem+json`:
 
 ```json
-{ "type": "https://nexus.dev/errors/UNFURL_PRIVATE_RANGE", "title": "URL blocked",
-  "status": 422, "detail": "The URL resolves to a private IP range.",
-  "code": "UNFURL_PRIVATE_RANGE", "class": "blocked", "txId": "018f…" }
+{
+  "type": "https://nexus.dev/errors/UNFURL_PRIVATE_RANGE",
+  "title": "URL blocked",
+  "status": 422,
+  "detail": "The URL resolves to a private IP range.",
+  "code": "UNFURL_PRIVATE_RANGE",
+  "class": "blocked",
+  "txId": "018f…"
+}
 ```
 
 ### 4.2 Endpoints
 
-| Method | Path | Scope | Notes |
-|---|---|---|---|
-| GET | `/api/v1/openapi.json` | none | generated from the zod schemas |
-| GET | `/api/v1/me` | any | token identity + scopes + org |
-| GET | `/api/v1/projects` | `boards:read` | cursor paginated |
-| GET | `/api/v1/projects/{id}/boards` | `boards:read` | |
-| POST | `/api/v1/projects/{id}/boards` | `boards:write` | `Idempotency-Key` header honored |
-| GET | `/api/v1/boards/{id}` | `boards:read` | |
-| GET | `/api/v1/boards/{id}/nodes` | `nodes:read` | filters mirror `nodes.list` |
-| GET | `/api/v1/boards/{id}/edges` | `nodes:read` | |
-| GET | `/api/v1/boards/{id}/export?format=json-v1` | `exports:read` | 302 to a presigned URL, or 202 + `Location` for async formats |
-| POST | `/api/v1/boards/{id}/proposals` | `nodes:propose` | body = `nodes.bulkPropose` ops |
-| GET | `/api/v1/nodes/{id}` | `nodes:read` | |
-| GET | `/api/v1/nodes/{id}/neighbors?depth=2` | `nodes:read` | depth ≤ 4 |
-| POST | `/api/v1/files` | `files:write` | returns presign payload |
-| POST | `/api/v1/files/{id}/complete` | `files:write` | |
-| GET | `/api/v1/files/{id}/content` | `files:read` | 302 to presigned GET |
-| POST | `/api/v1/runs` | `runs:start` | `Idempotency-Key` required |
-| GET | `/api/v1/runs/{id}` | `runs:read` | |
-| GET | `/api/v1/runs/{id}/logs` | `runs:read` | `text/event-stream` when `Accept` says so |
-| GET | `/api/v1/search?q=…&scope=project:{id}` | `search:read` | |
-| GET | `/api/v1/integrations` | `runs:read` | |
-| POST | `/api/v1/webhooks/test` | `admin:read` | |
+| Method | Path                                        | Scope           | Notes                                                         |
+| ------ | ------------------------------------------- | --------------- | ------------------------------------------------------------- |
+| GET    | `/api/v1/openapi.json`                      | none            | generated from the zod schemas                                |
+| GET    | `/api/v1/me`                                | any             | token identity + scopes + org                                 |
+| GET    | `/api/v1/projects`                          | `boards:read`   | cursor paginated                                              |
+| GET    | `/api/v1/projects/{id}/boards`              | `boards:read`   |                                                               |
+| POST   | `/api/v1/projects/{id}/boards`              | `boards:write`  | `Idempotency-Key` header honored                              |
+| GET    | `/api/v1/boards/{id}`                       | `boards:read`   |                                                               |
+| GET    | `/api/v1/boards/{id}/nodes`                 | `nodes:read`    | filters mirror `nodes.list`                                   |
+| GET    | `/api/v1/boards/{id}/edges`                 | `nodes:read`    |                                                               |
+| GET    | `/api/v1/boards/{id}/export?format=json-v1` | `exports:read`  | 302 to a presigned URL, or 202 + `Location` for async formats |
+| POST   | `/api/v1/boards/{id}/proposals`             | `nodes:propose` | body = `nodes.bulkPropose` ops                                |
+| GET    | `/api/v1/nodes/{id}`                        | `nodes:read`    |                                                               |
+| GET    | `/api/v1/nodes/{id}/neighbors?depth=2`      | `nodes:read`    | depth ≤ 4                                                     |
+| POST   | `/api/v1/files`                             | `files:write`   | returns presign payload                                       |
+| POST   | `/api/v1/files/{id}/complete`               | `files:write`   |                                                               |
+| GET    | `/api/v1/files/{id}/content`                | `files:read`    | 302 to presigned GET                                          |
+| POST   | `/api/v1/runs`                              | `runs:start`    | `Idempotency-Key` required                                    |
+| GET    | `/api/v1/runs/{id}`                         | `runs:read`     |                                                               |
+| GET    | `/api/v1/runs/{id}/logs`                    | `runs:read`     | `text/event-stream` when `Accept` says so                     |
+| GET    | `/api/v1/search?q=…&scope=project:{id}`     | `search:read`   |                                                               |
+| GET    | `/api/v1/integrations`                      | `runs:read`     |                                                               |
+| POST   | `/api/v1/webhooks/test`                     | `admin:read`    |                                                               |
 
 `Idempotency-Key`: stored for 24 h with the request-body hash; a replay with the same key and body
 returns the original response and `Idempotency-Replayed: true`; the same key with a different body
@@ -588,18 +617,18 @@ admin notification is created. Delivery history is retained 7 days
 
 ### 4.4 Rate limits
 
-| Bucket | Limit | Window | Scope |
-|---|---|---|---|
-| REST default | 600 req | 1 min | token |
-| REST writes (`POST/PATCH/DELETE`) | 120 req | 1 min | token |
-| `/api/v1/runs` POST | 20 req | 1 min | org |
-| `/api/v1/search` | 60 req | 1 min | token |
-| tRPC default | 1200 calls | 1 min | session |
-| `unfurl.request` | 120 | 1 min | org |
-| `files.presign` | 60 | 1 min | user |
-| `ai.*` | 30 | 1 min | org (plus token budget) |
-| Auth endpoints | 10 | 5 min | IP + email |
-| WS `/events` connections | 5 | concurrent | user |
+| Bucket                            | Limit      | Window     | Scope                   |
+| --------------------------------- | ---------- | ---------- | ----------------------- |
+| REST default                      | 600 req    | 1 min      | token                   |
+| REST writes (`POST/PATCH/DELETE`) | 120 req    | 1 min      | token                   |
+| `/api/v1/runs` POST               | 20 req     | 1 min      | org                     |
+| `/api/v1/search`                  | 60 req     | 1 min      | token                   |
+| tRPC default                      | 1200 calls | 1 min      | session                 |
+| `unfurl.request`                  | 120        | 1 min      | org                     |
+| `files.presign`                   | 60         | 1 min      | user                    |
+| `ai.*`                            | 30         | 1 min      | org (plus token budget) |
+| Auth endpoints                    | 10         | 5 min      | IP + email              |
+| WS `/events` connections          | 5          | concurrent | user                    |
 
 Algorithm: sliding-window counters in Redis (`INCR` + `PEXPIRE`) with a token-bucket refill for
 burst tolerance (`burst = limit / 4`). Responses carry `RateLimit-Limit`, `RateLimit-Remaining`,
@@ -638,12 +667,17 @@ over one WebSocket connection (Hocuspocus multiplexes).
 
 ```ts
 onAuthenticate: async ({ token, documentName }) => {
-  const boardId = parseRoom(documentName);                    // throws → 4401 close
-  const res = await internalApi.authorizeBoard({ token, boardId });  // HTTP, SYNC_INTERNAL_TOKEN
-  if (!res.allow) throw new Error('forbidden');               // Hocuspocus closes with 4403
-  return { userId: res.userId, orgId: res.orgId, role: res.role,
-           displayName: res.name, color: res.color };         // becomes connection.context
-}
+  const boardId = parseRoom(documentName); // throws → 4401 close
+  const res = await internalApi.authorizeBoard({ token, boardId }); // HTTP, SYNC_INTERNAL_TOKEN
+  if (!res.allow) throw new Error('forbidden'); // Hocuspocus closes with 4403
+  return {
+    userId: res.userId,
+    orgId: res.orgId,
+    role: res.role,
+    displayName: res.name,
+    color: res.color,
+  }; // becomes connection.context
+};
 ```
 
 `authorizeBoard` results are cached in Redis for 30 s (`authz:board:<boardId>:<sessionId>`) and
@@ -676,21 +710,21 @@ and in every connected client's IndexedDB, no data is lost by a rollback (G3).
 
 ### 5.4 Write authorization and guards
 
-* `viewer` role: `onBeforeHandleMessage` rejects `SyncStep2`/`Update` messages (awareness allowed).
-* Update size cap: 4 MB per message; larger disconnects with `4413` and the client splits
+- `viewer` role: `onBeforeHandleMessage` rejects `SyncStep2`/`Update` messages (awareness allowed).
+- Update size cap: 4 MB per message; larger disconnects with `4413` and the client splits
   (it never legitimately produces such an update outside a paste of thousands of nodes).
-* Board element cap: the projector counts elements; above 100 000 the room switches to read-only
+- Board element cap: the projector counts elements; above 100 000 the room switches to read-only
   and emits a `board:limit` awareness event (`02_ARCHITECTURE.md` §8.3).
-* Awareness payload cap: 8 KB per client; larger fields are dropped.
+- Awareness payload cap: 8 KB per client; larger fields are dropped.
 
 ### 5.5 Presence and awareness fields
 
 ```ts
 interface AwarenessState {
   user: { id: string; name: string; color: string; avatarUrl: string | null };
-  cursor: { x: number; y: number } | null;      // board coordinates, throttled to 20 Hz
-  viewport: { x: number; y: number; w: number; h: number } | null;  // throttled to 4 Hz
-  selection: string[];                           // capped at 50 ids
+  cursor: { x: number; y: number } | null; // board coordinates, throttled to 20 Hz
+  viewport: { x: number; y: number; w: number; h: number } | null; // throttled to 4 Hz
+  selection: string[]; // capped at 50 ids
   activity: 'idle' | 'editing' | 'dragging' | 'running';
 }
 ```
@@ -761,18 +795,18 @@ IPv6 mapping, rebinding servers, redirect chains, `0x7f.1`, and `http://[::ffff:
 
 Order of precedence per field (first non-empty wins):
 
-| Field | Sources in order |
-|---|---|
-| title | `og:title` → `twitter:title` → `<title>` → `h1` → hostname |
+| Field       | Sources in order                                                                                                                              |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| title       | `og:title` → `twitter:title` → `<title>` → `h1` → hostname                                                                                    |
 | description | `og:description` → `twitter:description` → `meta[name=description]` → first ≥ 120-char paragraph (truncated at 1200 chars on a word boundary) |
-| image | `og:image:secure_url` → `og:image` → `twitter:image` → `link[rel=image_src]` → largest `<img>` ≥ 200×200 in the first 40 KB |
-| siteName | `og:site_name` → `application-name` → registrable domain |
-| author | `article:author` → `meta[name=author]` → JSON-LD `author.name` |
-| publishedAt | `article:published_time` → JSON-LD `datePublished` → `meta[name=date]` (parsed to UTC, rejected if > 1 day in the future) |
-| canonical | `link[rel=canonical]` (must be same-registrable-domain, else ignored) |
-| lang | `<html lang>` → `og:locale` |
-| favicon | `link[rel~=icon]` largest declared size → `/favicon.ico` → domain fallback glyph |
-| themeColor | `meta[name=theme-color]` |
+| image       | `og:image:secure_url` → `og:image` → `twitter:image` → `link[rel=image_src]` → largest `<img>` ≥ 200×200 in the first 40 KB                   |
+| siteName    | `og:site_name` → `application-name` → registrable domain                                                                                      |
+| author      | `article:author` → `meta[name=author]` → JSON-LD `author.name`                                                                                |
+| publishedAt | `article:published_time` → JSON-LD `datePublished` → `meta[name=date]` (parsed to UTC, rejected if > 1 day in the future)                     |
+| canonical   | `link[rel=canonical]` (must be same-registrable-domain, else ignored)                                                                         |
+| lang        | `<html lang>` → `og:locale`                                                                                                                   |
+| favicon     | `link[rel~=icon]` largest declared size → `/favicon.ico` → domain fallback glyph                                                              |
+| themeColor  | `meta[name=theme-color]`                                                                                                                      |
 
 Parsing uses a streaming HTML parser over the first 512 KB only (metadata is in `<head>`);
 `<meta>` content is HTML-entity decoded and then treated as untrusted text (never rendered as HTML).
@@ -788,30 +822,30 @@ everything else → headers-only metadata (`provider: 'headers'`).
 
 ### 6.4 Caching keys and TTLs
 
-| Cache | Key | Store | TTL | Invalidation |
-|---|---|---|---|---|
-| Unfurl result | `unfurl:v3:<sha256(normalizedUrl)>` | Redis (JSON, ≤ 32 KB) | 24 h (2xx), 1 h (3xx-final), 15 min (4xx), 5 min (5xx/timeout) | `force:true` bypasses and rewrites |
-| Unfurl durable | `unfurl_cache` table row keyed by `url_hash` | Postgres | 30 d, refreshed on hit | nightly GC of rows unused 90 d |
-| Screenshot | `shot:<sha256(finalUrl)>:<vw>x<vh>:<theme>` | S3 + row | 7 d | `force`, or content-hash change of the HTML |
-| robots.txt | `robots:<origin>` | Redis | 12 h | — |
-| Favicon | `favicon:<registrableDomain>` | S3 + row | 30 d | — |
-| DNS decision | not cached | — | — | re-resolved every fetch (rebinding defense) |
+| Cache          | Key                                          | Store                 | TTL                                                            | Invalidation                                |
+| -------------- | -------------------------------------------- | --------------------- | -------------------------------------------------------------- | ------------------------------------------- |
+| Unfurl result  | `unfurl:v3:<sha256(normalizedUrl)>`          | Redis (JSON, ≤ 32 KB) | 24 h (2xx), 1 h (3xx-final), 15 min (4xx), 5 min (5xx/timeout) | `force:true` bypasses and rewrites          |
+| Unfurl durable | `unfurl_cache` table row keyed by `url_hash` | Postgres              | 30 d, refreshed on hit                                         | nightly GC of rows unused 90 d              |
+| Screenshot     | `shot:<sha256(finalUrl)>:<vw>x<vh>:<theme>`  | S3 + row              | 7 d                                                            | `force`, or content-hash change of the HTML |
+| robots.txt     | `robots:<origin>`                            | Redis                 | 12 h                                                           | —                                           |
+| Favicon        | `favicon:<registrableDomain>`                | S3 + row              | 30 d                                                           | —                                           |
+| DNS decision   | not cached                                   | —                     | —                                                              | re-resolved every fetch (rebinding defense) |
 
 Cache is keyed on the **normalized** URL; the response records `finalUrl` so redirect chains are
 visible to the analyst (provenance requirement).
 
 ### 6.5 Screenshot capture
 
-* A shared headless Chromium pool in `apps/worker` (`BROWSER_POOL_SIZE`, default 6 in prod),
+- A shared headless Chromium pool in `apps/worker` (`BROWSER_POOL_SIZE`, default 6 in prod),
   Playwright, one **incognito browser context per capture**, destroyed after use.
-* Context settings: viewport 1280×800 @ dpr 2, `javascript: enabled`, `bypassCSP: false`,
+- Context settings: viewport 1280×800 @ dpr 2, `javascript: enabled`, `bypassCSP: false`,
   no persistent storage, `permissions: []`, offline-blocked resource types
   (`media`, `websocket`, `eventsource`), request interception routing every request through the
   SSRF guard's allow decision, hard navigation timeout 20 s, total capture budget 30 s.
-* Output: full-page capped at 4 000 px height, WebP quality 82, plus a 640×400 thumbnail.
-* Robots: if `robots.txt` disallows our UA for the path, no screenshot is taken; metadata from the
+- Output: full-page capped at 4 000 px height, WebP quality 82, plus a 640×400 thumbnail.
+- Robots: if `robots.txt` disallows our UA for the path, no screenshot is taken; metadata from the
   server response is still stored, and `warnings` contains `robots_disallowed_screenshot`.
-* Crash/OOM: the context is discarded, the pool worker is recycled after 50 captures or 10 min,
+- Crash/OOM: the context is discarded, the pool worker is recycled after 50 captures or 10 min,
   and the job fails with `class:'upstream', code:'SCREENSHOT_FAILED'` (2 retries, §6.7).
 
 ### 6.6 Politeness
@@ -824,19 +858,19 @@ single-URL, never a crawler.
 
 ### 6.7 Failure modes
 
-| Condition | Code | Class | User message | Retry |
-|---|---|---|---|---|
-| Private/loopback resolution | `UNFURL_PRIVATE_RANGE` | blocked | "This address is on a private network, so it can't be previewed." | no |
-| Non-http scheme | `UNFURL_SCHEME` | blocked | "Only http and https links can be previewed." | no |
-| robots disallow (page) | `UNFURL_ROBOTS` | blocked | "This site asks not to be fetched automatically. The link is saved without a preview." | no |
-| > 3 redirects | `UNFURL_REDIRECTS` | upstream | "The link redirects too many times." | no |
-| Body > 5 MB | `UNFURL_TOO_LARGE` | upstream | "The page is too large to preview." | no |
-| Timeout | `UNFURL_TIMEOUT` | timeout | "The site didn't respond in time." | 3× |
-| 4xx | `UNFURL_HTTP_4XX` | upstream | "The site returned {status}." | no |
-| 5xx | `UNFURL_HTTP_5XX` | upstream | "The site is having problems." | 3× |
-| TLS failure | `UNFURL_TLS` | upstream | "The site's certificate couldn't be verified." | no |
-| Parse produced nothing | `UNFURL_EMPTY` | upstream | "We couldn't read anything useful from this page." | no (metadata: hostname only) |
-| Breaker open | `BREAKER_OPEN` | upstream | "This site is temporarily unavailable to us." | delayed |
+| Condition                   | Code                   | Class    | User message                                                                           | Retry                        |
+| --------------------------- | ---------------------- | -------- | -------------------------------------------------------------------------------------- | ---------------------------- |
+| Private/loopback resolution | `UNFURL_PRIVATE_RANGE` | blocked  | "This address is on a private network, so it can't be previewed."                      | no                           |
+| Non-http scheme             | `UNFURL_SCHEME`        | blocked  | "Only http and https links can be previewed."                                          | no                           |
+| robots disallow (page)      | `UNFURL_ROBOTS`        | blocked  | "This site asks not to be fetched automatically. The link is saved without a preview." | no                           |
+| > 3 redirects               | `UNFURL_REDIRECTS`     | upstream | "The link redirects too many times."                                                   | no                           |
+| Body > 5 MB                 | `UNFURL_TOO_LARGE`     | upstream | "The page is too large to preview."                                                    | no                           |
+| Timeout                     | `UNFURL_TIMEOUT`       | timeout  | "The site didn't respond in time."                                                     | 3×                           |
+| 4xx                         | `UNFURL_HTTP_4XX`      | upstream | "The site returned {status}."                                                          | no                           |
+| 5xx                         | `UNFURL_HTTP_5XX`      | upstream | "The site is having problems."                                                         | 3×                           |
+| TLS failure                 | `UNFURL_TLS`           | upstream | "The site's certificate couldn't be verified."                                         | no                           |
+| Parse produced nothing      | `UNFURL_EMPTY`         | upstream | "We couldn't read anything useful from this page."                                     | no (metadata: hostname only) |
+| Breaker open                | `BREAKER_OPEN`         | upstream | "This site is temporarily unavailable to us."                                          | delayed                      |
 
 Every failure still yields a usable node: URL, hostname, and a domain-letter glyph — the card is
 never blank (`03_UX.md` §12).
@@ -881,16 +915,16 @@ eviction is safe because S3 remains authoritative.
 
 ### 7.3 Size and type caps
 
-| Kind | Sniffed types | Max size | Notes |
-|---|---|---|---|
-| image | png, jpeg, webp, gif, avif, svg | 25 MB | SVG is sanitized (DOMPurify, server-side) and served with `Content-Disposition: attachment` + CSP sandbox |
-| pdf | application/pdf | 100 MB | preview = first page; text layer extracted up to 2 MB for search |
-| document | docx, odt, rtf, txt, md | 50 MB | docx → HTML preview via mammoth; text extracted for search |
-| spreadsheet | xlsx, ods, csv, tsv | 50 MB | csv/tsv preview = first 200 rows × 30 cols; delimiter sniffed |
-| data | json, ndjson, xml, yaml | 25 MB | json preview = pretty first 32 KB; schema outline for objects |
-| archive | zip, tar, gz, 7z | 200 MB | listing only: max 5 000 entries, max 10 MB of listing, reject ratio > 100:1 or depth > 8 (zip-bomb guard); no auto-extraction |
-| video/audio | mp4, webm, mp3, wav | 500 MB | poster frame at 1 s; no transcoding |
-| other | any allowed | 100 MB | generic icon, no preview |
+| Kind        | Sniffed types                   | Max size | Notes                                                                                                                         |
+| ----------- | ------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| image       | png, jpeg, webp, gif, avif, svg | 25 MB    | SVG is sanitized (DOMPurify, server-side) and served with `Content-Disposition: attachment` + CSP sandbox                     |
+| pdf         | application/pdf                 | 100 MB   | preview = first page; text layer extracted up to 2 MB for search                                                              |
+| document    | docx, odt, rtf, txt, md         | 50 MB    | docx → HTML preview via mammoth; text extracted for search                                                                    |
+| spreadsheet | xlsx, ods, csv, tsv             | 50 MB    | csv/tsv preview = first 200 rows × 30 cols; delimiter sniffed                                                                 |
+| data        | json, ndjson, xml, yaml         | 25 MB    | json preview = pretty first 32 KB; schema outline for objects                                                                 |
+| archive     | zip, tar, gz, 7z                | 200 MB   | listing only: max 5 000 entries, max 10 MB of listing, reject ratio > 100:1 or depth > 8 (zip-bomb guard); no auto-extraction |
+| video/audio | mp4, webm, mp3, wav             | 500 MB   | poster frame at 1 s; no transcoding                                                                                           |
+| other       | any allowed                     | 100 MB   | generic icon, no preview                                                                                                      |
 
 Global hard cap: 2 GB per file (schema-level), plan quota per org. Disallowed by default:
 executables (`application/x-*executable`, `.dll`, `.so`), `.iso`, `.dmg`, Office macro formats
@@ -898,16 +932,16 @@ executables (`application/x-*executable`, `.dll`, `.so`), `.iso`, `.dmg`, Office
 
 ### 7.4 Derivatives
 
-| Input | thumb (WebP) | preview | Tool |
-|---|---|---|---|
-| image | 320×320 cover, q80 | 1600 px long edge, q82 | sharp |
-| pdf | page 1 → 320×420 | page 1 → 1600 px + page count | pdfium/mupdf render |
-| docx | first page render → 320×420 | HTML (sanitized) | mammoth + headless render |
-| csv/tsv | table glyph | JSON of first 200×30 cells + inferred column types | fast-csv |
-| json/ndjson | code glyph | pretty first 32 KB + top-level key outline | streaming parser |
-| zip/tar | archive glyph | entry tree (name, size, mtime), depth ≤ 8 | yauzl/tar-stream |
-| video | poster frame 320×180 | poster 1280×720 + duration | ffmpeg |
-| audio | waveform 320×80 | waveform PNG + duration | ffmpeg |
+| Input       | thumb (WebP)                | preview                                            | Tool                      |
+| ----------- | --------------------------- | -------------------------------------------------- | ------------------------- |
+| image       | 320×320 cover, q80          | 1600 px long edge, q82                             | sharp                     |
+| pdf         | page 1 → 320×420            | page 1 → 1600 px + page count                      | pdfium/mupdf render       |
+| docx        | first page render → 320×420 | HTML (sanitized)                                   | mammoth + headless render |
+| csv/tsv     | table glyph                 | JSON of first 200×30 cells + inferred column types | fast-csv                  |
+| json/ndjson | code glyph                  | pretty first 32 KB + top-level key outline         | streaming parser          |
+| zip/tar     | archive glyph               | entry tree (name, size, mtime), depth ≤ 8          | yauzl/tar-stream          |
+| video       | poster frame 320×180        | poster 1280×720 + duration                         | ffmpeg                    |
+| audio       | waveform 320×80             | waveform PNG + duration                            | ffmpeg                    |
 
 Derivatives are written to `…/{fileId}/thumb.webp` and `…/{fileId}/preview.*`; failures are
 non-fatal (`variants.thumb = null`, the UI falls back to a kind glyph) and are recorded in
@@ -926,17 +960,17 @@ references the hash (§13.2).
 
 ### 8.1 Queues
 
-| Queue | Jobs | Priority | Concurrency/worker | Attempts | Backoff | TTL |
-|---|---|---|---|---|---|---|
-| `unfurl` | `unfurl:fetch` | 5 | 8 | 3 | exp 1 s ×4 | 30 min |
-| `screenshot` | `unfurl:screenshot` | 6 | `BROWSER_POOL_SIZE` | 2 | exp 2 s ×5 | 30 min |
-| `files` | `file:process`, `file:derivative`, `file:scan` | 4 | 6 | 3 | exp 2 s ×3 | 2 h |
-| `integrations` | `integration:run`, `integration:parse` | 3 | 4 (run) / 8 (parse) | 1 (run) / 2 (parse) | none / 5 s | 2 h |
-| `ai` | `ai:*`, `ai:embed` | 5 | 4 | 3 | exp 1 s ×5 | 1 h |
-| `exports` | `export:build` | 7 | 2 | 2 | exp 5 s ×6 | 6 h |
-| `projection` | `projection:repair`, `projection:backfill` | 2 | 2 | 5 | exp 100 ms ×5 | 24 h |
-| `webhooks` | `webhook:deliver` | 8 | 16 | 8 | table §4.3 | 24 h |
-| `maintenance` | §13 | 9 | 1 | 2 | fixed 60 s | 24 h |
+| Queue          | Jobs                                           | Priority | Concurrency/worker  | Attempts            | Backoff       | TTL    |
+| -------------- | ---------------------------------------------- | -------- | ------------------- | ------------------- | ------------- | ------ |
+| `unfurl`       | `unfurl:fetch`                                 | 5        | 8                   | 3                   | exp 1 s ×4    | 30 min |
+| `screenshot`   | `unfurl:screenshot`                            | 6        | `BROWSER_POOL_SIZE` | 2                   | exp 2 s ×5    | 30 min |
+| `files`        | `file:process`, `file:derivative`, `file:scan` | 4        | 6                   | 3                   | exp 2 s ×3    | 2 h    |
+| `integrations` | `integration:run`, `integration:parse`         | 3        | 4 (run) / 8 (parse) | 1 (run) / 2 (parse) | none / 5 s    | 2 h    |
+| `ai`           | `ai:*`, `ai:embed`                             | 5        | 4                   | 3                   | exp 1 s ×5    | 1 h    |
+| `exports`      | `export:build`                                 | 7        | 2                   | 2                   | exp 5 s ×6    | 6 h    |
+| `projection`   | `projection:repair`, `projection:backfill`     | 2        | 2                   | 5                   | exp 100 ms ×5 | 24 h   |
+| `webhooks`     | `webhook:deliver`                              | 8        | 16                  | 8                   | table §4.3    | 24 h   |
+| `maintenance`  | §13                                            | 9        | 1                   | 2                   | fixed 60 s    | 24 h   |
 
 Lower priority number = served first. Each queue group runs in its own worker deployment so a
 screenshot storm cannot starve projection repair.
@@ -946,11 +980,14 @@ screenshot storm cannot starve projection repair.
 ```ts
 export const JobEnvelope = z.object({
   v: z.literal(1),
-  txId: z.string(),                 // trace correlation, from the originating request
-  orgId: Id, projectId: Id.nullable(), boardId: Id.nullable(), userId: Id.nullable(),
+  txId: z.string(), // trace correlation, from the originating request
+  orgId: Id,
+  projectId: Id.nullable(),
+  boardId: Id.nullable(),
+  userId: Id.nullable(),
   idempotencyKey: z.string().max(128),
   enqueuedAt: z.number().int(),
-  deadlineAt: z.number().int(),     // job is dropped (not failed) if picked up after this
+  deadlineAt: z.number().int(), // job is dropped (not failed) if picked up after this
   payload: z.unknown(),
 });
 ```
@@ -961,47 +998,48 @@ work is a no-op while the job exists. `removeOnComplete: { age: 3600, count: 100
 
 ### 8.3 Failure handling
 
-* Attempts exhausted → the job moves to the queue's dead-letter set (`<queue>:dead`, a separate
+- Attempts exhausted → the job moves to the queue's dead-letter set (`<queue>:dead`, a separate
   BullMQ queue with no worker) with the last error serialized as a `NexusError`.
-* `admin.jobs.retryDead` re-enqueues selected dead jobs with a fresh deadline.
-* `nexus_job_dead_total{queue,code}` is alerted at > 10 in 15 min.
-* Poison detection: three consecutive failures with the same `code` for the same `idempotencyKey`
+- `admin.jobs.retryDead` re-enqueues selected dead jobs with a fresh deadline.
+- `nexus_job_dead_total{queue,code}` is alerted at > 10 in 15 min.
+- Poison detection: three consecutive failures with the same `code` for the same `idempotencyKey`
   stop retrying immediately (no exponential burn).
-* Worker crash → BullMQ stalled-job recovery after `lockDuration` (30 s, renewed every 15 s during
+- Worker crash → BullMQ stalled-job recovery after `lockDuration` (30 s, renewed every 15 s during
   long jobs; integration runs renew until the manifest timeout).
 
 ### 8.4 Idempotency
 
 Every consumer must be safe under at-least-once delivery:
-* `unfurl:fetch` — cache write is last-writer-wins on the same key; harmless.
-* `file:process` — guarded by a state transition `pending → scanning` with `UPDATE … WHERE state='pending'`;
+
+- `unfurl:fetch` — cache write is last-writer-wins on the same key; harmless.
+- `file:process` — guarded by a state transition `pending → scanning` with `UPDATE … WHERE state='pending'`;
   a second delivery sees 0 rows updated and exits.
-* `integration:run` — `runs` row has a unique `(org_id, idempotency_key)`; a duplicate returns the
+- `integration:run` — `runs` row has a unique `(org_id, idempotency_key)`; a duplicate returns the
   existing run and never spawns a second container.
-* `ai:*` — a duplicate returns the existing proposal id.
-* `export:build` — unique `(board_id, doc_version, format, options_hash)`; duplicates return the
+- `ai:*` — a duplicate returns the existing proposal id.
+- `export:build` — unique `(board_id, doc_version, format, options_hash)`; duplicates return the
   existing export.
-* `webhook:deliver` — receivers deduplicate on `X-Nexus-Delivery`; we guarantee at-least-once.
+- `webhook:deliver` — receivers deduplicate on `X-Nexus-Delivery`; we guarantee at-least-once.
 
 ---
 
 ## 9. Caching layers
 
-| Layer | Content | Store | TTL | Invalidation |
-|---|---|---|---|---|
-| CDN | hashed JS/CSS/fonts | edge | 1 y immutable | content hash in filename |
-| CDN | `index.html` | edge | no-store | — |
-| HTTP | `GET /api/v1/openapi.json` | edge/browser | 5 min | build id |
-| Redis | session → AuthContext | Redis | 30 s | on logout/role change (`authctx:<sessionId>`) |
-| Redis | board→project+ACL | Redis | 30 s | on membership/visibility change |
-| Redis | flags per org | Redis | 60 s | pub/sub `flags:changed` |
-| Redis | unfurl results | Redis | §6.4 | `force` |
-| Redis | search suggest | Redis | 60 s | key includes scope+q prefix |
-| Redis | rate-limit counters | Redis | window | — |
-| Postgres | `unfurl_cache`, derivative rows | Postgres | 30 d | GC job |
-| Process | manifests, JSON Schemas, compiled zod | in-memory | process lifetime | deploy |
-| Client | tRPC query cache | memory | per-query `staleTime` (list 30 s, detail 5 min) | mutation invalidation |
-| Client | Y.Doc + blobs | IndexedDB/OPFS | until eviction | CRDT merge / LRU |
+| Layer    | Content                               | Store          | TTL                                             | Invalidation                                  |
+| -------- | ------------------------------------- | -------------- | ----------------------------------------------- | --------------------------------------------- |
+| CDN      | hashed JS/CSS/fonts                   | edge           | 1 y immutable                                   | content hash in filename                      |
+| CDN      | `index.html`                          | edge           | no-store                                        | —                                             |
+| HTTP     | `GET /api/v1/openapi.json`            | edge/browser   | 5 min                                           | build id                                      |
+| Redis    | session → AuthContext                 | Redis          | 30 s                                            | on logout/role change (`authctx:<sessionId>`) |
+| Redis    | board→project+ACL                     | Redis          | 30 s                                            | on membership/visibility change               |
+| Redis    | flags per org                         | Redis          | 60 s                                            | pub/sub `flags:changed`                       |
+| Redis    | unfurl results                        | Redis          | §6.4                                            | `force`                                       |
+| Redis    | search suggest                        | Redis          | 60 s                                            | key includes scope+q prefix                   |
+| Redis    | rate-limit counters                   | Redis          | window                                          | —                                             |
+| Postgres | `unfurl_cache`, derivative rows       | Postgres       | 30 d                                            | GC job                                        |
+| Process  | manifests, JSON Schemas, compiled zod | in-memory      | process lifetime                                | deploy                                        |
+| Client   | tRPC query cache                      | memory         | per-query `staleTime` (list 30 s, detail 5 min) | mutation invalidation                         |
+| Client   | Y.Doc + blobs                         | IndexedDB/OPFS | until eviction                                  | CRDT merge / LRU                              |
 
 Rule: no cache may hold data across tenants under one key — every cache key includes `orgId`
 whenever the value is tenant-scoped.
@@ -1020,15 +1058,15 @@ function buildCursorWhere(sort: SortSpec, cursor?: Cursor) {
 }
 ```
 
-* `limit` default 50, max 200; the handler fetches `limit + 1` rows to compute `nextCursor` and
+- `limit` default 50, max 200; the handler fetches `limit + 1` rows to compute `nextCursor` and
   never returns the extra row.
-* `total` is returned only when cheap (`< 10 000` estimated rows via `pg_class.reltuples` check);
+- `total` is returned only when cheap (`< 10 000` estimated rows via `pg_class.reltuples` check);
   otherwise it is omitted and the UI shows "50+".
-* Every paginated query has a supporting composite index `(scope_col, sort_col DESC, id DESC)`
+- Every paginated query has a supporting composite index `(scope_col, sort_col DESC, id DESC)`
   listed in `08_DATA_MODEL.md` §6.
-* Cursors are opaque and version-tagged; an unparsable or wrong-version cursor yields
+- Cursors are opaque and version-tagged; an unparsable or wrong-version cursor yields
   `validation` / `CURSOR_INVALID` rather than silently restarting from page 1.
-* Deep graph traversals (`nodes.neighbors`) are not cursored; they are depth- and count-capped
+- Deep graph traversals (`nodes.neighbors`) are not cursored; they are depth- and count-capped
   (depth ≤ 4, ≤ 2 000 rows) and use a recursive CTE with a visited set.
 
 ---
@@ -1144,24 +1182,24 @@ support (`x-nexus-debug-trace: 1`, admin-only).
 
 ## 13. Background maintenance jobs
 
-| Job | Schedule | Action | Safety |
-|---|---|---|---|
-| `maintenance:snapshot-checkpoint` | every 15 min | for boards with > 200 incremental snapshots since the last checkpoint, write a full checkpoint and delete superseded incrementals older than 24 h | never deletes the newest checkpoint or anything < 24 h old |
-| `maintenance:snapshot-retention` | daily 03:10 UTC | keep all snapshots ≤ 7 d, hourly ≤ 30 d, daily ≤ 180 d, monthly ≤ 2 y | dry-run count logged first; deletions audited |
-| `maintenance:blob-gc` | hourly | delete S3 objects whose `files` row is `deleted_at < now() - 7 d` **and** whose `sha256` is unreferenced by any node in any board (projection query) | two-phase: mark `gc_pending`, delete on the next pass if still unreferenced |
-| `maintenance:orphan-blob-scan` | weekly Sun 04:00 | list bucket prefixes, find objects with no `files` row older than 24 h, move to `orphans/` for 30 d then delete | never deletes directly from the live prefix |
-| `maintenance:stale-run-cleanup` | every 5 min | runs stuck in `starting`/`running` past `timeoutMs + 60 s` → mark `timeout`, ask the runner to kill the container, keep artifacts | idempotent state transition guarded by `WHERE status IN (…)` |
-| `maintenance:run-artifact-retention` | daily 03:30 | delete run artifacts older than 90 d (org-configurable 7–365 d) unless referenced by a node's `rawArtifactKey` | reference check via projection |
-| `maintenance:projection-audit` | daily 02:00 | recompute the projection hash for a 2% board sample; mismatch → enqueue `projection:repair` | read-only unless mismatched |
-| `maintenance:projection-backfill` | continuous, low priority | boards where `projected_version < doc_version` for > 60 s | rate-limited to 4 concurrent |
-| `maintenance:unfurl-cache-gc` | daily 03:50 | delete `unfurl_cache` rows unused for 90 d and their derivative blobs | reference check against nodes |
-| `maintenance:session-gc` | hourly | delete expired sessions and used/expired invites | — |
-| `maintenance:soft-delete-purge` | daily 04:30 | hard-delete projects/boards soft-deleted > 30 d ago, cascading to nodes/edges/files | audit row per purge; a final export bundle is written to `archive/` first |
-| `maintenance:integration-health` | every 6 h | pull the upstream tag digest for each pinned integration image, compare with the manifest, update `integrations.health`; mark `degraded` when the pinned digest is unreachable | never auto-updates a digest (ADR-011) |
-| `maintenance:quota-recalc` | hourly | recompute per-org storage/AI usage into `org_usage` | — |
-| `maintenance:embedding-backfill` | continuous, low priority | embed nodes whose `text_hash` changed and lack a current embedding | budget-capped per org |
-| `maintenance:webhook-endpoint-health` | daily | disable endpoints failing for 7 consecutive days, notify admins | — |
-| `maintenance:board-thumbnail` | on demand, debounced 10 min | render a board thumbnail for board lists | skipped for boards > 20 000 elements |
+| Job                                   | Schedule                    | Action                                                                                                                                                                         | Safety                                                                      |
+| ------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| `maintenance:snapshot-checkpoint`     | every 15 min                | for boards with > 200 incremental snapshots since the last checkpoint, write a full checkpoint and delete superseded incrementals older than 24 h                              | never deletes the newest checkpoint or anything < 24 h old                  |
+| `maintenance:snapshot-retention`      | daily 03:10 UTC             | keep all snapshots ≤ 7 d, hourly ≤ 30 d, daily ≤ 180 d, monthly ≤ 2 y                                                                                                          | dry-run count logged first; deletions audited                               |
+| `maintenance:blob-gc`                 | hourly                      | delete S3 objects whose `files` row is `deleted_at < now() - 7 d` **and** whose `sha256` is unreferenced by any node in any board (projection query)                           | two-phase: mark `gc_pending`, delete on the next pass if still unreferenced |
+| `maintenance:orphan-blob-scan`        | weekly Sun 04:00            | list bucket prefixes, find objects with no `files` row older than 24 h, move to `orphans/` for 30 d then delete                                                                | never deletes directly from the live prefix                                 |
+| `maintenance:stale-run-cleanup`       | every 5 min                 | runs stuck in `starting`/`running` past `timeoutMs + 60 s` → mark `timeout`, ask the runner to kill the container, keep artifacts                                              | idempotent state transition guarded by `WHERE status IN (…)`                |
+| `maintenance:run-artifact-retention`  | daily 03:30                 | delete run artifacts older than 90 d (org-configurable 7–365 d) unless referenced by a node's `rawArtifactKey`                                                                 | reference check via projection                                              |
+| `maintenance:projection-audit`        | daily 02:00                 | recompute the projection hash for a 2% board sample; mismatch → enqueue `projection:repair`                                                                                    | read-only unless mismatched                                                 |
+| `maintenance:projection-backfill`     | continuous, low priority    | boards where `projected_version < doc_version` for > 60 s                                                                                                                      | rate-limited to 4 concurrent                                                |
+| `maintenance:unfurl-cache-gc`         | daily 03:50                 | delete `unfurl_cache` rows unused for 90 d and their derivative blobs                                                                                                          | reference check against nodes                                               |
+| `maintenance:session-gc`              | hourly                      | delete expired sessions and used/expired invites                                                                                                                               | —                                                                           |
+| `maintenance:soft-delete-purge`       | daily 04:30                 | hard-delete projects/boards soft-deleted > 30 d ago, cascading to nodes/edges/files                                                                                            | audit row per purge; a final export bundle is written to `archive/` first   |
+| `maintenance:integration-health`      | every 6 h                   | pull the upstream tag digest for each pinned integration image, compare with the manifest, update `integrations.health`; mark `degraded` when the pinned digest is unreachable | never auto-updates a digest (ADR-011)                                       |
+| `maintenance:quota-recalc`            | hourly                      | recompute per-org storage/AI usage into `org_usage`                                                                                                                            | —                                                                           |
+| `maintenance:embedding-backfill`      | continuous, low priority    | embed nodes whose `text_hash` changed and lack a current embedding                                                                                                             | budget-capped per org                                                       |
+| `maintenance:webhook-endpoint-health` | daily                       | disable endpoints failing for 7 consecutive days, notify admins                                                                                                                | —                                                                           |
+| `maintenance:board-thumbnail`         | on demand, debounced 10 min | render a board thumbnail for board lists                                                                                                                                       | skipped for boards > 20 000 elements                                        |
 
 All maintenance jobs take a Redis lock (`lock:maint:<name>`, TTL = 2× expected duration) so only one
 instance runs cluster-wide, log a structured summary (`{scanned, changed, skipped, durationMs}`),
@@ -1171,16 +1209,16 @@ and support `--dry-run` through `admin.jobs` for operators.
 
 ## 14. Open risks
 
-| # | Risk | Impact | Mitigation / trigger |
-|---|---|---|---|
-| R1 | Headless browser pool is the most expensive and least stable worker component | Screenshot loss, worker OOM | Isolated queue and deployment, context-per-capture, recycle every 50 captures, `capture.screenshots` kill-switch, metadata-only is a complete fallback |
-| R2 | Unfurl of hostile pages (huge DOM, redirect loops, decompression bombs) | Worker resource exhaustion | 5 MB byte cap enforced at the stream, 512 KB parse window, 3-redirect cap, 15 s total budget, per-domain politeness bucket |
-| R3 | Projection transaction contention on very active boards (store every 2 s × many boards) | Sync store latency, lag alert | Delta-mode projector above 20 000 elements, `maxDebounce` 10 s, per-board advisory lock, connection pool separated from API |
-| R4 | tRPC and REST drift (ADR-006) | Plugin breakage | Both call `services/*`; contract parity tests in `18_TESTING.md` §7; OpenAPI generated from the same zod schemas |
-| R5 | Virus scanning is optional in self-host deployments | Malware distribution through a shared board | `FILES_REQUIRE_SCAN` defaults to true in prod; without a scanner configured, uploads of executable-adjacent kinds are rejected outright |
-| R6 | At-least-once job delivery combined with a non-idempotent future consumer | Duplicate side effects (double run, double charge) | Idempotency is a review checklist item for every new consumer; `runs` has a DB-level unique key; new queues require an idempotency note in the PR |
-| R7 | Rate limiter fails open for reads when Redis is down | Load amplification during an incident | Fail-closed for writes/runs, per-pod in-process fallback limiter (1/10 of the global limit), alert on `nexus_ratelimit_degraded_total` |
-| R8 | Idempotency-key store growth and 24 h replay window mismatch with long offline periods | Duplicate operations after > 24 h offline | Offline pending intents carry a client-generated key; the client also checks for an existing entity by key before re-submitting (`02_ARCHITECTURE.md` §5.5) |
-| R9 | Blob GC deleting a blob still referenced by an unprojected board version | Broken file reference | Two-phase GC, 7-day quarantine, reference check against the projection **and** a `projected_version >= doc_version` precondition per board |
-| R10 | Archive listing and docx/pdf rendering pull heavy native dependencies into the worker image | Image size, CVE surface | Derivative generation isolated in its own worker deployment with a minimal image; failure is non-fatal (glyph fallback) |
-| R11 | Search hybrid ranking weights (0.6/0.4) are unvalidated against real corpora | Poor result quality | Weights are configuration (`search.rankWeights`), an offline relevance harness with a labelled fixture set runs in CI (`18_TESTING.md` §8) |
+| #   | Risk                                                                                        | Impact                                             | Mitigation / trigger                                                                                                                                        |
+| --- | ------------------------------------------------------------------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1  | Headless browser pool is the most expensive and least stable worker component               | Screenshot loss, worker OOM                        | Isolated queue and deployment, context-per-capture, recycle every 50 captures, `capture.screenshots` kill-switch, metadata-only is a complete fallback      |
+| R2  | Unfurl of hostile pages (huge DOM, redirect loops, decompression bombs)                     | Worker resource exhaustion                         | 5 MB byte cap enforced at the stream, 512 KB parse window, 3-redirect cap, 15 s total budget, per-domain politeness bucket                                  |
+| R3  | Projection transaction contention on very active boards (store every 2 s × many boards)     | Sync store latency, lag alert                      | Delta-mode projector above 20 000 elements, `maxDebounce` 10 s, per-board advisory lock, connection pool separated from API                                 |
+| R4  | tRPC and REST drift (ADR-006)                                                               | Plugin breakage                                    | Both call `services/*`; contract parity tests in `18_TESTING.md` §7; OpenAPI generated from the same zod schemas                                            |
+| R5  | Virus scanning is optional in self-host deployments                                         | Malware distribution through a shared board        | `FILES_REQUIRE_SCAN` defaults to true in prod; without a scanner configured, uploads of executable-adjacent kinds are rejected outright                     |
+| R6  | At-least-once job delivery combined with a non-idempotent future consumer                   | Duplicate side effects (double run, double charge) | Idempotency is a review checklist item for every new consumer; `runs` has a DB-level unique key; new queues require an idempotency note in the PR           |
+| R7  | Rate limiter fails open for reads when Redis is down                                        | Load amplification during an incident              | Fail-closed for writes/runs, per-pod in-process fallback limiter (1/10 of the global limit), alert on `nexus_ratelimit_degraded_total`                      |
+| R8  | Idempotency-key store growth and 24 h replay window mismatch with long offline periods      | Duplicate operations after > 24 h offline          | Offline pending intents carry a client-generated key; the client also checks for an existing entity by key before re-submitting (`02_ARCHITECTURE.md` §5.5) |
+| R9  | Blob GC deleting a blob still referenced by an unprojected board version                    | Broken file reference                              | Two-phase GC, 7-day quarantine, reference check against the projection **and** a `projected_version >= doc_version` precondition per board                  |
+| R10 | Archive listing and docx/pdf rendering pull heavy native dependencies into the worker image | Image size, CVE surface                            | Derivative generation isolated in its own worker deployment with a minimal image; failure is non-fatal (glyph fallback)                                     |
+| R11 | Search hybrid ranking weights (0.6/0.4) are unvalidated against real corpora                | Poor result quality                                | Weights are configuration (`search.rankWeights`), an offline relevance harness with a labelled fixture set runs in CI (`18_TESTING.md` §8)                  |

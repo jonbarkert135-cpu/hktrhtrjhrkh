@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import type { ServerEnv } from './env.js';
+import type { ServerEnv } from './env.ts';
 
 /**
  * Test-only endpoints (used by e2e to reset state). They must be impossible to expose in

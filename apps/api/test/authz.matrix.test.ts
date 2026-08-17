@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@nexus/db', () => ({ prisma: {}, recordAudit: vi.fn() }));
 
-const { appRouter } = await import('../src/trpc/router.js');
-const { ORG_ROLES } = await import('../src/trpc/context.js');
+const { appRouter } = await import('../src/trpc/router.ts');
+const { ORG_ROLES } = await import('../src/trpc/context.ts');
 
 const ALLOWED = new Set<string>(['public', 'protected', ...ORG_ROLES]);
 

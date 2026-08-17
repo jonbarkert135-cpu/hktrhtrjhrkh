@@ -1,14 +1,16 @@
 name: Bootstrap
-description: Node 22 + pnpm 9 + store cache + frozen-lockfile install. Run after actions/checkout.
+description: Node 22 + pnpm (version from package.json packageManager) + store cache + frozen-lockfile install. Run after actions/checkout.
 runs:
   using: composite
   steps:
     - uses: pnpm/action-setup@v4
-      with:
-        version: '9'
     - uses: actions/setup-node@v4
       with:
         node-version: '22'
         cache: pnpm
     - run: pnpm install --frozen-lockfile
+      shell: bash
+    # The Prisma client is generated code: without it every type-aware ESLint rule
+    # sees `any` in packages/db, and `tsc` resolves the stub types.
+    - run: pnpm --filter @nexus/db exec prisma generate
       shell: bash

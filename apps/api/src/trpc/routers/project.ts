@@ -2,8 +2,8 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { prisma } from '@nexus/db';
 import { isId, newId, systemClock } from '@nexus/domain';
-import { orgProcedure, router } from '../trpc.js';
-import { audit } from '../../audit.js';
+import { orgProcedure, router } from '../trpc.ts';
+import { audit } from '../../audit.ts';
 
 export const Id = z.string().refine(isId, 'Not a valid id');
 

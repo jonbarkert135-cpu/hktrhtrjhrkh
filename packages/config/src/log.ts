@@ -1,6 +1,6 @@
 import { pino } from 'pino';
 import type { DestinationStream, Logger, LoggerOptions } from 'pino';
-import { SECRET_ENV_KEYS } from './env';
+import { SECRET_ENV_KEYS } from './env.ts';
 
 export const REDACT_CENSOR = '[redacted]';
 
@@ -23,9 +23,12 @@ const CASE_VARIANTS = (name: string): string[] => [
   name.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase(),
 ];
 
-const FIELD_PATHS = [
-  ...new Set(SECRET_FIELD_NAMES.flatMap(CASE_VARIANTS)),
-].flatMap((f) => [f, `*.${f}`, `req.headers.${f}`, `res.headers.${f}`]);
+const FIELD_PATHS = [...new Set(SECRET_FIELD_NAMES.flatMap(CASE_VARIANTS))].flatMap((f) => [
+  f,
+  `*.${f}`,
+  `req.headers.${f}`,
+  `res.headers.${f}`,
+]);
 
 /** Values shaped like a secret (long opaque strings, bearer tokens, URLs with credentials). */
 const SECRET_SHAPED = [

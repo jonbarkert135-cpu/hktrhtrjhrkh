@@ -4,15 +4,15 @@ Shared configuration for the monorepo: env schemas, feature flags, logger, ESLin
 the design-token lint rule, tsconfig presets and the Vitest config factory.
 Source-only package (no build step); consumers compile `./src/*.ts`.
 
-| Export | Contents |
-|---|---|
-| `@nexus/config` | everything from `src/index.ts` |
-| `@nexus/config/env` | `serverEnv`, `clientEnv`, `loadServerEnv`, `SECRET_ENV_KEYS` |
-| `@nexus/config/flags` | `parseFlags`, `FLAG_NAMES`, `FlagName` |
-| `@nexus/config/log` | `createLogger`, `redactValue` |
-| `@nexus/config/eslint` | `base`, `node`, `react`, `domainStrict` flat configs |
-| `@nexus/config/tsconfig/{base,react,node}` | tsconfig presets |
-| `@nexus/config/vitest` | `nodeConfig()`, `jsdomConfig()`, `COVERAGE_TARGETS` |
+| Export                                     | Contents                                                     |
+| ------------------------------------------ | ------------------------------------------------------------ |
+| `@nexus/config`                            | everything from `src/index.ts`                               |
+| `@nexus/config/env`                        | `serverEnv`, `clientEnv`, `loadServerEnv`, `SECRET_ENV_KEYS` |
+| `@nexus/config/flags`                      | `parseFlags`, `FLAG_NAMES`, `FlagName`                       |
+| `@nexus/config/log`                        | `createLogger`, `redactValue`                                |
+| `@nexus/config/eslint`                     | `base`, `node`, `react`, `domainStrict` flat configs         |
+| `@nexus/config/tsconfig/{base,react,node}` | tsconfig presets                                             |
+| `@nexus/config/vitest`                     | `nodeConfig()`, `jsdomConfig()`, `COVERAGE_TARGETS`          |
 
 ## Adding an env var
 

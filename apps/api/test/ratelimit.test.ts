@@ -5,7 +5,7 @@ import {
   SIGNUP_RULE,
   loginKey,
   signupKey,
-} from '../src/auth/rate-limit.js';
+} from '../src/auth/rate-limit.ts';
 
 const limiterAt = (clock: { t: number }) => new FixedWindowLimiter(() => clock.t);
 

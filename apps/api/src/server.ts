@@ -8,18 +8,18 @@ import { createLogger } from '@nexus/config/log';
 import { prisma } from '@nexus/db';
 import Redis from 'ioredis';
 import type { FastifyBaseLogger, FastifyInstance } from 'fastify';
-import { loadServerEnv } from './env.js';
-import type { ServerEnv } from './env.js';
-import { createAuth, auditAuthEvent } from './auth/index.js';
-import { USER_API_RULE } from './auth/rate-limit.js';
-import { metricsPlugin, startMetricsServer } from './plugins/metrics.js';
-import { requestContextPlugin, REQ_ID_HEADER } from './plugins/request-context.js';
-import { createContextFactory, toHeaders } from './trpc/context.js';
-import type { Context } from './trpc/context.js';
-import { appRouter } from './trpc/router.js';
-import { registerTestEndpoints } from './test-endpoints.js';
+import { loadServerEnvFromProcess } from './env.ts';
+import type { ServerEnv } from './env.ts';
+import { createAuth, auditAuthEvent } from './auth/index.ts';
+import { USER_API_RULE } from './auth/rate-limit.ts';
+import { metricsPlugin, startMetricsServer } from './plugins/metrics.ts';
+import { requestContextPlugin, REQ_ID_HEADER } from './plugins/request-context.ts';
+import { createContextFactory, toHeaders } from './trpc/context.ts';
+import type { Context } from './trpc/context.ts';
+import { appRouter } from './trpc/router.ts';
+import { registerTestEndpoints } from './test-endpoints.ts';
 
-export type { AppRouter } from './trpc/router.js';
+export type { AppRouter } from './trpc/router.ts';
 
 export async function buildServer(env: ServerEnv): Promise<FastifyInstance> {
   const logger: FastifyBaseLogger = createLogger({
@@ -105,14 +105,29 @@ export async function buildServer(env: ServerEnv): Promise<FastifyInstance> {
   let draining = false;
   app.get('/readyz', async (_req, reply) => {
     if (draining) return reply.status(503).send({ status: 'draining' });
-    try {
-      await prisma.$queryRaw`SELECT 1`;
-      await redis.ping();
-      return { status: 'ready' };
-    } catch (error) {
-      app.log.error({ event: 'readyz.failed', err: error }, 'dependency unreachable');
-      return reply.status(503).send({ status: 'not-ready' });
-    }
+    // Each dependency is probed separately and named in the body: a bare 503 says "something is
+    // down" and costs a CI round trip to identify, which is exactly what happened in P1.
+    const checks: Record<string, string> = {};
+    const probe = async (name: string, run: () => Promise<unknown>): Promise<boolean> => {
+      try {
+        await run();
+        checks[name] = 'ok';
+        return true;
+      } catch (error) {
+        checks[name] = error instanceof Error ? error.message : String(error);
+        app.log.error(
+          { event: 'readyz.failed', dependency: name, err: error },
+          'dependency unreachable',
+        );
+        return false;
+      }
+    };
+    const results = await Promise.all([
+      probe('db', () => prisma.$queryRaw`SELECT 1`),
+      probe('redis', () => redis.ping()),
+    ]);
+    if (results.every(Boolean)) return { status: 'ready', checks };
+    return reply.status(503).send({ status: 'not-ready', checks });
   });
 
   registerTestEndpoints(app, env);
@@ -152,7 +167,7 @@ async function enumerationSafeBody(pathname: string, response: Response): Promis
 async function main(): Promise<void> {
   let env: ServerEnv;
   try {
-    env = loadServerEnv();
+    env = loadServerEnvFromProcess();
   } catch (error) {
     process.stderr.write(
       `Invalid configuration — the API cannot start:\n${error instanceof Error ? error.message : String(error)}\n`,
@@ -162,7 +177,10 @@ async function main(): Promise<void> {
 
   const app = await buildServer(env);
   const metrics = await startMetricsServer();
-  await app.listen({ port: 3000, host: '0.0.0.0' });
+  // 19_DEPLOYMENT.md §7 and infra/docker/api.Dockerfile pin the API to 3001; `API_PORT`
+  // (02_ARCHITECTURE.md §12 env table) overrides it for local multi-instance runs.
+  const port = Number(process.env['API_PORT'] ?? 3001);
+  await app.listen({ port, host: '0.0.0.0' });
 
   const shutdown = (signal: string) => {
     void (async () => {

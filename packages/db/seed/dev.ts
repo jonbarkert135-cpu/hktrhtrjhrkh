@@ -130,6 +130,8 @@ async function main(): Promise<void> {
 main()
   .catch((error: unknown) => {
     process.exitCode = 1;
-    process.stderr.write(`Seed failed: ${error instanceof Error ? error.message : String(error)}\n`);
+    process.stderr.write(
+      `Seed failed: ${error instanceof Error ? error.message : String(error)}\n`,
+    );
   })
   .finally(() => prisma.$disconnect());

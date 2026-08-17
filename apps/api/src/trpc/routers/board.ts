@@ -2,9 +2,9 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { prisma } from '@nexus/db';
 import { newId } from '@nexus/domain';
-import { orgProcedure, router } from '../trpc.js';
-import { audit } from '../../audit.js';
-import { Id } from './project.js';
+import { orgProcedure, router } from '../trpc.ts';
+import { audit } from '../../audit.ts';
+import { Id } from './project.ts';
 
 interface BoardRow {
   id: string;

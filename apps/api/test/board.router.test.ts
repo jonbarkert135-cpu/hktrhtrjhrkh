@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ORG_ID, PROJECT_ID, ctx, prismaMock, recordAuditMock } from './prisma-mock.js';
+import { ORG_ID, PROJECT_ID, ctx, prismaMock, recordAuditMock } from './prisma-mock.ts';
 
 vi.mock('@nexus/db', () => ({ prisma: prismaMock, recordAudit: recordAuditMock }));
 
-const { appRouter } = await import('../src/trpc/router.js');
-const { createCallerFactory } = await import('../src/trpc/trpc.js');
+const { appRouter } = await import('../src/trpc/router.ts');
+const { createCallerFactory } = await import('../src/trpc/trpc.ts');
 
 const caller = createCallerFactory(appRouter);
 

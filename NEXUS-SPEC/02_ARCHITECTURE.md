@@ -1,4 +1,5 @@
 # NEXUS — 02 ARCHITECTURE
+
 ## Layer contracts, module boundaries, runtime topology, key sequences
 
 **Scope**
@@ -85,16 +86,16 @@ It refines `00_MASTER.md` §2, §5 and §6 and never overrides them. Endpoint-le
 
 ### 1.2 Per-service responsibilities
 
-| Service | Owns | Must not | Scaling unit | Statefulness |
-|---|---|---|---|---|
-| `apps/web` | rendering, interaction, local document, offline durability, optimistic UX | contain business rules that the server must also enforce; write to Postgres directly | CDN-served static bundle | IndexedDB + OPFS per origin |
-| `apps/sync` | Y.Doc rooms, auth on room join, awareness, binary persistence, projection into Postgres, snapshot cadence | serve product APIs, run tools, call third-party services | horizontal, Redis fanout, sticky not required | in-memory doc per active room |
-| `apps/api` | request/response product surface (tRPC + REST), authn/z decisions, validation, job enqueue, presigned URLs, search queries, admin | hold WebSocket rooms, execute tools (`N5`), do long CPU work inline | horizontal, stateless | none (sessions in Postgres) |
-| `apps/worker` | asynchronous work: unfurl, screenshots, thumbnails, repo analysis, AI calls, exports, maintenance | accept public inbound traffic; mutate Y.Doc directly | horizontal per queue, concurrency per queue | ephemeral tmp only |
-| `apps/runner` | manifest-driven sandboxed tool execution, artifact capture, resource enforcement | parse tool output into domain entities (that is `packages/integrations`), reach Postgres | horizontal, node-pinned to sandbox-capable hosts | ephemeral |
-| Postgres | durable truth for everything queryable + Yjs binary snapshots | be bypassed by any service writing files as truth | primary + read replica (P16) | stateful |
-| Redis | queues, pub/sub, rate limit counters, short-TTL caches | hold anything whose loss is unrecoverable | cluster/sentinel | ephemeral-by-design |
-| S3/MinIO | blobs: originals, derivatives, run artifacts, exports | store metadata that is not also in Postgres | provider | stateful |
+| Service       | Owns                                                                                                                              | Must not                                                                                 | Scaling unit                                     | Statefulness                  |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------ | ----------------------------- |
+| `apps/web`    | rendering, interaction, local document, offline durability, optimistic UX                                                         | contain business rules that the server must also enforce; write to Postgres directly     | CDN-served static bundle                         | IndexedDB + OPFS per origin   |
+| `apps/sync`   | Y.Doc rooms, auth on room join, awareness, binary persistence, projection into Postgres, snapshot cadence                         | serve product APIs, run tools, call third-party services                                 | horizontal, Redis fanout, sticky not required    | in-memory doc per active room |
+| `apps/api`    | request/response product surface (tRPC + REST), authn/z decisions, validation, job enqueue, presigned URLs, search queries, admin | hold WebSocket rooms, execute tools (`N5`), do long CPU work inline                      | horizontal, stateless                            | none (sessions in Postgres)   |
+| `apps/worker` | asynchronous work: unfurl, screenshots, thumbnails, repo analysis, AI calls, exports, maintenance                                 | accept public inbound traffic; mutate Y.Doc directly                                     | horizontal per queue, concurrency per queue      | ephemeral tmp only            |
+| `apps/runner` | manifest-driven sandboxed tool execution, artifact capture, resource enforcement                                                  | parse tool output into domain entities (that is `packages/integrations`), reach Postgres | horizontal, node-pinned to sandbox-capable hosts | ephemeral                     |
+| Postgres      | durable truth for everything queryable + Yjs binary snapshots                                                                     | be bypassed by any service writing files as truth                                        | primary + read replica (P16)                     | stateful                      |
+| Redis         | queues, pub/sub, rate limit counters, short-TTL caches                                                                            | hold anything whose loss is unrecoverable                                                | cluster/sentinel                                 | ephemeral-by-design           |
+| S3/MinIO      | blobs: originals, derivatives, run artifacts, exports                                                                             | store metadata that is not also in Postgres                                              | provider                                         | stateful                      |
 
 **Trust boundaries.** (1) browser ↔ api/sync: hostile, everything validated with zod;
 (2) worker ↔ internet: hostile outbound, SSRF guard + egress proxy;
@@ -123,80 +124,100 @@ L9 Platform (cross-cutting: config, auth, observability, flags, security)
 ```
 
 ### L1 — UI Layer
-* **Owns:** React component tree, panels, inspector, command palette, dialogs, toasts, keyboard
+
+- **Owns:** React component tree, panels, inspector, command palette, dialogs, toasts, keyboard
   shortcut registry, theming, focus management, routing (`react-router` in `apps/web/src/routes`).
-* **Must not:** contain graph algorithms, know Yjs types, perform network calls other than through
+- **Must not:** contain graph algorithms, know Yjs types, perform network calls other than through
   L5 hooks, hardcode design values (tokens only, `04_DESIGN_SYSTEM.md` §2).
-* **Public API surface:** none — it is a leaf. Nothing imports `apps/web/src/ui/**` except
+- **Public API surface:** none — it is a leaf. Nothing imports `apps/web/src/ui/**` except
   `apps/web`.
-* **Package:** `apps/web/src/ui/**`, primitives from `packages/ui`.
+- **Package:** `apps/web/src/ui/**`, primitives from `packages/ui`.
 
 ### L2 — Canvas Engine
-* **Owns:** camera, spatial index, viewport culling, LOD selection, canvas painting, DOM overlay
+
+- **Owns:** camera, spatial index, viewport culling, LOD selection, canvas painting, DOM overlay
   mount/unmount scheduling, interaction FSM (idle/hover/marquee/drag/connect/pan/zoom), hit
   testing, rAF loop, edge routing worker protocol.
-* **Must not:** import React, import Yjs, know that a node is a "GitHub repo", fetch anything.
-* **Public API surface** (`packages/canvas-engine/src/index.ts`):
+- **Must not:** import React, import Yjs, know that a node is a "GitHub repo", fetch anything.
+- **Public API surface** (`packages/canvas-engine/src/index.ts`):
 
 ```ts
 export interface SceneNode {
-  id: string; x: number; y: number; w: number; h: number;
-  z: number; kind: string;            // opaque to the engine
-  lod: 'glyph' | 'compact' | 'full';  // computed, but overridable
-  selected: boolean; hidden: boolean;
-  paint: PaintHints;                  // colors/labels resolved by L3, engine only draws
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  z: number;
+  kind: string; // opaque to the engine
+  lod: 'glyph' | 'compact' | 'full'; // computed, but overridable
+  selected: boolean;
+  hidden: boolean;
+  paint: PaintHints; // colors/labels resolved by L3, engine only draws
 }
 export interface SceneEdge {
-  id: string; from: string; to: string; route: RouteMode;
-  waypoints?: Vec2[]; paint: EdgePaintHints;
+  id: string;
+  from: string;
+  to: string;
+  route: RouteMode;
+  waypoints?: Vec2[];
+  paint: EdgePaintHints;
 }
 export interface CanvasEngine {
   mount(host: HTMLElement, opts: EngineOptions): void;
   destroy(): void;
-  setScene(patch: ScenePatch): void;            // diff-based, never full replace on hot paths
+  setScene(patch: ScenePatch): void; // diff-based, never full replace on hot paths
   camera: CameraController;
   hitTest(p: Vec2, opts?: HitOptions): HitResult | null;
-  query(rect: Rect): string[];                  // spatial index query
+  query(rect: Rect): string[]; // spatial index query
   on<E extends EngineEventName>(e: E, cb: (payload: EngineEvent[E]) => void): Unsubscribe;
   overlay: { visibleNodeIds(): string[]; onChange(cb: (ids: string[]) => void): Unsubscribe };
   stats(): { fps: number; drawnNodes: number; drawnEdges: number; lastFrameMs: number };
 }
 ```
-  The engine **emits intents** (`node:dragEnd`, `edge:connectRequest`, `selection:change`) and never
-  mutates data. See `05_CANVAS_ENGINE.md` §3–§6.
+
+The engine **emits intents** (`node:dragEnd`, `edge:connectRequest`, `selection:change`) and never
+mutates data. See `05_CANVAS_ENGINE.md` §3–§6.
 
 ### L3 — Domain Layer
-* **Owns:** entity and edge type registry, zod schemas, provenance rules, proposal construction and
+
+- **Owns:** entity and edge type registry, zod schemas, provenance rules, proposal construction and
   application, selection semantics, graph algorithms (traversal, clustering, dedupe, layout inputs),
   export/import serialization (`JSON v1`), derived selectors from the document.
-* **Must not:** import React, import the canvas engine, perform I/O, read `window`.
-* **Public API surface** (`packages/domain/src/index.ts`):
+- **Must not:** import React, import the canvas engine, perform I/O, read `window`.
+- **Public API surface** (`packages/domain/src/index.ts`):
 
 ```ts
 export const NodeSchema: z.ZodType<NodeEntity>;
 export const EdgeSchema: z.ZodType<EdgeEntity>;
 export const BoardExportV1: z.ZodType<BoardExport>;
-export function buildScene(doc: DocSnapshot, view: ViewState): { nodes: SceneNode[]; edges: SceneEdge[] };
+export function buildScene(
+  doc: DocSnapshot,
+  view: ViewState,
+): { nodes: SceneNode[]; edges: SceneEdge[] };
 export function applyProposal(doc: DocHandle, p: Proposal, origin: Origin): ApplyResult; // only graph writer
 export function planLayout(g: GraphView, algo: LayoutAlgo, opts: LayoutOpts): LayoutPlan;
 export function detectDuplicates(g: GraphView, opts: DedupeOpts): DuplicateCluster[];
 ```
-* **Invariant N4 enforcement:** `applyProposal` is the *only* exported symbol that writes graph
+
+- **Invariant N4 enforcement:** `applyProposal` is the _only_ exported symbol that writes graph
   structure. ESLint rule `nexus/no-direct-graph-write` forbids `ydoc.getMap('nodes').set(...)`
   outside `packages/domain/src/write/**`.
 
 ### L4 — Data Layer (client)
-* **Owns:** `Y.Doc` lifecycle per board, `y-indexeddb` provider, OPFS blob cache, Hocuspocus
+
+- **Owns:** `Y.Doc` lifecycle per board, `y-indexeddb` provider, OPFS blob cache, Hocuspocus
   provider, sync/connection status machine, tRPC client + query cache, optimistic mutation
   bookkeeping, awareness state publication.
-* **Must not:** import the canvas engine (`00_MASTER.md` §5), interpret entity semantics, render.
-* **Public API surface** (`apps/web/src/data/index.ts`):
+- **Must not:** import the canvas engine (`00_MASTER.md` §5), interpret entity semantics, render.
+- **Public API surface** (`apps/web/src/data/index.ts`):
 
 ```ts
 export function openBoard(boardId: string): Promise<BoardHandle>;
 export interface BoardHandle {
-  doc: Y.Doc; undo: Y.UndoManager;
-  status: Readable<SyncStatus>;         // 'local' | 'saving' | 'saved' | 'offline' | 'error'
+  doc: Y.Doc;
+  undo: Y.UndoManager;
+  status: Readable<SyncStatus>; // 'local' | 'saving' | 'saved' | 'offline' | 'error'
   awareness: Awareness;
   blobs: { get(hash: string): Promise<Blob | null>; put(hash: string, b: Blob): Promise<void> };
   close(): Promise<void>;
@@ -205,57 +226,62 @@ export const trpc: TRPCClient<AppRouter>;
 ```
 
 ### L5 — Transport / API
-* **Owns:** tRPC router definitions and REST controllers, request validation, authz middleware,
+
+- **Owns:** tRPC router definitions and REST controllers, request validation, authz middleware,
   serialization, rate limiting, OpenAPI document generation, error mapping to the taxonomy in §8.
-* **Must not:** contain business logic beyond orchestration; talk to third-party hosts directly
+- **Must not:** contain business logic beyond orchestration; talk to third-party hosts directly
   (that is worker/runner); import Prisma models into the response type surface (map to DTOs).
-* **Public surface:** `AppRouter` type exported from `apps/api/src/router/index.ts` and consumed by
+- **Public surface:** `AppRouter` type exported from `apps/api/src/router/index.ts` and consumed by
   `apps/web` type-only; REST `/api/v1/**` described in `09_BACKEND.md` §5.
 
 ### L6 — Persistence
-* **Owns:** Prisma schema and migrations, repositories, the projection engine, snapshot writer,
+
+- **Owns:** Prisma schema and migrations, repositories, the projection engine, snapshot writer,
   blob store abstraction, search queries (FTS + pgvector), transaction boundaries.
-* **Must not:** be imported by `apps/web`; leak SQL types past repository functions.
-* **Public surface:** `packages/db` exports `prisma`, `repositories/*`, `projectBoardUpdate()`.
+- **Must not:** be imported by `apps/web`; leak SQL types past repository functions.
+- **Public surface:** `packages/db` exports `prisma`, `repositories/*`, `projectBoardUpdate()`.
 
 ### L7 — Execution
-* **Owns:** BullMQ queue definitions and consumers, the runner protocol, manifest resolution,
+
+- **Owns:** BullMQ queue definitions and consumers, the runner protocol, manifest resolution,
   sandbox policy application, artifact capture, run state machine.
-* **Must not:** map raw tool output into domain entities inside `apps/runner` (parsers live in
+- **Must not:** map raw tool output into domain entities inside `apps/runner` (parsers live in
   `packages/integrations`, executed in `apps/worker`); write to `nodes`/`edges` (it produces a
   Proposal instead — `N4`).
-* **Public surface:** `packages/integrations` manifest + parser contracts (`10_INTEGRATIONS.md` §3).
+- **Public surface:** `packages/integrations` manifest + parser contracts (`10_INTEGRATIONS.md` §3).
 
 ### L8 — Intelligence
-* **Owns:** `AIProvider` abstraction, prompt templates, embedding pipeline, proposal generation
+
+- **Owns:** `AIProvider` abstraction, prompt templates, embedding pipeline, proposal generation
   (summarize, link-suggest, dedupe, cluster, investigation summary), cost accounting and budgets.
-* **Must not:** write to the graph (always a Proposal), be the only path to a feature (every AI
+- **Must not:** write to the graph (always a Proposal), be the only path to a feature (every AI
   feature degrades to a deterministic fallback or an explicit "unavailable" state).
-* **Public surface:** `packages/domain/src/ai/types.ts` (`AIProvider`, `Proposal`), implementations
+- **Public surface:** `packages/domain/src/ai/types.ts` (`AIProvider`, `Proposal`), implementations
   in `apps/worker/src/ai/**`. See `14_AI_AGENT.md`.
 
 ### L9 — Platform (cross-cutting)
-* **Owns:** configuration loading and validation, secrets access, Better-Auth setup, RBAC policy
+
+- **Owns:** configuration loading and validation, secrets access, Better-Auth setup, RBAC policy
   evaluation, feature flags, logging/metrics/tracing bootstrap, audit log writer, SSRF guard,
   health/readiness endpoints.
-* **Must not:** depend on any of L1–L8 (it is the base of the dependency graph).
-* **Public surface:** `packages/config` (build/tooling config) plus `packages/platform`
+- **Must not:** depend on any of L1–L8 (it is the base of the dependency graph).
+- **Public surface:** `packages/config` (build/tooling config) plus `packages/platform`
   (`env`, `logger`, `metrics`, `flags`, `authz`, `ssrf`) — runtime-only, never imported by
   `packages/canvas-engine` or `packages/domain`.
 
 ### 2.1 Layer contract matrix (may-import)
 
-| from ↓ / to → | L1 UI | L2 Canvas | L3 Domain | L4 Data | L5 API | L6 Persist | L7 Exec | L8 AI | L9 Platform |
-|---|---|---|---|---|---|---|---|---|---|
-| L1 UI | — | yes | yes | yes | type-only | no | no | type-only | yes |
-| L2 Canvas | no | — | no | no | no | no | no | no | no |
-| L3 Domain | no | no | — | no | no | no | no | types | no |
-| L4 Data | no | **no** | yes | — | yes | no | no | no | yes |
-| L5 API | no | no | yes | no | — | yes | yes | yes | yes |
-| L6 Persist | no | no | yes | no | no | — | no | no | yes |
-| L7 Exec | no | no | yes | no | no | yes | — | yes | yes |
-| L8 AI | no | no | yes | no | no | yes | no | — | yes |
-| L9 Platform | no | no | no | no | no | no | no | no | — |
+| from ↓ / to → | L1 UI | L2 Canvas | L3 Domain | L4 Data | L5 API    | L6 Persist | L7 Exec | L8 AI     | L9 Platform |
+| ------------- | ----- | --------- | --------- | ------- | --------- | ---------- | ------- | --------- | ----------- |
+| L1 UI         | —     | yes       | yes       | yes     | type-only | no         | no      | type-only | yes         |
+| L2 Canvas     | no    | —         | no        | no      | no        | no         | no      | no        | no          |
+| L3 Domain     | no    | no        | —         | no      | no        | no         | no      | types     | no          |
+| L4 Data       | no    | **no**    | yes       | —       | yes       | no         | no      | no        | yes         |
+| L5 API        | no    | no        | yes       | no      | —         | yes        | yes     | yes       | yes         |
+| L6 Persist    | no    | no        | yes       | no      | no        | —          | no      | no        | yes         |
+| L7 Exec       | no    | no        | yes       | no      | no        | yes        | —       | yes       | yes         |
+| L8 AI         | no    | no        | yes       | no      | no        | yes        | no      | —         | yes         |
+| L9 Platform   | no    | no        | no        | no      | no        | no         | no      | no        | —           |
 
 `packages/canvas-engine` and `packages/domain` intentionally sit at the bottom with zero runtime
 dependencies on anything internal except `packages/config` types — this is what makes them
@@ -289,9 +315,10 @@ testable in Node without a DOM and benchmarkable in isolation (`N1`).
 ```
 
 Hard facts encoded above:
-* `apps/runner` **cannot** import `packages/db` — a compromised tool must not reach a DB client.
-* `packages/plugin-sdk` is types + a narrow host API; it never imports `apps/*`.
-* `packages/ui` may import `packages/domain` **types only** (for prop typing), never its algorithms.
+
+- `apps/runner` **cannot** import `packages/db` — a compromised tool must not reach a DB client.
+- `packages/plugin-sdk` is types + a narrow host API; it never imports `apps/*`.
+- `packages/ui` may import `packages/domain` **types only** (for prop typing), never its algorithms.
 
 ### 3.2 dependency-cruiser configuration sketch
 
@@ -301,37 +328,84 @@ Hard facts encoded above:
 module.exports = {
   forbidden: [
     { name: 'no-circular', severity: 'error', from: {}, to: { circular: true } },
-    { name: 'no-orphans', severity: 'warn',
-      from: { orphan: true, pathNot: '\\.d\\.ts$|^packages/config/' }, to: {} },
-    { name: 'engine-no-react', severity: 'error',
+    {
+      name: 'no-orphans',
+      severity: 'warn',
+      from: { orphan: true, pathNot: '\\.d\\.ts$|^packages/config/' },
+      to: {},
+    },
+    {
+      name: 'engine-no-react',
+      severity: 'error',
       from: { path: '^packages/canvas-engine/' },
-      to: { path: 'node_modules/(react|react-dom|motion|framer-motion)' } },
-    { name: 'engine-no-yjs', severity: 'error',
-      from: { path: '^packages/canvas-engine/' }, to: { path: 'node_modules/(yjs|y-)' } },
-    { name: 'engine-isolated', severity: 'error',
+      to: { path: 'node_modules/(react|react-dom|motion|framer-motion)' },
+    },
+    {
+      name: 'engine-no-yjs',
+      severity: 'error',
       from: { path: '^packages/canvas-engine/' },
-      to: { path: '^(apps|packages)/', pathNot: '^packages/(canvas-engine|config)/' } },
-    { name: 'domain-pure', severity: 'error',
+      to: { path: 'node_modules/(yjs|y-)' },
+    },
+    {
+      name: 'engine-isolated',
+      severity: 'error',
+      from: { path: '^packages/canvas-engine/' },
+      to: { path: '^(apps|packages)/', pathNot: '^packages/(canvas-engine|config)/' },
+    },
+    {
+      name: 'domain-pure',
+      severity: 'error',
       from: { path: '^packages/domain/' },
-      to: { path: '^(apps/|packages/(ui|canvas-engine|db|platform)/)' } },
-    { name: 'domain-no-io', severity: 'error',
+      to: { path: '^(apps/|packages/(ui|canvas-engine|db|platform)/)' },
+    },
+    {
+      name: 'domain-no-io',
+      severity: 'error',
       from: { path: '^packages/domain/' },
-      to: { path: 'node_modules/(axios|node-fetch|undici|fs|prisma|@prisma)' } },
-    { name: 'data-not-canvas', severity: 'error',
-      from: { path: '^apps/web/src/data/' }, to: { path: '^packages/canvas-engine/' } },
-    { name: 'ui-no-yjs', severity: 'error',
-      from: { path: '^apps/web/src/ui/' }, to: { path: 'node_modules/yjs' } },
-    { name: 'api-no-child-process', severity: 'error',   // N5
-      from: { path: '^apps/api/' }, to: { path: '^(child_process|node:child_process)$' } },
-    { name: 'runner-no-db', severity: 'error',
+      to: { path: 'node_modules/(axios|node-fetch|undici|fs|prisma|@prisma)' },
+    },
+    {
+      name: 'data-not-canvas',
+      severity: 'error',
+      from: { path: '^apps/web/src/data/' },
+      to: { path: '^packages/canvas-engine/' },
+    },
+    {
+      name: 'ui-no-yjs',
+      severity: 'error',
+      from: { path: '^apps/web/src/ui/' },
+      to: { path: 'node_modules/yjs' },
+    },
+    {
+      name: 'api-no-child-process',
+      severity: 'error', // N5
+      from: { path: '^apps/api/' },
+      to: { path: '^(child_process|node:child_process)$' },
+    },
+    {
+      name: 'runner-no-db',
+      severity: 'error',
       from: { path: '^apps/runner/' },
-      to: { path: '^packages/db/|node_modules/(@prisma|prisma)' } },
-    { name: 'plugin-sdk-pure', severity: 'error',
-      from: { path: '^packages/plugin-sdk/' }, to: { path: '^apps/' } },
-    { name: 'no-cross-app', severity: 'error',
-      from: { path: '^apps/([^/]+)/' }, to: { path: '^apps/', pathNot: '^apps/$1/' } },
-    { name: 'no-deep-package-import', severity: 'error',
-      from: {}, to: { path: '^packages/[^/]+/src/(?!index)', pathNot: '^packages/config/' } },
+      to: { path: '^packages/db/|node_modules/(@prisma|prisma)' },
+    },
+    {
+      name: 'plugin-sdk-pure',
+      severity: 'error',
+      from: { path: '^packages/plugin-sdk/' },
+      to: { path: '^apps/' },
+    },
+    {
+      name: 'no-cross-app',
+      severity: 'error',
+      from: { path: '^apps/([^/]+)/' },
+      to: { path: '^apps/', pathNot: '^apps/$1/' },
+    },
+    {
+      name: 'no-deep-package-import',
+      severity: 'error',
+      from: {},
+      to: { path: '^packages/[^/]+/src/(?!index)', pathNot: '^packages/config/' },
+    },
   ],
   options: {
     tsConfig: { fileName: 'tsconfig.base.json' },
@@ -346,14 +420,14 @@ publishes the `dot` graph as a build artifact for review.
 
 ### 3.3 Additional lint rules that encode architecture
 
-| Rule | Enforces |
-|---|---|
-| `nexus/no-direct-graph-write` | N4 — Yjs graph maps mutated only inside `packages/domain/src/write/**` |
-| `nexus/no-hardcoded-design-value` | `00_MASTER.md` §10.6 — bans hex colors, raw px in `style=`, raw ms in transitions outside tokens |
-| `nexus/no-layout-animation-in-canvas` | bans `motion` imports under `apps/web/src/canvas/**` |
-| `nexus/require-zod-at-boundary` | every tRPC procedure and REST handler declares an input schema |
-| `nexus/no-unbounded-query` | every Prisma `findMany` in `packages/db` has `take` |
-| `nexus/ssrf-guarded-fetch` | outbound `fetch` in `apps/worker` must go through `platform/ssrf.safeFetch` |
+| Rule                                  | Enforces                                                                                         |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `nexus/no-direct-graph-write`         | N4 — Yjs graph maps mutated only inside `packages/domain/src/write/**`                           |
+| `nexus/no-hardcoded-design-value`     | `00_MASTER.md` §10.6 — bans hex colors, raw px in `style=`, raw ms in transitions outside tokens |
+| `nexus/no-layout-animation-in-canvas` | bans `motion` imports under `apps/web/src/canvas/**`                                             |
+| `nexus/require-zod-at-boundary`       | every tRPC procedure and REST handler declares an input schema                                   |
+| `nexus/no-unbounded-query`            | every Prisma `findMany` in `packages/db` has `take`                                              |
+| `nexus/ssrf-guarded-fetch`            | outbound `fetch` in `apps/worker` must go through `platform/ssrf.safeFetch`                      |
 
 ---
 
@@ -381,6 +455,7 @@ React overlay renders only ids in engine.overlay.visibleNodeIds()  (typically 40
 ```
 
 Rules:
+
 1. **No Yjs type escapes L4/L3.** `GraphView` contains plain frozen objects. This makes
    `buildScene` benchmarkable and keeps React out of CRDT observation.
 2. **One rAF, one scene update.** Doc events are queued into a dirty-set (`Set<nodeId>`); the rAF
@@ -415,10 +490,10 @@ Rules:
 ```ts
 export interface Origin {
   source: 'local-user' | 'local-proposal' | 'remote' | 'projection-repair' | 'import';
-  actorId: string;            // user id or 'system:<service>'
-  txId: string;               // uuid v7, correlates audit + logs + traces
-  proposalId?: string;        // set when source === 'local-proposal'
-  runId?: string;             // set when the proposal came from an integration run
+  actorId: string; // user id or 'system:<service>'
+  txId: string; // uuid v7, correlates audit + logs + traces
+  proposalId?: string; // set when source === 'local-proposal'
+  runId?: string; // set when the proposal came from an integration run
 }
 ```
 
@@ -636,41 +711,45 @@ lives once in `packages/domain/src/io/exportV1.ts` and is shared by both.
 
 ```ts
 export type ErrorClass =
-  | 'validation'     // client sent something invalid — never retry
-  | 'auth'           // unauthenticated / expired session — re-auth then retry once
-  | 'permission'     // authenticated but not allowed — never retry
-  | 'not_found'      // gone or never existed — never retry
-  | 'conflict'       // idempotency or version conflict — resolve then retry
-  | 'rate_limited'   // retry after server-provided delay
-  | 'upstream'       // third-party failed — retry with backoff, bounded
-  | 'timeout'        // deadline exceeded — retry with backoff, bounded
-  | 'blocked'        // policy denied (SSRF, robots, acceptable use) — never retry
-  | 'capacity'       // queue/pool exhausted — retry with backoff
-  | 'internal';      // our bug — retry once, then surface
+  | 'validation' // client sent something invalid — never retry
+  | 'auth' // unauthenticated / expired session — re-auth then retry once
+  | 'permission' // authenticated but not allowed — never retry
+  | 'not_found' // gone or never existed — never retry
+  | 'conflict' // idempotency or version conflict — resolve then retry
+  | 'rate_limited' // retry after server-provided delay
+  | 'upstream' // third-party failed — retry with backoff, bounded
+  | 'timeout' // deadline exceeded — retry with backoff, bounded
+  | 'blocked' // policy denied (SSRF, robots, acceptable use) — never retry
+  | 'capacity' // queue/pool exhausted — retry with backoff
+  | 'internal'; // our bug — retry once, then surface
 
 export interface NexusError {
-  class: ErrorClass; code: string;      // stable machine code e.g. 'UNFURL_PRIVATE_RANGE'
-  message: string;                       // developer-facing
-  userMessage: string;                   // what happened / why / what to do (00_MASTER §10.5)
-  retryable: boolean; retryAfterMs?: number;
-  details?: unknown; txId: string; cause?: string;
+  class: ErrorClass;
+  code: string; // stable machine code e.g. 'UNFURL_PRIVATE_RANGE'
+  message: string; // developer-facing
+  userMessage: string; // what happened / why / what to do (00_MASTER §10.5)
+  retryable: boolean;
+  retryAfterMs?: number;
+  details?: unknown;
+  txId: string;
+  cause?: string;
 }
 ```
 
 ### 6.2 Retry policy per surface
 
-| Surface | Policy | Max attempts | Ceiling |
-|---|---|---|---|
-| tRPC query (idempotent) | exponential 250 ms × 2^n ± 20% jitter | 3 | 4 s |
-| tRPC mutation | no automatic retry unless `idempotencyKey` present; then 2 | 2 | 2 s |
-| WS sync reconnect | 1 s, 2 s, 4 s, 8 s, 15 s, then every 15 s ± jitter | ∞ | 15 s |
-| Unfurl fetch | 1 s, 4 s, 15 s | 3 | 15 s |
-| Screenshot | 2 s, 10 s | 2 | 10 s |
-| Integration run | **no automatic retry** (side-effectful, costs quota); explicit "Run again" | 0 | — |
-| AI call | 1 s, 5 s (only on `upstream`/`timeout`/`rate_limited`) | 3 | 20 s |
-| Export | 5 s, 30 s | 2 | 30 s |
-| Projection write | 100 ms, 500 ms, 2 s, then DLQ + repair job | 4 | 2 s |
-| Blob upload | 1 s, 3 s, 9 s (per part) | 3 | 9 s |
+| Surface                 | Policy                                                                     | Max attempts | Ceiling |
+| ----------------------- | -------------------------------------------------------------------------- | ------------ | ------- |
+| tRPC query (idempotent) | exponential 250 ms × 2^n ± 20% jitter                                      | 3            | 4 s     |
+| tRPC mutation           | no automatic retry unless `idempotencyKey` present; then 2                 | 2            | 2 s     |
+| WS sync reconnect       | 1 s, 2 s, 4 s, 8 s, 15 s, then every 15 s ± jitter                         | ∞            | 15 s    |
+| Unfurl fetch            | 1 s, 4 s, 15 s                                                             | 3            | 15 s    |
+| Screenshot              | 2 s, 10 s                                                                  | 2            | 10 s    |
+| Integration run         | **no automatic retry** (side-effectful, costs quota); explicit "Run again" | 0            | —       |
+| AI call                 | 1 s, 5 s (only on `upstream`/`timeout`/`rate_limited`)                     | 3            | 20 s    |
+| Export                  | 5 s, 30 s                                                                  | 2            | 30 s    |
+| Projection write        | 100 ms, 500 ms, 2 s, then DLQ + repair job                                 | 4            | 2 s     |
+| Blob upload             | 1 s, 3 s, 9 s (per part)                                                   | 3            | 9 s     |
 
 Circuit breaker on every outbound third-party host: 10 failures within 60 s opens the breaker for
 120 s; while open, jobs fail fast with `class:'upstream', code:'BREAKER_OPEN'` and the UI shows
@@ -695,11 +774,11 @@ The Y.Doc is authoritative; `nodes` and `edges` tables are a **derived, idempote
 projection** used for search, exports, integrations, permissions-scoped queries and analytics.
 Guarantees:
 
-* **G1 Idempotent** — projecting the same doc version twice yields identical rows.
-* **G2 Monotonic** — a row is never written from a doc version older than the row's `doc_version`.
-* **G3 Rebuildable** — dropping all projection rows for a board and replaying from the latest
+- **G1 Idempotent** — projecting the same doc version twice yields identical rows.
+- **G2 Monotonic** — a row is never written from a doc version older than the row's `doc_version`.
+- **G3 Rebuildable** — dropping all projection rows for a board and replaying from the latest
   binary snapshot reproduces them exactly; therefore projection failure is never data loss.
-* **G4 Bounded lag** — p95 projection lag ≤ 2 s after the debounce window; alert at 30 s.
+- **G4 Bounded lag** — p95 projection lag ≤ 2 s after the debounce window; alert at 30 s.
 
 ### 7.2 Trigger points
 
@@ -710,12 +789,12 @@ new Database({
   fetch: async ({ documentName }) => loadLatestSnapshot(documentName),
   store: async ({ documentName, state, document }) => {
     await withTx(async (tx) => {
-      const version = nextDocVersion(documentName);          // monotonic bigint per board
+      const version = nextDocVersion(documentName); // monotonic bigint per board
       await storeSnapshot(tx, documentName, state, version); // binary, compressed
       await projectBoard(tx, documentName, document, version);
     });
   },
-})
+});
 ```
 
 `store` is debounced by Hocuspocus (`debounce: 2000 ms`, `maxDebounce: 10000 ms`). Snapshot binary
@@ -756,22 +835,22 @@ the changed-key set is unavailable (e.g. after a cold room load).
 
 ### 7.4 Replay and backfill
 
-* `pnpm nexus projection:replay --board <id> [--from-snapshot <version>]` — loads the snapshot,
+- `pnpm nexus projection:replay --board <id> [--from-snapshot <version>]` — loads the snapshot,
   reconstructs the doc in a headless Yjs instance, runs `projectBoard` with `force=true`
   (bypasses G2 by taking the snapshot's version), and reports a row-level diff before applying
   when `--dry-run`.
-* `projection:backfill --org <id> --concurrency 4` — iterates boards where
+- `projection:backfill --org <id> --concurrency 4` — iterates boards where
   `projected_version < doc_version` or `projected_at < now() - interval '1 day'`.
-* A nightly maintenance job (`maintenance:projection-audit`) samples 2% of boards, recomputes the
+- A nightly maintenance job (`maintenance:projection-audit`) samples 2% of boards, recomputes the
   projection hash in memory and compares; mismatch raises `nexus_projection_mismatch_total` and
   auto-enqueues a replay for that board.
-* Projection code version is stamped in `boards.projector_version`; bumping it (schema change in
+- Projection code version is stamped in `boards.projector_version`; bumping it (schema change in
   the derived rows) triggers a rolling backfill instead of a big-bang migration.
 
 ### 7.5 Server-authored writes back into the doc
 
 Some flows must write into the Y.Doc from the server (unfurl completion when the originating client
-is gone, run proposal auto-accept is *not* permitted — N4). This is done by `apps/sync` opening the
+is gone, run proposal auto-accept is _not_ permitted — N4). This is done by `apps/sync` opening the
 room server-side and applying a transaction with `origin.source='projection-repair'` and
 `actorId='system:sync'`. Rules: (a) only fields under `node.data.serverManaged.*` may be written
 this way; (b) such writes are excluded from client undo; (c) every such write appends an audit row.
@@ -814,15 +893,15 @@ Also org-scoped: files, runs, integrations credentials, exports, audit, AI budge
 
 ### 8.3 Noisy-neighbour controls
 
-| Resource | Per-org limit (default plan) | Enforcement |
-|---|---|---|
-| Concurrent integration runs | 3 | Redis semaphore `run:sem:{orgId}` |
-| Queued jobs | 500 | enqueue-time check → `capacity` error |
-| Unfurl req/min | 120 | token bucket in Redis |
-| AI tokens/month | plan-defined | pre-flight budget check + hard stop |
-| Board size | 50 000 elements soft warn, 100 000 hard | client warn + server reject on import |
-| Storage | plan-defined | quota table, checked at presign |
-| WS messages/s per socket | 200 | Hocuspocus custom guard, disconnect on abuse |
+| Resource                    | Per-org limit (default plan)            | Enforcement                                  |
+| --------------------------- | --------------------------------------- | -------------------------------------------- |
+| Concurrent integration runs | 3                                       | Redis semaphore `run:sem:{orgId}`            |
+| Queued jobs                 | 500                                     | enqueue-time check → `capacity` error        |
+| Unfurl req/min              | 120                                     | token bucket in Redis                        |
+| AI tokens/month             | plan-defined                            | pre-flight budget check + hard stop          |
+| Board size                  | 50 000 elements soft warn, 100 000 hard | client warn + server reject on import        |
+| Storage                     | plan-defined                            | quota table, checked at presign              |
+| WS messages/s per socket    | 200                                     | Hocuspocus custom guard, disconnect on abuse |
 
 ---
 
@@ -843,28 +922,29 @@ export const FlagSchema = z.object({
 });
 export type Flags = Readonly<Record<FlagKey, boolean | number | string>>;
 ```
+
 Percentage rollout is deterministic: `hash(salt + ':' + orgId) % 100 < percent` — stable per org, so
 a board never flickers between two canvas code paths mid-session.
 
 ### 9.2 Registered flags
 
-| Key | Type | Default | Owner | Removal condition |
-|---|---|---|---|---|
-| `canvas.hybridOverlay` | bool | true | L2 | permanent kill-switch (falls back to full-canvas LOD rendering) |
-| `canvas.lodThreshold` | number | 0.55 | L2 | permanent tuning knob |
-| `canvas.edgeRouterWorker` | bool | true | L2 | remove after P16 if stable 2 releases |
-| `sync.enabled` | bool | true | L4 | permanent kill-switch (local-only mode) |
-| `sync.presence` | bool | true | L4 | permanent |
-| `capture.screenshots` | bool | true | L7 | permanent (browser pool cost control) |
-| `integrations.sherlock` | bool | false | L7 | on at P11 GA |
-| `integrations.spiderfoot` | bool | false | L7 | on at P12 GA; **stays a kill-switch** (§10 ADR-011) |
-| `integrations.github` | bool | false | L7 | on at P10 GA |
-| `ai.enabled` | bool | false | L8 | on at P13 GA |
-| `ai.provider` | string | `openai-compatible` | L8 | permanent |
-| `views.timeline` / `views.map` / `views.table` | bool | false | L1 | on at P14 GA |
-| `export.pdf` | bool | false | L1 | on at P15 GA |
-| `plugins.enabled` | bool | false | L9 | on after plugin sandbox audit |
-| `search.semantic` | bool | false | L6 | on at P11 |
+| Key                                            | Type   | Default             | Owner | Removal condition                                               |
+| ---------------------------------------------- | ------ | ------------------- | ----- | --------------------------------------------------------------- |
+| `canvas.hybridOverlay`                         | bool   | true                | L2    | permanent kill-switch (falls back to full-canvas LOD rendering) |
+| `canvas.lodThreshold`                          | number | 0.55                | L2    | permanent tuning knob                                           |
+| `canvas.edgeRouterWorker`                      | bool   | true                | L2    | remove after P16 if stable 2 releases                           |
+| `sync.enabled`                                 | bool   | true                | L4    | permanent kill-switch (local-only mode)                         |
+| `sync.presence`                                | bool   | true                | L4    | permanent                                                       |
+| `capture.screenshots`                          | bool   | true                | L7    | permanent (browser pool cost control)                           |
+| `integrations.sherlock`                        | bool   | false               | L7    | on at P11 GA                                                    |
+| `integrations.spiderfoot`                      | bool   | false               | L7    | on at P12 GA; **stays a kill-switch** (§10 ADR-011)             |
+| `integrations.github`                          | bool   | false               | L7    | on at P10 GA                                                    |
+| `ai.enabled`                                   | bool   | false               | L8    | on at P13 GA                                                    |
+| `ai.provider`                                  | string | `openai-compatible` | L8    | permanent                                                       |
+| `views.timeline` / `views.map` / `views.table` | bool   | false               | L1    | on at P14 GA                                                    |
+| `export.pdf`                                   | bool   | false               | L1    | on at P15 GA                                                    |
+| `plugins.enabled`                              | bool   | false               | L9    | on after plugin sandbox audit                                   |
+| `search.semantic`                              | bool   | false               | L6    | on at P11                                                       |
 
 Every flag must have an owner layer and a removal condition; a flag older than two releases past
 its removal condition fails the architecture gate.
@@ -878,42 +958,42 @@ its removal condition fails the architecture gate.
 Validated at process start with zod in `packages/platform/src/env.ts`; a missing or invalid var is a
 **fatal startup error**, never a silent default (except where a default is listed).
 
-| Variable | Services | Type | Default | Notes |
-|---|---|---|---|---|
-| `NODE_ENV` | all | `development\|test\|production` | — | |
-| `NEXUS_ENV` | all | `local\|ci\|staging\|prod` | — | drives flag defaults and log format |
-| `DATABASE_URL` | api, sync, worker | url | — | Prisma; pool size below |
-| `DATABASE_POOL_MAX` | api, sync, worker | int | api 20 / sync 10 / worker 10 | |
-| `REDIS_URL` | api, sync, worker, runner | url | — | |
-| `S3_ENDPOINT`,`S3_BUCKET`,`S3_REGION`,`S3_ACCESS_KEY`,`S3_SECRET_KEY` | api, worker | — | — | MinIO in dev |
-| `AUTH_SECRET` | api, sync | secret ≥ 32 B | — | Better-Auth |
-| `AUTH_URL` | api | url | — | public origin |
-| `PUBLIC_WEB_ORIGIN` | api, sync | url | — | CORS + WS origin allowlist |
-| `SYNC_PORT` / `API_PORT` | sync / api | int | 1234 / 3000 | |
-| `SYNC_INTERNAL_TOKEN` | api, sync | secret | — | sync→api authorizeBoard call |
-| `RUNNER_URL`, `RUNNER_MTLS_CERT/KEY/CA` | worker, runner | — | — | internal only |
-| `RUNNER_RUNTIME_CLASS` | runner | string | `runc` local / `gvisor` prod | |
-| `EGRESS_PROXY_URL` | worker, runner | url | — | allowlisting proxy |
-| `AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL` | worker | — | — | OpenAI-compatible |
-| `BROWSER_POOL_SIZE` | worker | int | 2 (dev) / 6 (prod) | headless screenshots |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | all | url | — | optional in local |
-| `LOG_LEVEL` | all | pino level | `info` | |
-| `RATE_LIMIT_DISABLED` | api | bool | false | only allowed when `NEXUS_ENV=local` (hard-checked) |
+| Variable                                                              | Services                  | Type                            | Default                      | Notes                                              |
+| --------------------------------------------------------------------- | ------------------------- | ------------------------------- | ---------------------------- | -------------------------------------------------- |
+| `NODE_ENV`                                                            | all                       | `development\|test\|production` | —                            |                                                    |
+| `NEXUS_ENV`                                                           | all                       | `local\|ci\|staging\|prod`      | —                            | drives flag defaults and log format                |
+| `DATABASE_URL`                                                        | api, sync, worker         | url                             | —                            | Prisma; pool size below                            |
+| `DATABASE_POOL_MAX`                                                   | api, sync, worker         | int                             | api 20 / sync 10 / worker 10 |                                                    |
+| `REDIS_URL`                                                           | api, sync, worker, runner | url                             | —                            |                                                    |
+| `S3_ENDPOINT`,`S3_BUCKET`,`S3_REGION`,`S3_ACCESS_KEY`,`S3_SECRET_KEY` | api, worker               | —                               | —                            | MinIO in dev                                       |
+| `AUTH_SECRET`                                                         | api, sync                 | secret ≥ 32 B                   | —                            | Better-Auth                                        |
+| `AUTH_URL`                                                            | api                       | url                             | —                            | public origin                                      |
+| `PUBLIC_WEB_ORIGIN`                                                   | api, sync                 | url                             | —                            | CORS + WS origin allowlist                         |
+| `SYNC_PORT` / `API_PORT`                                              | sync / api                | int                             | 1234 / 3000                  |                                                    |
+| `SYNC_INTERNAL_TOKEN`                                                 | api, sync                 | secret                          | —                            | sync→api authorizeBoard call                       |
+| `RUNNER_URL`, `RUNNER_MTLS_CERT/KEY/CA`                               | worker, runner            | —                               | —                            | internal only                                      |
+| `RUNNER_RUNTIME_CLASS`                                                | runner                    | string                          | `runc` local / `gvisor` prod |                                                    |
+| `EGRESS_PROXY_URL`                                                    | worker, runner            | url                             | —                            | allowlisting proxy                                 |
+| `AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL`                               | worker                    | —                               | —                            | OpenAI-compatible                                  |
+| `BROWSER_POOL_SIZE`                                                   | worker                    | int                             | 2 (dev) / 6 (prod)           | headless screenshots                               |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`                                         | all                       | url                             | —                            | optional in local                                  |
+| `LOG_LEVEL`                                                           | all                       | pino level                      | `info`                       |                                                    |
+| `RATE_LIMIT_DISABLED`                                                 | api                       | bool                            | false                        | only allowed when `NEXUS_ENV=local` (hard-checked) |
 
 ### 10.2 Environment matrix
 
-| Aspect | local | ci | staging | prod |
-|---|---|---|---|---|
-| Compose/K8s | docker-compose | compose (ephemeral) | k8s | k8s |
-| Postgres | container, no replica | container, tmpfs | managed, 1 replica | managed, HA + PITR |
-| Redis | container | container | managed | managed, sentinel |
-| Object store | MinIO | MinIO | S3 | S3 + lifecycle rules |
-| Runner runtime | `runc` + full flags | runner disabled (mocked) | gVisor | gVisor |
-| Egress proxy | permissive log-only | blocked (no network in tests) | allowlist | allowlist + audit |
-| Sync replicas | 1 | 1 | 2 | ≥ 3 |
-| Flags | all on | deterministic fixture set | staged rollout | staged rollout |
-| Telemetry | console | none | OTLP | OTLP + alerting |
-| Seed data | demo board | fixtures | anonymized | none |
+| Aspect         | local                 | ci                            | staging            | prod                 |
+| -------------- | --------------------- | ----------------------------- | ------------------ | -------------------- |
+| Compose/K8s    | docker-compose        | compose (ephemeral)           | k8s                | k8s                  |
+| Postgres       | container, no replica | container, tmpfs              | managed, 1 replica | managed, HA + PITR   |
+| Redis          | container             | container                     | managed            | managed, sentinel    |
+| Object store   | MinIO                 | MinIO                         | S3                 | S3 + lifecycle rules |
+| Runner runtime | `runc` + full flags   | runner disabled (mocked)      | gVisor             | gVisor               |
+| Egress proxy   | permissive log-only   | blocked (no network in tests) | allowlist          | allowlist + audit    |
+| Sync replicas  | 1                     | 1                             | 2                  | ≥ 3                  |
+| Flags          | all on                | deterministic fixture set     | staged rollout     | staged rollout       |
+| Telemetry      | console               | none                          | OTLP               | OTLP + alerting      |
+| Seed data      | demo board            | fixtures                      | anonymized         | none                 |
 
 Config precedence: process env → `.env.<NEXUS_ENV>` → `.env` → schema default. Secrets never come
 from files in prod (k8s Secret → env). See `19_DEPLOYMENT.md` §3.
@@ -926,17 +1006,17 @@ Conventions: metrics are Prometheus-style `nexus_<area>_<name>_<unit>`; traces a
 with `txId` propagated from the client as `traceparent`; logs are pino JSON with a mandatory
 `{txId, orgId, userId?, boardId?, service}` base.
 
-| Layer | Key metrics | Key spans | Key log events |
-|---|---|---|---|
-| L1 UI | `nexus_ui_route_render_ms`, `nexus_ui_interaction_latency_ms{action}`, `nexus_ui_error_boundary_total` | `ui.boardOpen`, `ui.commandPalette` | unhandled rejection, error boundary trip |
-| L2 Canvas | `nexus_canvas_frame_ms{p50,p95}`, `nexus_canvas_nodes_drawn`, `nexus_canvas_overlay_mounts_total`, `nexus_canvas_index_query_ms` | `canvas.frame` (sampled 1%), `canvas.layout` | dropped-frame burst (> 5 frames > 33 ms) |
-| L3 Domain | `nexus_domain_scene_build_ms`, `nexus_domain_proposal_apply_ms`, `nexus_domain_validation_fail_total{schema}` | `domain.applyProposal` | proposal rejected with reason |
-| L4 Data | `nexus_sync_status_seconds{status}`, `nexus_doc_update_bytes`, `nexus_idb_write_ms`, `nexus_ws_reconnects_total` | `data.openBoard`, `data.transact` | offline enter/exit, queue high-water |
-| L5 API | `nexus_http_request_ms{route,code}`, `nexus_trpc_call_ms{procedure}`, `nexus_ratelimit_block_total{rule}` | one span per request | 4xx with `class`, all 5xx |
-| L6 Persist | `nexus_db_query_ms{repo}`, `nexus_projection_lag_seconds`, `nexus_projection_rows_total{op}`, `nexus_projection_mismatch_total`, `nexus_snapshot_bytes` | `db.tx`, `projection.board` | projection retry, DLQ entry |
-| L7 Exec | `nexus_job_wait_ms{queue}`, `nexus_job_run_ms{queue}`, `nexus_job_fail_total{queue,code}`, `nexus_run_duration_ms{integration}`, `nexus_runner_container_kills_total{reason}` | `job.<name>`, `runner.exec` | run start/end with exit code, sandbox violation |
-| L8 AI | `nexus_ai_tokens_total{dir,model}`, `nexus_ai_cost_usd_total{org}`, `nexus_ai_latency_ms`, `nexus_ai_proposal_accept_ratio` | `ai.complete` | budget exhausted, schema-invalid completion |
-| L9 Platform | `nexus_auth_failures_total{reason}`, `nexus_ssrf_block_total{reason}`, `nexus_flag_eval_total{key}`, `nexus_build_info` | — | authz denial, config load |
+| Layer       | Key metrics                                                                                                                                                                   | Key spans                                    | Key log events                                  |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ----------------------------------------------- |
+| L1 UI       | `nexus_ui_route_render_ms`, `nexus_ui_interaction_latency_ms{action}`, `nexus_ui_error_boundary_total`                                                                        | `ui.boardOpen`, `ui.commandPalette`          | unhandled rejection, error boundary trip        |
+| L2 Canvas   | `nexus_canvas_frame_ms{p50,p95}`, `nexus_canvas_nodes_drawn`, `nexus_canvas_overlay_mounts_total`, `nexus_canvas_index_query_ms`                                              | `canvas.frame` (sampled 1%), `canvas.layout` | dropped-frame burst (> 5 frames > 33 ms)        |
+| L3 Domain   | `nexus_domain_scene_build_ms`, `nexus_domain_proposal_apply_ms`, `nexus_domain_validation_fail_total{schema}`                                                                 | `domain.applyProposal`                       | proposal rejected with reason                   |
+| L4 Data     | `nexus_sync_status_seconds{status}`, `nexus_doc_update_bytes`, `nexus_idb_write_ms`, `nexus_ws_reconnects_total`                                                              | `data.openBoard`, `data.transact`            | offline enter/exit, queue high-water            |
+| L5 API      | `nexus_http_request_ms{route,code}`, `nexus_trpc_call_ms{procedure}`, `nexus_ratelimit_block_total{rule}`                                                                     | one span per request                         | 4xx with `class`, all 5xx                       |
+| L6 Persist  | `nexus_db_query_ms{repo}`, `nexus_projection_lag_seconds`, `nexus_projection_rows_total{op}`, `nexus_projection_mismatch_total`, `nexus_snapshot_bytes`                       | `db.tx`, `projection.board`                  | projection retry, DLQ entry                     |
+| L7 Exec     | `nexus_job_wait_ms{queue}`, `nexus_job_run_ms{queue}`, `nexus_job_fail_total{queue,code}`, `nexus_run_duration_ms{integration}`, `nexus_runner_container_kills_total{reason}` | `job.<name>`, `runner.exec`                  | run start/end with exit code, sandbox violation |
+| L8 AI       | `nexus_ai_tokens_total{dir,model}`, `nexus_ai_cost_usd_total{org}`, `nexus_ai_latency_ms`, `nexus_ai_proposal_accept_ratio`                                                   | `ai.complete`                                | budget exhausted, schema-invalid completion     |
+| L9 Platform | `nexus_auth_failures_total{reason}`, `nexus_ssrf_block_total{reason}`, `nexus_flag_eval_total{key}`, `nexus_build_info`                                                       | —                                            | authz denial, config load                       |
 
 Four SLOs are alerted on: board open p95 < 2.5 s; sync ack p95 < 2 s; projection lag p95 < 2 s;
 API 5xx rate < 0.5% over 15 min. RED dashboards per service, USE dashboards for Postgres/Redis.
@@ -951,6 +1031,7 @@ Format: **Context → Decision → Consequences → Rejected alternatives.** The
 justify the frozen decisions of `00_MASTER.md` §2; they cannot be reopened without a master edit.
 
 ### ADR-001 — Custom hybrid canvas engine
+
 **Context.** Requirement N1 (5 000 nodes at 60 fps) with rich HTML cards (favicons, rich text,
 previews). React Flow renders every node as React DOM plus SVG edges and degrades around several
 hundred rich DOM nodes. tldraw sustains large scenes with a spatial index, viewport culling
@@ -958,7 +1039,7 @@ hundred rich DOM nodes. tldraw sustains large scenes with a spatial index, viewp
 but owns its own document and shape model.
 **Decision.** Build `packages/canvas-engine`: Canvas2D for edges/grid/marquee/far-LOD nodes, a DOM
 overlay only for visible near-zoom nodes, an R-tree-style spatial index, LOD switch at zoom 0.55,
-and quantized zoom during camera movement — applying tldraw's *techniques* to our own data model.
+and quantized zoom during camera movement — applying tldraw's _techniques_ to our own data model.
 **Consequences.** We own hit testing, text rendering fidelity at far LOD, and accessibility of
 canvas-drawn content (mitigated: DOM overlay carries the accessible tree for visible nodes).
 Highest-risk subsystem; it is built first (P2) and guarded by a CI benchmark.
@@ -966,6 +1047,7 @@ Highest-risk subsystem; it is built first (P2) and guarded by a CI benchmark.
 pure WebGL/PixiJS (loses HTML/rich-text fidelity and a11y), plain SVG (worst of both).
 
 ### ADR-002 — Yjs as the document, Zustand for ephemeral UI state
+
 **Context.** Offline-first (req. 22), persistence (req. 21), realtime collaboration and undo/redo
 under concurrency are one problem.
 **Decision.** One `Y.Doc` per board is the document; Zustand holds only ephemeral UI state (panel
@@ -977,6 +1059,7 @@ custom OT (years of work), server-authoritative REST with polling (breaks offlin
 Zustand-as-document with manual persistence (no concurrency story).
 
 ### ADR-003 — `Y.UndoManager` scoped by origin
+
 **Context.** N3 requires undo for every mutation including imports and AI, while remote edits must
 never be undone locally.
 **Decision.** One `Y.UndoManager` per board over the graph roots, `trackedOrigins =
@@ -988,6 +1071,7 @@ Server-authored `projection-repair` writes are deliberately not undoable.
 records in Postgres (latency, and cannot express CRDT merges).
 
 ### ADR-004 — Postgres projection of the CRDT
+
 **Context.** Search, exports, integrations, admin and analytics need queryable graph data; the CRDT
 binary is opaque.
 **Decision.** `apps/sync` projects each stored doc version into `nodes`/`edges` rows in the same
@@ -1000,6 +1084,7 @@ with the doc schema, enforced by shared serializers in `packages/domain`.
 graph separately (duplicate truth).
 
 ### ADR-005 — Separate `sync` service from `api`
+
 **Context.** Long-lived stateful rooms vs stateless request handling; N5 also demands the API
 process be free of execution capability.
 **Decision.** `apps/sync` (Hocuspocus 4 with Redis fanout) and `apps/api` (Fastify 5 + tRPC v11)
@@ -1010,6 +1095,7 @@ board sessions; independent scaling.
 serverless runtime (WebSocket lifetime and memory model do not fit).
 
 ### ADR-006 — tRPC for the app, REST/OpenAPI for third parties
+
 **Context.** One first-party client that benefits from end-to-end types; plugins and webhooks need
 a stable, language-neutral contract.
 **Decision.** tRPC v11 at `/trpc` for `apps/web`; a versioned REST surface at `/api/v1` with a
@@ -1021,6 +1107,7 @@ overhead, N+1 risk, no benefit for a single known client), tRPC exposed publicly
 contract, poor non-TS ergonomics).
 
 ### ADR-007 — BullMQ + Redis for jobs
+
 **Context.** Unfurl, screenshots, thumbnails, repo analysis, AI, exports and maintenance are
 asynchronous and bursty; Redis already exists for sync fanout and rate limits.
 **Decision.** BullMQ queues with per-queue concurrency, priorities, exponential backoff,
@@ -1031,6 +1118,7 @@ editing); jobs must be idempotent since at-least-once delivery is possible.
 Kafka (operational weight far beyond need), in-process timers (lost on deploy).
 
 ### ADR-008 — Sandboxed runner as a separate service
+
 **Context.** N5: third-party OSINT tools are untrusted code that must never run in the API process.
 **Decision.** `apps/runner` executes each run in an ephemeral container with `--user` non-root,
 `--read-only` rootfs, tmpfs workdir, `--cap-drop ALL`, `--security-opt no-new-privileges`,
@@ -1043,6 +1131,7 @@ isolation), Firecracker microVMs (stronger but heavier to operate; revisit if gV
 insufficient), running tools client-side (impossible for Python CLIs).
 
 ### ADR-009 — Integrations as manifests, not code paths
+
 **Context.** Requirement: add tools without touching the core; a plugin SDK must expose the same
 mechanism.
 **Decision.** A tool = manifest (image digest, input schema, arg template, timeouts, egress
@@ -1054,6 +1143,7 @@ individually testable against recorded fixtures; manifest validation becomes a s
 from the API with ad-hoc parsing (violates N5 and N4).
 
 ### ADR-010 — Sherlock adapter design
+
 **Context.** Sherlock (`sherlock-project/sherlock`, MIT, latest release v0.16.0 dated 2025-09-16) is
 an actively maintained Python CLI covering ~400+ sites, with flags including `--json FILE`,
 `--site`, `--timeout`, `--print-found`, `--nsfw`, `--local`, `--proxy`, and an official
@@ -1070,6 +1160,7 @@ digest and version so provenance is reproducible.
 parsing stdout text (unstable), invoking Sherlock as a Python library in-process (violates N5).
 
 ### ADR-011 — SpiderFoot adapter with an explicit maintenance risk posture
+
 **Context.** SpiderFoot (`smicallef/spiderfoot`, MIT, stable v4.0) offers a web UI, an HTTP API on
 the `sfwebui` server, the `sfcli.py` interactive client and the `sf.py` CLI. deps.dev (June 2026)
 reports zero commits and no issue activity in the previous 90 days — **low maintenance activity**.
@@ -1087,6 +1178,7 @@ unmaintained codebase), running SpiderFoot's web UI as a user-facing surface (au
 exposure we do not control), dropping it entirely (its module breadth is a real product value today).
 
 ### ADR-012 — Better-Auth with Postgres-backed sessions
+
 **Context.** Self-hosting is a product requirement for OSINT users; no vendor lock-in is acceptable.
 **Decision.** Better-Auth with email + OAuth providers, sessions stored in Postgres, org/project
 RBAC implemented in our own tables and evaluated in `packages/platform/authz`.
@@ -1097,6 +1189,7 @@ revoke).
 (revocation and org-switch semantics become painful), rolling our own auth (security risk).
 
 ### ADR-013 — Design tokens as CSS custom properties with a generated Tailwind v4 preset
+
 **Context.** `00_MASTER.md` §10.6 bans hardcoded design values; a light theme must arrive later
 without touching components.
 **Decision.** One token source of truth in `packages/ui/tokens/*.json`, compiled into CSS custom
@@ -1107,13 +1200,14 @@ renames are a build-time break rather than a runtime surprise.
 arbitrary values (defeats the token contract), plain CSS modules only (loses utility velocity).
 
 ### ADR-014 — Proposal object as the only write path for tools and AI
+
 **Context.** N4 and product principle "nothing silently changes data".
 **Decision.** Every non-human-originated mutation is materialized as a `Proposal` (items with a
 diff, rationale, confidence and provenance), reviewed in UI, and applied only through
 `domain.applyProposal` in a single transaction.
 **Consequences.** Uniform review UX for tools and AI; one undoable step per import; a lint rule and
 an e2e matrix can prove the invariant; slight friction for users who want auto-import — mitigated by
-per-integration "auto-accept high-confidence items" *preferences* that still create the proposal
+per-integration "auto-accept high-confidence items" _preferences_ that still create the proposal
 record and still produce one undo step and an audit entry.
 **Rejected.** Direct writes with an audit trail (unreviewable, unexplainable, hard to undo),
 staging boards (extra concept for users), server-side auto-merge (violates N4).
@@ -1122,17 +1216,17 @@ staging boards (extra concept for users), server-side auto-merge (violates N4).
 
 ## 13. Open risks
 
-| # | Risk | Impact | Mitigation / trigger |
-|---|---|---|---|
-| R1 | The hybrid canvas fails to hold 60 fps with rich DOM overlays on a 2020-class laptop at high node density in-viewport | N1 misses; product credibility | Benchmark from P2 day one; fallback ladder: reduce overlay budget → raise LOD threshold → canvas-only text rendering behind `canvas.hybridOverlay=false` |
-| R2 | Projection drifts from the doc after a schema change or a partial failure | Wrong search/export results | G1–G3 guarantees, `projector_version` gating, nightly 2% audit job, one-command replay |
-| R3 | Yjs doc growth on long-lived boards (thousands of edits) degrades load time | Slow board open | Checkpoint snapshots, client-side compaction, 50 000-element soft warning, split-board flow in `03_UX.md` |
-| R4 | SpiderFoot becomes unmaintained or ships a CVE | Feature loss | Digest pinning, kill-switch flag, weekly manifest-health job, first-party adapter candidates listed in `12_SPIDERFOOT.md` §7 |
-| R5 | Sherlock output schema changes between releases | Broken parser | zod-validated adapter with `ADAPTER_OUTPUT_MISMATCH` failure and raw-artifact import fallback; digest pinning |
-| R6 | gVisor unavailable or performance-prohibitive on the target cluster | Weaker isolation | Runtime class is configuration (`RUNNER_RUNTIME_CLASS`); documented minimum posture is the full container flag set; escalation path is Firecracker (ADR-008) |
-| R7 | Headless browser pool cost/instability for screenshots | Unfurl quality drops | `capture.screenshots` flag, per-org rate limit, metadata-only fallback is a complete experience |
-| R8 | Offline queue growth beyond 25 MB on very long disconnects | Client memory pressure | Compaction policy §5.5, explicit user warning, export path |
-| R9 | Two write paths (client doc + server `projection-repair`) create subtle races | Field flapping | Server writes restricted to `data.serverManaged.*`, last-writer-wins per field with `observed_at`, audit row for every server write |
-| R10 | tRPC and REST surfaces diverge in behavior | Plugin bugs | Both are thin adapters over one service layer; contract tests assert parity for shared operations (`18_TESTING.md` §7) |
-| R11 | RLS misconfiguration silently disables tenant isolation backstop | Latent security gap | Startup assertion that RLS is enabled on all tenant tables; a CI test connects as an unprivileged role and asserts cross-org reads fail |
-| R12 | Flag sprawl leaves dead code paths | Maintenance drag | Every flag has an owner and a removal condition (§9.2); architecture gate fails on expired flags |
+| #   | Risk                                                                                                                  | Impact                         | Mitigation / trigger                                                                                                                                         |
+| --- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| R1  | The hybrid canvas fails to hold 60 fps with rich DOM overlays on a 2020-class laptop at high node density in-viewport | N1 misses; product credibility | Benchmark from P2 day one; fallback ladder: reduce overlay budget → raise LOD threshold → canvas-only text rendering behind `canvas.hybridOverlay=false`     |
+| R2  | Projection drifts from the doc after a schema change or a partial failure                                             | Wrong search/export results    | G1–G3 guarantees, `projector_version` gating, nightly 2% audit job, one-command replay                                                                       |
+| R3  | Yjs doc growth on long-lived boards (thousands of edits) degrades load time                                           | Slow board open                | Checkpoint snapshots, client-side compaction, 50 000-element soft warning, split-board flow in `03_UX.md`                                                    |
+| R4  | SpiderFoot becomes unmaintained or ships a CVE                                                                        | Feature loss                   | Digest pinning, kill-switch flag, weekly manifest-health job, first-party adapter candidates listed in `12_SPIDERFOOT.md` §7                                 |
+| R5  | Sherlock output schema changes between releases                                                                       | Broken parser                  | zod-validated adapter with `ADAPTER_OUTPUT_MISMATCH` failure and raw-artifact import fallback; digest pinning                                                |
+| R6  | gVisor unavailable or performance-prohibitive on the target cluster                                                   | Weaker isolation               | Runtime class is configuration (`RUNNER_RUNTIME_CLASS`); documented minimum posture is the full container flag set; escalation path is Firecracker (ADR-008) |
+| R7  | Headless browser pool cost/instability for screenshots                                                                | Unfurl quality drops           | `capture.screenshots` flag, per-org rate limit, metadata-only fallback is a complete experience                                                              |
+| R8  | Offline queue growth beyond 25 MB on very long disconnects                                                            | Client memory pressure         | Compaction policy §5.5, explicit user warning, export path                                                                                                   |
+| R9  | Two write paths (client doc + server `projection-repair`) create subtle races                                         | Field flapping                 | Server writes restricted to `data.serverManaged.*`, last-writer-wins per field with `observed_at`, audit row for every server write                          |
+| R10 | tRPC and REST surfaces diverge in behavior                                                                            | Plugin bugs                    | Both are thin adapters over one service layer; contract tests assert parity for shared operations (`18_TESTING.md` §7)                                       |
+| R11 | RLS misconfiguration silently disables tenant isolation backstop                                                      | Latent security gap            | Startup assertion that RLS is enabled on all tenant tables; a CI test connects as an unprivileged role and asserts cross-org reads fail                      |
+| R12 | Flag sprawl leaves dead code paths                                                                                    | Maintenance drag               | Every flag has an owner and a removal condition (§9.2); architecture gate fails on expired flags                                                             |

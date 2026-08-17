@@ -101,8 +101,7 @@ Every PR runs the eleven jobs above. Since P2 the `bench` job runs `compare.mjs 
 absolute N1 budgets gate immediately, and the 5 % regression gate starts as soon as a baseline
 recorded on a CI runner exists (`bench/baseline.json` is still empty on purpose — a developer-machine
 number would make every CI run look like a regression). `visual` starts diffing now that the canvas
-engine paints a stable surface. Caveat: none of this has executed yet, because the workflow file
-cannot be pushed to `.github/workflows/` (see below).
+engine paints a stable surface.
 
 ## Legal & ethical scope
 
@@ -112,26 +111,8 @@ audit log; all outbound traffic leaves through an allowlist-only egress proxy. U
 people or systems you have no permission to investigate is outside the product's intended use and
 may be illegal in your jurisdiction. See [`NEXUS-SPEC/15_SECURITY.md`](NEXUS-SPEC/15_SECURITY.md) §9.
 
-
 ## CI workflow file
 
-The CI pipeline lives at `.github/ci-workflow.yml`. It is byte-identical to what belongs at
-`.github/workflows/ci.yml`, but the GitHub App used for automated PRs has no `workflows` permission,
-so it cannot push that path. To activate CI, a repo admin runs once:
-
-```bash
-git mv .github/ci-workflow.yml .github/workflows/ci.yml && git commit -m "ci: activate pipeline" && git push
-```
-
-(or grants the App the `workflows` permission, after which the file moves back automatically in the next PR).
-
-### OPEN TASK FOR THE AI AGENT (check on every run)
-
-1. Check whether `.github/workflows/ci.yml` exists on `main`.
-2. If it does **not**, retry moving `.github/ci-workflow.yml` there. If the push is rejected again
-   (`refusing to allow a GitHub App to create or update workflow ... without workflows permission`),
-   say so plainly in the phase report: **no gate has run on GitHub**, only local gates.
-3. If it **does** exist, delete the duplicate `.github/ci-workflow.yml`, delete this section, and
-   note in the PR that CI is now the source of truth for the e2e, visual, bench and container jobs.
-
-Status: as of the P2 PR the workflow file is still `.github/ci-workflow.yml`; CI has never run.
+CI lives at `.github/workflows/ci.yml` and is active: every push to `main` and every PR runs the
+full job matrix (lint, typecheck, unit + coverage gate, build, e2e, visual, bench, audit, docker,
+migrate-check) aggregated by the single required check `ci-ok`.

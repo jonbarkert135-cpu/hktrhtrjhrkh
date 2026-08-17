@@ -1,11 +1,12 @@
 import { vi } from 'vitest';
-import type { Context } from '../src/trpc/context.js';
+import type { Context } from '../src/trpc/context.ts';
 
 /** The slice of prisma the routers touch, all mocked. */
 export const prismaMock = {
   project: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
   board: { findMany: vi.fn(), create: vi.fn() },
-  membership: { findFirst: vi.fn() },
+  membership: { findFirst: vi.fn(), create: vi.fn() },
+  organization: { create: vi.fn() },
 };
 
 export const recordAuditMock = vi.fn();

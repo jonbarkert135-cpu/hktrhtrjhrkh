@@ -30,12 +30,12 @@ compiling with GitHub nodes degrading to `link` nodes (`06_NODE_SYSTEM.md` §3, 
 
 Execution split:
 
-| Work | Where | Why |
-|---|---|---|
-| URL detection + canonicalization | client (`packages/domain/url/github.ts`), pure function | must be instant on paste (`03_UX.md` paste pipeline) |
-| Metadata fetch, README fetch, analysis | `apps/worker` (BullMQ queue `github`) | needs secrets, rate-limit budget, retries |
-| Nothing | `apps/runner` | GitHub is HTTP-only; no untrusted code executes, so the container sandbox is not required (contrast `13_SHERLOCK.md` §3) |
-| LLM enrichment of analysis | `apps/worker` → `AIProvider` (`14_AI_AGENT.md` §4) | bounded, optional, never authoritative |
+| Work                                   | Where                                                   | Why                                                                                                                      |
+| -------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| URL detection + canonicalization       | client (`packages/domain/url/github.ts`), pure function | must be instant on paste (`03_UX.md` paste pipeline)                                                                     |
+| Metadata fetch, README fetch, analysis | `apps/worker` (BullMQ queue `github`)                   | needs secrets, rate-limit budget, retries                                                                                |
+| Nothing                                | `apps/runner`                                           | GitHub is HTTP-only; no untrusted code executes, so the container sandbox is not required (contrast `13_SHERLOCK.md` §3) |
+| LLM enrichment of analysis             | `apps/worker` → `AIProvider` (`14_AI_AGENT.md` §4)      | bounded, optional, never authoritative                                                                                   |
 
 ---
 
@@ -69,13 +69,14 @@ the login identity (a user may log in with email and still connect GitHub).
 
 Requested scopes, minimal-first:
 
-| Tier | Scopes | Grants |
-|---|---|---|
-| `read-public` (default) | `read:user` | authenticated rate budget, user identity for attribution |
-| `read-private` (opt-in) | `read:user`, `repo` | private repository metadata and file reads |
-| `read-org` (opt-in) | + `read:org` | org membership, org repo listing |
+| Tier                    | Scopes              | Grants                                                   |
+| ----------------------- | ------------------- | -------------------------------------------------------- |
+| `read-public` (default) | `read:user`         | authenticated rate budget, user identity for attribution |
+| `read-private` (opt-in) | `read:user`, `repo` | private repository metadata and file reads               |
+| `read-org` (opt-in)     | + `read:org`        | org membership, org repo listing                         |
 
 Rules:
+
 - We never request write scopes. The integration is read-only; the manifest declares
   `permissions: ['net:api.github.com', 'net:raw.githubusercontent.com']` and no write capability
   (`10_INTEGRATIONS.md` §4 permission model).
@@ -102,10 +103,11 @@ Rules:
 // packages/integrations/github/auth/select.ts
 export function selectCredential(ctx: GithubRequestContext): GithubCredential {
   // 1. App installation covering the owner (private + org data, best budget)
-  const inst = ctx.appInstallations.find(i => i.owners.includes(ctx.owner));
+  const inst = ctx.appInstallations.find((i) => i.owners.includes(ctx.owner));
   if (inst) return { kind: 'app', installationId: inst.id };
   // 2. The requesting user's OAuth token
-  if (ctx.userToken && ctx.userToken.status === 'active') return { kind: 'user', userId: ctx.userId };
+  if (ctx.userToken && ctx.userToken.status === 'active')
+    return { kind: 'user', userId: ctx.userId };
   // 3. Instance-wide service token (self-host operators may set GITHUB_SERVICE_TOKEN)
   if (ctx.serviceToken) return { kind: 'service' };
   // 4. Anonymous
@@ -156,15 +158,15 @@ Result is stored as `GithubCapabilities`:
 
 ```ts
 export interface GithubCapabilities {
-  probedAt: string;                  // ISO
-  apiBaseUrl: string;                // https://api.github.com or GHE base
+  probedAt: string; // ISO
+  apiBaseUrl: string; // https://api.github.com or GHE base
   authenticated: boolean;
   login: string | null;
   scopes: string[];
-  rateLimitHeaders: boolean;         // x-ratelimit-* present
-  resources: string[];               // e.g. ['core','search','graphql'] as reported
-  graphql: boolean;                  // POST /graphql returned 200 for `{viewer{login}}`
-  ghesVersion: string | null;        // from x-github-enterprise-version, if present
+  rateLimitHeaders: boolean; // x-ratelimit-* present
+  resources: string[]; // e.g. ['core','search','graphql'] as reported
+  graphql: boolean; // POST /graphql returned 200 for `{viewer{login}}`
+  ghesVersion: string | null; // from x-github-enterprise-version, if present
 }
 ```
 
@@ -181,23 +183,30 @@ via REST with more requests (§5.9 request budget accounts for both).
 ```ts
 // packages/domain/url/github.ts
 export type GithubRef =
-  | { kind: 'repo';        owner: string; repo: string; ref?: string }
-  | { kind: 'owner';       owner: string; ownerType: 'user' | 'org' | 'unknown' }
-  | { kind: 'path';        owner: string; repo: string; ref: string; path: string; dir: boolean }
-  | { kind: 'blobRange';   owner: string; repo: string; ref: string; path: string;
-                           startLine: number; endLine: number | null }
-  | { kind: 'issue';       owner: string; repo: string; number: number }
-  | { kind: 'pull';        owner: string; repo: string; number: number }
-  | { kind: 'discussion';  owner: string; repo: string; number: number }
-  | { kind: 'release';     owner: string; repo: string; tag: string | 'latest' }
-  | { kind: 'commit';      owner: string; repo: string; sha: string }
-  | { kind: 'compare';     owner: string; repo: string; base: string; head: string }
-  | { kind: 'gist';        owner: string | null; gistId: string }
-  | { kind: 'raw';         owner: string; repo: string; ref: string; path: string };
+  | { kind: 'repo'; owner: string; repo: string; ref?: string }
+  | { kind: 'owner'; owner: string; ownerType: 'user' | 'org' | 'unknown' }
+  | { kind: 'path'; owner: string; repo: string; ref: string; path: string; dir: boolean }
+  | {
+      kind: 'blobRange';
+      owner: string;
+      repo: string;
+      ref: string;
+      path: string;
+      startLine: number;
+      endLine: number | null;
+    }
+  | { kind: 'issue'; owner: string; repo: string; number: number }
+  | { kind: 'pull'; owner: string; repo: string; number: number }
+  | { kind: 'discussion'; owner: string; repo: string; number: number }
+  | { kind: 'release'; owner: string; repo: string; tag: string | 'latest' }
+  | { kind: 'commit'; owner: string; repo: string; sha: string }
+  | { kind: 'compare'; owner: string; repo: string; base: string; head: string }
+  | { kind: 'gist'; owner: string | null; gistId: string }
+  | { kind: 'raw'; owner: string; repo: string; ref: string; path: string };
 
-export function parseGithubUrl(input: string): GithubRef | null;   // pure, no network
-export function canonicalGithubUrl(ref: GithubRef): string;        // stable https URL
-export function githubRefKey(ref: GithubRef): string;              // dedupe key, lowercased owner/repo
+export function parseGithubUrl(input: string): GithubRef | null; // pure, no network
+export function canonicalGithubUrl(ref: GithubRef): string; // stable https URL
+export function githubRefKey(ref: GithubRef): string; // dedupe key, lowercased owner/repo
 ```
 
 ### 3.2 Recognized hosts
@@ -209,25 +218,25 @@ generic link unfurler (`06_NODE_SYSTEM.md` link node).
 
 ### 3.3 Pattern table
 
-| URL shape | `GithubRef.kind` | Node kind produced | Notes |
-|---|---|---|---|
-| `/{owner}/{repo}` | `repo` | `repository` | strips `.git`, trailing `/`, `?tab=` |
-| `/{owner}/{repo}/tree/{ref}` | `path` (dir, path `''`) | `repository` pinned to ref | ref stored in `pinnedRef` |
-| `/{owner}` | `owner` | `person` (user) or `organization` | type resolved by API; until then `ownerType:'unknown'` and node kind `person` with `pendingType` |
-| `/orgs/{owner}` | `owner` (org) | `organization` | |
-| `/{owner}/{repo}/tree/{ref}/{path}` | `path` dir=true | `repo_path` | folder node |
-| `/{owner}/{repo}/blob/{ref}/{path}` | `path` dir=false | `code_file` | |
-| `/{owner}/{repo}/blob/{ref}/{path}#L12` | `blobRange` (12,null) | `code_snippet` | |
-| `…#L12-L48` | `blobRange` (12,48) | `code_snippet` | max span clamped to 400 lines |
-| `/{owner}/{repo}/issues/{n}` | `issue` | `issue` | |
-| `/{owner}/{repo}/pull/{n}` | `pull` | `pull_request` | `/pull/{n}/files` and `/pull/{n}#discussion_r…` collapse to the PR |
-| `/{owner}/{repo}/discussions/{n}` | `discussion` | `discussion` | |
-| `/{owner}/{repo}/releases/tag/{tag}` | `release` | `release` | |
-| `/{owner}/{repo}/releases/latest` | `release` (`latest`) | `release` | resolved at fetch time; stored tag replaces `latest` |
-| `/{owner}/{repo}/commit/{sha}` | `commit` | `commit` | sha normalized to full 40 hex when the API answers |
-| `/{owner}/{repo}/compare/{base}...{head}` | `compare` | `note` with diff summary | not a first-class entity; keeps the graph small |
-| `gist.github.com/{owner}/{id}` or `/{id}` | `gist` | `gist` | |
-| `raw.githubusercontent.com/{owner}/{repo}/{ref}/{path}` | `raw` | `code_file` | canonicalized to the `blob` URL |
+| URL shape                                               | `GithubRef.kind`        | Node kind produced                | Notes                                                                                            |
+| ------------------------------------------------------- | ----------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `/{owner}/{repo}`                                       | `repo`                  | `repository`                      | strips `.git`, trailing `/`, `?tab=`                                                             |
+| `/{owner}/{repo}/tree/{ref}`                            | `path` (dir, path `''`) | `repository` pinned to ref        | ref stored in `pinnedRef`                                                                        |
+| `/{owner}`                                              | `owner`                 | `person` (user) or `organization` | type resolved by API; until then `ownerType:'unknown'` and node kind `person` with `pendingType` |
+| `/orgs/{owner}`                                         | `owner` (org)           | `organization`                    |                                                                                                  |
+| `/{owner}/{repo}/tree/{ref}/{path}`                     | `path` dir=true         | `repo_path`                       | folder node                                                                                      |
+| `/{owner}/{repo}/blob/{ref}/{path}`                     | `path` dir=false        | `code_file`                       |                                                                                                  |
+| `/{owner}/{repo}/blob/{ref}/{path}#L12`                 | `blobRange` (12,null)   | `code_snippet`                    |                                                                                                  |
+| `…#L12-L48`                                             | `blobRange` (12,48)     | `code_snippet`                    | max span clamped to 400 lines                                                                    |
+| `/{owner}/{repo}/issues/{n}`                            | `issue`                 | `issue`                           |                                                                                                  |
+| `/{owner}/{repo}/pull/{n}`                              | `pull`                  | `pull_request`                    | `/pull/{n}/files` and `/pull/{n}#discussion_r…` collapse to the PR                               |
+| `/{owner}/{repo}/discussions/{n}`                       | `discussion`            | `discussion`                      |                                                                                                  |
+| `/{owner}/{repo}/releases/tag/{tag}`                    | `release`               | `release`                         |                                                                                                  |
+| `/{owner}/{repo}/releases/latest`                       | `release` (`latest`)    | `release`                         | resolved at fetch time; stored tag replaces `latest`                                             |
+| `/{owner}/{repo}/commit/{sha}`                          | `commit`                | `commit`                          | sha normalized to full 40 hex when the API answers                                               |
+| `/{owner}/{repo}/compare/{base}...{head}`               | `compare`               | `note` with diff summary          | not a first-class entity; keeps the graph small                                                  |
+| `gist.github.com/{owner}/{id}` or `/{id}`               | `gist`                  | `gist`                            |                                                                                                  |
+| `raw.githubusercontent.com/{owner}/{repo}/{ref}/{path}` | `raw`                   | `code_file`                       | canonicalized to the `blob` URL                                                                  |
 
 ### 3.4 Canonicalization algorithm
 
@@ -259,7 +268,7 @@ trailing slash, no query, and the fragment only for `blobRange`.
 2. A `github.hydrate` job is enqueued with `{ nodeId, ref, boardId, userId }`.
 3. Hydration result is applied as a **direct field patch** on the node the user just created (this
    is not a Proposal: the user explicitly created this node and asked for this exact URL). Nodes
-   *derived* from it (owner, contributors, deps) are always a Proposal.
+   _derived_ from it (owner, contributors, deps) are always a Proposal.
 4. If hydration fails, the node stays valid as a link with an error badge (§9).
 
 Multi-URL paste: up to 50 GitHub URLs in one paste are batched into one job with a single
@@ -280,14 +289,14 @@ export const RepositoryDataSchema = z.object({
   provider: z.literal('github'),
   owner: z.string(),
   name: z.string(),
-  fullName: z.string(),                    // "owner/name", display case
-  key: z.string(),                         // githubRefKey
+  fullName: z.string(), // "owner/name", display case
+  key: z.string(), // githubRefKey
   htmlUrl: z.string().url(),
   apiUrl: z.string().url(),
   description: z.string().nullable(),
   homepage: z.string().url().nullable(),
   defaultBranch: z.string(),
-  pinnedRef: z.string().nullable(),        // when the user pasted /tree/{ref}
+  pinnedRef: z.string().nullable(), // when the user pasted /tree/{ref}
   visibility: z.enum(['public', 'private', 'internal']),
   isFork: z.boolean(),
   parentFullName: z.string().nullable(),
@@ -296,35 +305,60 @@ export const RepositoryDataSchema = z.object({
   stars: z.number().int(),
   forks: z.number().int(),
   watchers: z.number().int(),
-  openIssues: z.number().int(),            // GitHub counts PRs here; see §4.4
+  openIssues: z.number().int(), // GitHub counts PRs here; see §4.4
   openIssuesOnly: z.number().int().nullable(),
-  size: z.number().int(),                  // KB, as reported
-  license: z.object({ spdxId: z.string().nullable(), name: z.string(), url: z.string().url().nullable() }).nullable(),
+  size: z.number().int(), // KB, as reported
+  license: z
+    .object({ spdxId: z.string().nullable(), name: z.string(), url: z.string().url().nullable() })
+    .nullable(),
   languages: z.array(z.object({ name: z.string(), bytes: z.number().int(), pct: z.number() })),
   primaryLanguage: z.string().nullable(),
   topics: z.array(z.string()),
-  createdAt: z.string(),                   // ISO
+  createdAt: z.string(), // ISO
   updatedAt: z.string(),
   pushedAt: z.string(),
-  latestRelease: z.object({
-    tag: z.string(), name: z.string().nullable(), publishedAt: z.string(),
-    prerelease: z.boolean(), url: z.string().url(),
-  }).nullable(),
-  readme: z.object({
-    path: z.string(), sha: z.string(), markdown: z.string(),      // raw, capped 256 KB
-    renderedHtmlKey: z.string().nullable(),                        // S3 key of sanitized HTML
-    truncated: z.boolean(),
-  }).nullable(),
-  manifests: z.array(z.object({
-    ecosystem: z.enum(['npm','pip','go','cargo','maven','gradle','composer','gem','nuget','other']),
-    path: z.string(), sha: z.string(),
-  })),
-  analysisId: z.string().uuid().nullable(),   // -> RepositoryAnalysis
+  latestRelease: z
+    .object({
+      tag: z.string(),
+      name: z.string().nullable(),
+      publishedAt: z.string(),
+      prerelease: z.boolean(),
+      url: z.string().url(),
+    })
+    .nullable(),
+  readme: z
+    .object({
+      path: z.string(),
+      sha: z.string(),
+      markdown: z.string(), // raw, capped 256 KB
+      renderedHtmlKey: z.string().nullable(), // S3 key of sanitized HTML
+      truncated: z.boolean(),
+    })
+    .nullable(),
+  manifests: z.array(
+    z.object({
+      ecosystem: z.enum([
+        'npm',
+        'pip',
+        'go',
+        'cargo',
+        'maven',
+        'gradle',
+        'composer',
+        'gem',
+        'nuget',
+        'other',
+      ]),
+      path: z.string(),
+      sha: z.string(),
+    }),
+  ),
+  analysisId: z.string().uuid().nullable(), // -> RepositoryAnalysis
   fetch: z.object({
     etag: z.string().nullable(),
     lastFetchedAt: z.string(),
-    lastStatus: z.enum(['ok','not_modified','rate_limited','not_found','forbidden','error']),
-    authMode: z.enum(['anonymous','user','app','service']),
+    lastStatus: z.enum(['ok', 'not_modified', 'rate_limited', 'not_found', 'forbidden', 'error']),
+    authMode: z.enum(['anonymous', 'user', 'app', 'service']),
     staleSince: z.string().nullable(),
   }),
 });
@@ -338,11 +372,11 @@ observation of an authoritative source, not an inference. Derived nodes get lowe
 
 ### 4.2 Card rendering (canvas)
 
-| Zoom band | Rendering |
-|---|---|
-| `zoom ≥ 0.55` (DOM) | owner avatar 24 px, `owner/name` (14 px, `--text-primary`), description 2 lines clamped (12 px, `--text-secondary`), badge row: language dot + name, ★ stars (compact `1.2k`), license SPDX, "archived" pill when archived |
-| `0.25 ≤ zoom < 0.55` (canvas LOD) | rounded rect, language color bar 4 px on the left, `owner/name` single line, star count |
-| `zoom < 0.25` | 12×12 glyph with language color only (`05_CANVAS_ENGINE.md` §6 LOD table) |
+| Zoom band                         | Rendering                                                                                                                                                                                                                  |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `zoom ≥ 0.55` (DOM)               | owner avatar 24 px, `owner/name` (14 px, `--text-primary`), description 2 lines clamped (12 px, `--text-secondary`), badge row: language dot + name, ★ stars (compact `1.2k`), license SPDX, "archived" pill when archived |
+| `0.25 ≤ zoom < 0.55` (canvas LOD) | rounded rect, language color bar 4 px on the left, `owner/name` single line, star count                                                                                                                                    |
+| `zoom < 0.25`                     | 12×12 glyph with language color only (`05_CANVAS_ENGINE.md` §6 LOD table)                                                                                                                                                  |
 
 Card size: 280 × 132 px default, resizable; min 200 × 96, max 520 × 400.
 
@@ -352,16 +386,16 @@ Opened from the node (`Enter` or double-click) into the right inspector
 (`03_UX.md` §7). Tabs are lazy: a tab fetches only when first opened, and each tab caches
 independently with its own TTL.
 
-| Tab | Data | Source | TTL | Empty state |
-|---|---|---|---|---|
-| **README** | sanitized HTML, TOC, image proxying | `GET /repos/{o}/{r}/readme` + markdown render | 24 h | "This repository has no README." + link |
-| **Releases** | last 20, tag/name/date/prerelease/assets count, changelog markdown | `GET /repos/{o}/{r}/releases?per_page=20` | 6 h | "No releases published." |
-| **Issues** | last 30 open, filter `open/closed/all`, labels, author, comments count | `GET /repos/{o}/{r}/issues?state=…` (filter out `pull_request` key) | 15 min | "No open issues." |
-| **Contributors** | top 30 by commits, avatar, login, contributions | `GET /repos/{o}/{r}/contributors?per_page=30` | 24 h | "Contributor data unavailable for this repository." |
-| **Files** | tree of the default (or pinned) ref, lazy per directory, file size, "open on GitHub", "add as node" | `GET /repos/{o}/{r}/git/trees/{ref}` (non-recursive per level) | 6 h | "Empty repository." |
-| **Dependencies** | parsed manifests grouped by ecosystem, direct deps with version ranges, "resolve on registry" off by default | raw manifest fetch + parser (§5.5) | 24 h | "No dependency manifest detected." |
-| **Related** | forks-of/parent, repos sharing ≥2 topics already on the board, repos linked in README, other boards' repos by same owner | local graph + README link extraction | live | "No related repositories on this board yet." |
-| **Analysis** | `RepositoryAnalysis` render + "Propose integration" (§6) | analysis job | on demand | "Run analysis to see structure, entry points and integration options." |
+| Tab              | Data                                                                                                                     | Source                                                              | TTL       | Empty state                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- | --------- | ---------------------------------------------------------------------- |
+| **README**       | sanitized HTML, TOC, image proxying                                                                                      | `GET /repos/{o}/{r}/readme` + markdown render                       | 24 h      | "This repository has no README." + link                                |
+| **Releases**     | last 20, tag/name/date/prerelease/assets count, changelog markdown                                                       | `GET /repos/{o}/{r}/releases?per_page=20`                           | 6 h       | "No releases published."                                               |
+| **Issues**       | last 30 open, filter `open/closed/all`, labels, author, comments count                                                   | `GET /repos/{o}/{r}/issues?state=…` (filter out `pull_request` key) | 15 min    | "No open issues."                                                      |
+| **Contributors** | top 30 by commits, avatar, login, contributions                                                                          | `GET /repos/{o}/{r}/contributors?per_page=30`                       | 24 h      | "Contributor data unavailable for this repository."                    |
+| **Files**        | tree of the default (or pinned) ref, lazy per directory, file size, "open on GitHub", "add as node"                      | `GET /repos/{o}/{r}/git/trees/{ref}` (non-recursive per level)      | 6 h       | "Empty repository."                                                    |
+| **Dependencies** | parsed manifests grouped by ecosystem, direct deps with version ranges, "resolve on registry" off by default             | raw manifest fetch + parser (§5.5)                                  | 24 h      | "No dependency manifest detected."                                     |
+| **Related**      | forks-of/parent, repos sharing ≥2 topics already on the board, repos linked in README, other boards' repos by same owner | local graph + README link extraction                                | live      | "No related repositories on this board yet."                           |
+| **Analysis**     | `RepositoryAnalysis` render + "Propose integration" (§6)                                                                 | analysis job                                                        | on demand | "Run analysis to see structure, entry points and integration options." |
 
 Tab-level errors never blank the card: the tab shows the error strip (§9) and the previously cached
 content stays visible with a "stale" marker.
@@ -370,13 +404,14 @@ content stays visible with a "stale" marker.
 
 ```ts
 const REPO_TTL = {
-  hot:   15 * 60_000,      // node visible in viewport AND board active in the last 5 min
-  warm:  6 * 3_600_000,    // node on an open board
-  cold:  7 * 24 * 3_600_000, // node on a closed board — refreshed only on open
+  hot: 15 * 60_000, // node visible in viewport AND board active in the last 5 min
+  warm: 6 * 3_600_000, // node on an open board
+  cold: 7 * 24 * 3_600_000, // node on a closed board — refreshed only on open
 } as const;
 ```
 
 Rules:
+
 1. Refresh is **conditional**: always send `If-None-Match: <etag>`. A `304` costs no rate-limit
    quota on GitHub's documented model and is recorded as `lastStatus: 'not_modified'` with a bumped
    `lastFetchedAt`.
@@ -395,14 +430,14 @@ Rules:
 
 ### 4.5 Cached artifacts and storage
 
-| Artifact | Store | Key | Limit |
-|---|---|---|---|
-| README markdown | node payload (`jsonb`) | inline | 256 KB, then truncated with `truncated: true` |
-| README rendered HTML | S3 | `gh/readme/{owner}/{repo}/{sha}.html` | 1 MB |
-| README images | S3 proxy | `gh/asset/{sha256(url)}` | 5 MB each, 25 per README |
-| Avatars | S3 proxy | `gh/avatar/{login}/{sha256(url)}` | 512 KB |
-| Manifest files | S3 | `gh/manifest/{owner}/{repo}/{sha}/{path}` | 1 MB each |
-| Raw API payloads | S3, 30-day lifecycle | `gh/raw/{run_id}/{n}.json` | 8 MB each |
+| Artifact             | Store                  | Key                                       | Limit                                         |
+| -------------------- | ---------------------- | ----------------------------------------- | --------------------------------------------- |
+| README markdown      | node payload (`jsonb`) | inline                                    | 256 KB, then truncated with `truncated: true` |
+| README rendered HTML | S3                     | `gh/readme/{owner}/{repo}/{sha}.html`     | 1 MB                                          |
+| README images        | S3 proxy               | `gh/asset/{sha256(url)}`                  | 5 MB each, 25 per README                      |
+| Avatars              | S3 proxy               | `gh/avatar/{login}/{sha256(url)}`         | 512 KB                                        |
+| Manifest files       | S3                     | `gh/manifest/{owner}/{repo}/{sha}/{path}` | 1 MB each                                     |
+| Raw API payloads     | S3, 30-day lifecycle   | `gh/raw/{run_id}/{n}.json`                | 8 MB each                                     |
 
 Markdown rendering happens **server-side** in the worker (unified/remark + rehype-sanitize with a
 strict allowlist: no `script`, no `iframe`, no inline `style`, no `on*`, external images rewritten
@@ -464,7 +499,12 @@ function detectLanguages(api: Record<string, number>, tree: TreeEntry[]): Langua
   const total = Object.values(api).reduce((a, b) => a + b, 0);
   if (total > 0) {
     return Object.entries(api)
-      .map(([name, bytes]) => ({ name, bytes, pct: +(100 * bytes / total).toFixed(2), source: 'api' as const }))
+      .map(([name, bytes]) => ({
+        name,
+        bytes,
+        pct: +((100 * bytes) / total).toFixed(2),
+        source: 'api' as const,
+      }))
       .sort((a, b) => b.bytes - a.bytes);
   }
   const hist = new Map<string, number>();
@@ -473,8 +513,14 @@ function detectLanguages(api: Record<string, number>, tree: TreeEntry[]): Langua
     if (lang) hist.set(lang, (hist.get(lang) ?? 0) + 1);
   }
   const files = [...hist.values()].reduce((a, b) => a + b, 0) || 1;
-  return [...hist].map(([name, n]) => ({ name, bytes: 0, pct: +(100 * n / files).toFixed(2), source: 'heuristic' as const }))
-                  .sort((a, b) => b.pct - a.pct);
+  return [...hist]
+    .map(([name, n]) => ({
+      name,
+      bytes: 0,
+      pct: +((100 * n) / files).toFixed(2),
+      source: 'heuristic' as const,
+    }))
+    .sort((a, b) => b.pct - a.pct);
 }
 ```
 
@@ -505,7 +551,7 @@ One parser module per ecosystem, all implementing:
 export interface DependencyParser {
   ecosystem: Ecosystem;
   matches(path: string): boolean;
-  parse(path: string, content: string): ParsedManifest;   // must not throw; returns errors[]
+  parse(path: string, content: string): ParsedManifest; // must not throw; returns errors[]
 }
 
 export interface ParsedManifest {
@@ -519,25 +565,25 @@ export interface ParsedManifest {
 
 export interface Dependency {
   name: string;
-  range: string | null;          // as written, never resolved
+  range: string | null; // as written, never resolved
   scope: 'runtime' | 'dev' | 'peer' | 'optional' | 'build' | 'test';
   ecosystem: Ecosystem;
-  registryUrl: string | null;    // computed, not fetched
-  repoUrlGuess: string | null;   // only when the manifest itself states a repository URL
+  registryUrl: string | null; // computed, not fetched
+  repoUrlGuess: string | null; // only when the manifest itself states a repository URL
 }
 ```
 
 Per-ecosystem rules (all parse-only, no network, no lockfile resolution in v1):
 
-| Ecosystem | Files | Extracted | Notes |
-|---|---|---|---|
-| npm | `package.json` | `name`, `version`, `dependencies`, `devDependencies`, `peerDependencies`, `optionalDependencies`, `bin`, `main`, `exports`, `scripts`, `engines` | `bin` and `scripts` feed steps F/G |
-| pip | `pyproject.toml`, `setup.py`, `requirements*.txt` | PEP 621 `project.dependencies`, `optional-dependencies`, poetry `tool.poetry.dependencies`, `project.scripts` | `setup.py` parsed with a regex-restricted reader (`install_requires=[...]` literal lists only); non-literal → `errors: ['setup.py dynamic']` |
-| go | `go.mod` | `module`, `go` version, `require` blocks, `// indirect` marks → scope `build` | |
-| cargo | `Cargo.toml` | `package.name/version`, `dependencies`, `dev-dependencies`, `build-dependencies`, `[[bin]]`, `[lib]` | workspace members listed as sub-manifests when present in the tree |
-| maven | `pom.xml` | `groupId:artifactId`, `version`, `<dependencies>`, `<modules>` | property placeholders `${x}` resolved only from `<properties>` in the same file |
-| gradle | `build.gradle`, `build.gradle.kts` | line-matched `implementation "g:a:v"` style declarations | explicitly marked `confidence: 'low'` — Gradle files are programs |
-| composer / gem / nuget | `composer.json`, `Gemfile`, `*.csproj` | direct deps | best-effort, `low` confidence for `Gemfile` blocks |
+| Ecosystem              | Files                                             | Extracted                                                                                                                                        | Notes                                                                                                                                        |
+| ---------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| npm                    | `package.json`                                    | `name`, `version`, `dependencies`, `devDependencies`, `peerDependencies`, `optionalDependencies`, `bin`, `main`, `exports`, `scripts`, `engines` | `bin` and `scripts` feed steps F/G                                                                                                           |
+| pip                    | `pyproject.toml`, `setup.py`, `requirements*.txt` | PEP 621 `project.dependencies`, `optional-dependencies`, poetry `tool.poetry.dependencies`, `project.scripts`                                    | `setup.py` parsed with a regex-restricted reader (`install_requires=[...]` literal lists only); non-literal → `errors: ['setup.py dynamic']` |
+| go                     | `go.mod`                                          | `module`, `go` version, `require` blocks, `// indirect` marks → scope `build`                                                                    |                                                                                                                                              |
+| cargo                  | `Cargo.toml`                                      | `package.name/version`, `dependencies`, `dev-dependencies`, `build-dependencies`, `[[bin]]`, `[lib]`                                             | workspace members listed as sub-manifests when present in the tree                                                                           |
+| maven                  | `pom.xml`                                         | `groupId:artifactId`, `version`, `<dependencies>`, `<modules>`                                                                                   | property placeholders `${x}` resolved only from `<properties>` in the same file                                                              |
+| gradle                 | `build.gradle`, `build.gradle.kts`                | line-matched `implementation "g:a:v"` style declarations                                                                                         | explicitly marked `confidence: 'low'` — Gradle files are programs                                                                            |
+| composer / gem / nuget | `composer.json`, `Gemfile`, `*.csproj`            | direct deps                                                                                                                                      | best-effort, `low` confidence for `Gemfile` blocks                                                                                           |
 
 Dependency count is capped at 500 per manifest; the remainder is summarized as
 `truncatedDependencies: n`.
@@ -547,22 +593,22 @@ Dependency count is capped at 500 per manifest; the remainder is summarized as
 Deterministic rules, each producing an `EntryPoint` with a `rule` field naming the rule that fired
 (so the UI can explain every conclusion):
 
-| Rule id | Condition | Emits |
-|---|---|---|
-| `npm.bin` | `package.json.bin` present | CLI entry per bin name, `run: npx {name}` |
-| `npm.scripts` | `scripts.start` / `dev` / `build` | run commands with those exact strings |
-| `npm.main` | `main`/`module`/`exports` | library entry |
-| `py.console_scripts` | `project.scripts` or `entry_points.console_scripts` | CLI entry |
-| `py.dunder_main` | `**/__main__.py` in tree | `python -m {package}` |
-| `py.toplevel_script` | root-level `*.py` with `if __name__ == "__main__"` (needs file fetch; only if budget remains) | `python {file}` |
-| `go.cmd` | `cmd/*/main.go` | one CLI entry per `cmd/*` |
-| `go.rootmain` | root `main.go` with `package main` | `go run .` |
-| `cargo.bin` | `[[bin]]` or `src/main.rs` | `cargo run --bin {name}` |
-| `maven.mainclass` | `<mainClass>` in pom | `java -cp … {class}` |
-| `docker.cmd` | `Dockerfile` `ENTRYPOINT`/`CMD` | container run command |
-| `compose.service` | `docker-compose.yml` services | `docker compose up {service}` |
-| `make.target` | `Makefile` targets named `run`/`start`/`dev`/`serve` | `make {target}` |
-| `ci.workflow` | workflow `run:` steps | build/test commands, `confidence: medium` |
+| Rule id              | Condition                                                                                     | Emits                                     |
+| -------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `npm.bin`            | `package.json.bin` present                                                                    | CLI entry per bin name, `run: npx {name}` |
+| `npm.scripts`        | `scripts.start` / `dev` / `build`                                                             | run commands with those exact strings     |
+| `npm.main`           | `main`/`module`/`exports`                                                                     | library entry                             |
+| `py.console_scripts` | `project.scripts` or `entry_points.console_scripts`                                           | CLI entry                                 |
+| `py.dunder_main`     | `**/__main__.py` in tree                                                                      | `python -m {package}`                     |
+| `py.toplevel_script` | root-level `*.py` with `if __name__ == "__main__"` (needs file fetch; only if budget remains) | `python {file}`                           |
+| `go.cmd`             | `cmd/*/main.go`                                                                               | one CLI entry per `cmd/*`                 |
+| `go.rootmain`        | root `main.go` with `package main`                                                            | `go run .`                                |
+| `cargo.bin`          | `[[bin]]` or `src/main.rs`                                                                    | `cargo run --bin {name}`                  |
+| `maven.mainclass`    | `<mainClass>` in pom                                                                          | `java -cp … {class}`                      |
+| `docker.cmd`         | `Dockerfile` `ENTRYPOINT`/`CMD`                                                               | container run command                     |
+| `compose.service`    | `docker-compose.yml` services                                                                 | `docker compose up {service}`             |
+| `make.target`        | `Makefile` targets named `run`/`start`/`dev`/`serve`                                          | `make {target}`                           |
+| `ci.workflow`        | workflow `run:` steps                                                                         | build/test commands, `confidence: medium` |
 
 Each entry point carries `confidence: 'high' | 'medium' | 'low'`: `high` when the manifest declares
 it explicitly, `medium` when inferred from conventional layout, `low` when regex-matched from a
@@ -637,11 +683,11 @@ match; unmatched → `spdxGuess: null, note: 'License file present but unrecogni
 
 ### 5.9 Request budget
 
-| Mode | Max GitHub requests per analysis | Skipped when exceeded |
-|---|---|---|
-| anonymous | 12 | key files 5–7, workflows, contributors page 2+ |
-| user OAuth | 30 | nothing (steps fit) |
-| app installation | 30 | nothing |
+| Mode             | Max GitHub requests per analysis | Skipped when exceeded                          |
+| ---------------- | -------------------------------- | ---------------------------------------------- |
+| anonymous        | 12                               | key files 5–7, workflows, contributors page 2+ |
+| user OAuth       | 30                               | nothing (steps fit)                            |
+| app installation | 30                               | nothing                                        |
 
 The budget is enforced by a counting HTTP client; exceeding it does not fail the analysis — it sets
 `analysis.completeness` below 1 and lists `skippedSteps[]`. A partial analysis is still emitted
@@ -654,79 +700,110 @@ budget. Connect GitHub for a full analysis."
 // packages/domain/entities/repository-analysis.ts
 export const RepositoryAnalysisSchema = z.object({
   id: z.string().uuid(),
-  repoKey: z.string(),                       // gh:repo:owner/name
+  repoKey: z.string(), // gh:repo:owner/name
   headSha: z.string(),
-  inputsDigest: z.string(),                  // sha256 of (headSha + keyfile shas + analyzer version)
-  analyzerVersion: z.string(),               // semver of the analysis pipeline
+  inputsDigest: z.string(), // sha256 of (headSha + keyfile shas + analyzer version)
+  analyzerVersion: z.string(), // semver of the analysis pipeline
   producedAt: z.string(),
   completeness: z.number().min(0).max(1),
   skippedSteps: z.array(z.string()),
   treeComplete: z.boolean(),
 
-  languages: z.array(z.object({
-    name: z.string(), bytes: z.number(), pct: z.number(), source: z.enum(['api','heuristic']),
-  })),
+  languages: z.array(
+    z.object({
+      name: z.string(),
+      bytes: z.number(),
+      pct: z.number(),
+      source: z.enum(['api', 'heuristic']),
+    }),
+  ),
   primaryLanguage: z.string().nullable(),
 
   layout: z.object({
-    kind: z.enum(['single-package','monorepo','multi-module','unknown']),
-    packages: z.array(z.object({ path: z.string(), ecosystem: z.string(), name: z.string().nullable() })),
+    kind: z.enum(['single-package', 'monorepo', 'multi-module', 'unknown']),
+    packages: z.array(
+      z.object({ path: z.string(), ecosystem: z.string(), name: z.string().nullable() }),
+    ),
     docsDirs: z.array(z.string()),
     testDirs: z.array(z.string()),
     ciProviders: z.array(z.string()),
   }),
 
-  entryPoints: z.array(z.object({
-    type: z.enum(['cli','service','library','script','container']),
-    name: z.string(),
-    path: z.string().nullable(),
-    runCommand: z.string().nullable(),
-    rule: z.string(),                        // rule id from §5.6
-    confidence: z.enum(['high','medium','low']),
-  })),
+  entryPoints: z.array(
+    z.object({
+      type: z.enum(['cli', 'service', 'library', 'script', 'container']),
+      name: z.string(),
+      path: z.string().nullable(),
+      runCommand: z.string().nullable(),
+      rule: z.string(), // rule id from §5.6
+      confidence: z.enum(['high', 'medium', 'low']),
+    }),
+  ),
 
   build: z.object({
-    systems: z.array(z.string()),            // npm, poetry, go, cargo, maven, make, docker
-    commands: z.array(z.object({ purpose: z.enum(['install','build','test','run','lint']),
-                                 command: z.string(), rule: z.string() })),
-    runtimeVersions: z.record(z.string()),   // { node: ">=22", python: ">=3.9" }
+    systems: z.array(z.string()), // npm, poetry, go, cargo, maven, make, docker
+    commands: z.array(
+      z.object({
+        purpose: z.enum(['install', 'build', 'test', 'run', 'lint']),
+        command: z.string(),
+        rule: z.string(),
+      }),
+    ),
+    runtimeVersions: z.record(z.string()), // { node: ">=22", python: ">=3.9" }
   }),
 
-  dependencies: z.array(z.object({
-    ecosystem: z.string(), path: z.string(), packageName: z.string().nullable(),
-    direct: z.number().int(), dev: z.number().int(), truncated: z.number().int(),
-    top: z.array(z.object({ name: z.string(), range: z.string().nullable(), scope: z.string() })),
-    parseErrors: z.array(z.string()),
-  })),
+  dependencies: z.array(
+    z.object({
+      ecosystem: z.string(),
+      path: z.string(),
+      packageName: z.string().nullable(),
+      direct: z.number().int(),
+      dev: z.number().int(),
+      truncated: z.number().int(),
+      top: z.array(z.object({ name: z.string(), range: z.string().nullable(), scope: z.string() })),
+      parseErrors: z.array(z.string()),
+    }),
+  ),
 
   surface: z.object({
     cli: z.array(z.object({ command: z.string(), flags: z.array(z.string()), source: z.string() })),
-    http: z.object({ spec: z.string().nullable(), framework: z.string().nullable(),
-                     routesKnown: z.boolean(), routes: z.array(z.string()) }),
+    http: z.object({
+      spec: z.string().nullable(),
+      framework: z.string().nullable(),
+      routesKnown: z.boolean(),
+      routes: z.array(z.string()),
+    }),
     grpc: z.array(z.string()),
     library: z.boolean(),
     mcp: z.boolean(),
   }),
 
   container: z.object({
-    dockerfile: z.string().nullable(), compose: z.array(z.string()),
-    baseImages: z.array(z.string()), exposedPorts: z.array(z.number().int()),
-    publishedImageHints: z.array(z.string()), rootUser: z.boolean().nullable(),
+    dockerfile: z.string().nullable(),
+    compose: z.array(z.string()),
+    baseImages: z.array(z.string()),
+    exposedPorts: z.array(z.number().int()),
+    publishedImageHints: z.array(z.string()),
+    rootUser: z.boolean().nullable(),
   }),
 
   health: z.object({
-    license: z.object({ spdxId: z.string().nullable(), method: z.enum(['api','text-match','none']),
-                        permissive: z.boolean().nullable() }),
+    license: z.object({
+      spdxId: z.string().nullable(),
+      method: z.enum(['api', 'text-match', 'none']),
+      permissive: z.boolean().nullable(),
+    }),
     maintenanceScore: z.number().int().min(0).max(100),
-    maintenanceBand: z.enum(['healthy','watch','at-risk','unmaintained']),
+    maintenanceBand: z.enum(['healthy', 'watch', 'at-risk', 'unmaintained']),
     signals: z.array(z.object({ signal: z.string(), value: z.string(), points: z.number() })),
     archived: z.boolean(),
     contributorsCount: z.number().int().nullable(),
   }),
 
-  narrative: z.object({                      // step J, LLM-authored, clearly separated
-    summary: z.string().nullable(),          // ≤ 120 words
-    architecture: z.string().nullable(),     // ≤ 200 words
+  narrative: z.object({
+    // step J, LLM-authored, clearly separated
+    summary: z.string().nullable(), // ≤ 120 words
+    architecture: z.string().nullable(), // ≤ 200 words
     integrationNotes: z.string().nullable(),
     model: z.string().nullable(),
     generatedAt: z.string().nullable(),
@@ -744,39 +821,68 @@ verified in `13_SHERLOCK.md` §1):
   "analyzerVersion": "1.0.0",
   "completeness": 1,
   "primaryLanguage": "Python",
-  "layout": { "kind": "single-package", "packages": [{ "path": ".", "ecosystem": "pip", "name": "sherlock-project" }],
-              "docsDirs": ["docs"], "testDirs": ["tests"], "ciProviders": ["github-actions"] },
+  "layout": {
+    "kind": "single-package",
+    "packages": [{ "path": ".", "ecosystem": "pip", "name": "sherlock-project" }],
+    "docsDirs": ["docs"],
+    "testDirs": ["tests"],
+    "ciProviders": ["github-actions"]
+  },
   "entryPoints": [
-    { "type": "cli", "name": "sherlock", "path": null, "runCommand": "sherlock {username}",
-      "rule": "py.console_scripts", "confidence": "high" },
-    { "type": "container", "name": "docker", "path": "Dockerfile",
-      "runCommand": "docker run --rm sherlock/sherlock {username}", "rule": "docker.cmd", "confidence": "high" }
+    {
+      "type": "cli",
+      "name": "sherlock",
+      "path": null,
+      "runCommand": "sherlock {username}",
+      "rule": "py.console_scripts",
+      "confidence": "high"
+    },
+    {
+      "type": "container",
+      "name": "docker",
+      "path": "Dockerfile",
+      "runCommand": "docker run --rm sherlock/sherlock {username}",
+      "rule": "docker.cmd",
+      "confidence": "high"
+    }
   ],
-  "surface": { "cli": [{ "command": "sherlock",
-                         "flags": ["--json","--site","--timeout","--print-found","--nsfw","--local","--proxy"],
-                         "source": "readme" }],
-               "http": { "spec": null, "framework": null, "routesKnown": false, "routes": [] },
-               "grpc": [], "library": true, "mcp": false },
-  "health": { "license": { "spdxId": "MIT", "method": "api", "permissive": true },
-              "maintenanceScore": 8, "maintenanceBand": "healthy",
-              "signals": [{ "signal": "latest release", "value": "v0.16.0 (2025-09-16)", "points": 0 }],
-              "archived": false, "contributorsCount": null }
+  "surface": {
+    "cli": [
+      {
+        "command": "sherlock",
+        "flags": ["--json", "--site", "--timeout", "--print-found", "--nsfw", "--local", "--proxy"],
+        "source": "readme"
+      }
+    ],
+    "http": { "spec": null, "framework": null, "routesKnown": false, "routes": [] },
+    "grpc": [],
+    "library": true,
+    "mcp": false
+  },
+  "health": {
+    "license": { "spdxId": "MIT", "method": "api", "permissive": true },
+    "maintenanceScore": 8,
+    "maintenanceBand": "healthy",
+    "signals": [{ "signal": "latest release", "value": "v0.16.0 (2025-09-16)", "points": 0 }],
+    "archived": false,
+    "contributorsCount": null
+  }
 }
 ```
 
 ### 5.11 Static analysis vs LLM — the split
 
-| Concern | Owner | Why |
-|---|---|---|
-| Language stats, layout, tree | static | measurable |
-| Dependency lists, versions | static | must be exact; hallucinated deps are dangerous |
-| Entry points, build/run commands | static (rules) | must be executable verbatim |
-| CLI flags | static (README code-block regex) + LLM *may only re-order/annotate*, never add | adding a flag that does not exist breaks execution |
-| HTTP routes | static (spec file only) | never guess |
-| License, maintenance score | static (formula) | must be reproducible and auditable |
-| Prose summary, architecture description, integration notes | LLM | genuinely a summarization task |
-| Integration Proposal *fields* | static from the above | proposals become executable manifests |
-| Integration Proposal *rationale text* | LLM | explanation only |
+| Concern                                                    | Owner                                                                          | Why                                                |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------- |
+| Language stats, layout, tree                               | static                                                                         | measurable                                         |
+| Dependency lists, versions                                 | static                                                                         | must be exact; hallucinated deps are dangerous     |
+| Entry points, build/run commands                           | static (rules)                                                                 | must be executable verbatim                        |
+| CLI flags                                                  | static (README code-block regex) + LLM _may only re-order/annotate_, never add | adding a flag that does not exist breaks execution |
+| HTTP routes                                                | static (spec file only)                                                        | never guess                                        |
+| License, maintenance score                                 | static (formula)                                                               | must be reproducible and auditable                 |
+| Prose summary, architecture description, integration notes | LLM                                                                            | genuinely a summarization task                     |
+| Integration Proposal _fields_                              | static from the above                                                          | proposals become executable manifests              |
+| Integration Proposal _rationale text_                      | LLM                                                                            | explanation only                                   |
 
 Guardrails for step J (see `14_AI_AGENT.md` §6 for the shared rules):
 
@@ -806,12 +912,13 @@ Guardrails for step J (see `14_AI_AGENT.md` §6 for the shared rules):
 
 ## 6. Integration Proposal (repository → candidate manifest)
 
-An analysis of a *tool-like* repository can be turned into a draft NEXUS integration manifest
+An analysis of a _tool-like_ repository can be turned into a draft NEXUS integration manifest
 (`10_INTEGRATIONS.md` §3 manifest schema). This is the roadmap requirement §14 item 11.
 
 ### 6.1 Eligibility
 
 A repository is proposal-eligible when **all** hold:
+
 - `surface.cli.length > 0` **or** `surface.http.spec !== null` **or** `container.dockerfile !== null`
 - `health.license.permissive === true` (MIT/Apache-2.0/BSD/ISC/MPL-2.0); otherwise the proposal is
   produced but blocked with `blockers: ['license']` and cannot be installed without an operator
@@ -827,32 +934,40 @@ export interface IntegrationProposal {
   analysisId: string;
   generatedAt: string;
   executionMode: 'container' | 'http-api' | 'unsupported';
-  confidence: number;                 // 0..1, computed (§6.3)
-  requiresHumanReview: true;          // always true, never auto-installed
+  confidence: number; // 0..1, computed (§6.3)
+  requiresHumanReview: true; // always true, never auto-installed
   blockers: Array<'license' | 'no-entrypoint' | 'network-required' | 'unmaintained' | 'root-user'>;
   draftManifest: {
-    id: string;                       // slugified owner-repo
+    id: string; // slugified owner-repo
     name: string;
     version: '0.1.0-draft';
     repository: string;
     execution: {
       kind: 'container';
-      image: string | null;           // publishedImageHints[0] ?? null (unverified)
+      image: string | null; // publishedImageHints[0] ?? null (unverified)
       build: { dockerfile: string } | null;
-      command: string[];              // argv template with ${input.x} placeholders
-      timeoutMs: number;              // default 300_000
+      command: string[]; // argv template with ${input.x} placeholders
+      timeoutMs: number; // default 300_000
       network: 'none' | 'allowlist';
-      egressAllowlist: string[];      // [] unless the analysis found explicit hosts
+      egressAllowlist: string[]; // [] unless the analysis found explicit hosts
     };
-    inputs: Array<{ name: string; type: 'string'|'url'|'email'|'username'|'domain'|'ip';
-                    required: boolean; flag: string | null }>;
-    outputs: { format: 'json' | 'jsonl' | 'csv' | 'text'; path: string | null; flag: string | null };
-    parserHint: string;               // free text for the implementer
+    inputs: Array<{
+      name: string;
+      type: 'string' | 'url' | 'email' | 'username' | 'domain' | 'ip';
+      required: boolean;
+      flag: string | null;
+    }>;
+    outputs: {
+      format: 'json' | 'jsonl' | 'csv' | 'text';
+      path: string | null;
+      flag: string | null;
+    };
+    parserHint: string; // free text for the implementer
     proposedNodeKinds: string[];
     proposedEdgeKinds: string[];
   };
-  rationale: string;                  // LLM prose, labeled
-  unverified: string[];               // every field the system could not verify
+  rationale: string; // LLM prose, labeled
+  unverified: string[]; // every field the system could not verify
 }
 ```
 
@@ -889,30 +1004,30 @@ integration" enable. Everything unverified is listed in red in the `unverified[]
 
 Direct hydration (no Proposal — user-initiated node):
 
-| From | Node | Fields |
-|---|---|---|
-| `repo` ref | `repository` | §4.1 |
-| `owner` ref | `person` or `organization` | login, name, avatar, url, type |
+| From                        | Node                                | Fields                                               |
+| --------------------------- | ----------------------------------- | ---------------------------------------------------- |
+| `repo` ref                  | `repository`                        | §4.1                                                 |
+| `owner` ref                 | `person` or `organization`          | login, name, avatar, url, type                       |
 | `issue`/`pull`/`discussion` | `issue`/`pull_request`/`discussion` | number, title, state, author, labels, createdAt, url |
-| `release` | `release` | tag, name, publishedAt, assets[], url |
-| `commit` | `commit` | sha, message (first line), author, date, url |
-| `path`/`blobRange` | `code_file`/`code_snippet` | path, ref, lines, content (≤ 64 KB), language |
-| `gist` | `gist` | id, description, files[], owner |
+| `release`                   | `release`                           | tag, name, publishedAt, assets[], url                |
+| `commit`                    | `commit`                            | sha, message (first line), author, date, url         |
+| `path`/`blobRange`          | `code_file`/`code_snippet`          | path, ref, lines, content (≤ 64 KB), language        |
+| `gist`                      | `gist`                              | id, description, files[], owner                      |
 
 Derived (always inside one Import Proposal, `10_INTEGRATIONS.md` §7):
 
-| Edge | From → To | Created when |
-|---|---|---|
-| `owned_by` | repository → person/organization | always |
-| `contributed_to` | person → repository | contributor import (opt-in, top N chosen by the user) |
-| `forked_from` | repository → repository | `isFork` and parent known |
-| `depends_on` | repository → package/repository | dependency import (opt-in, only direct deps) |
-| `released` | repository → release | release import |
-| `references` | issue/PR → repository | always for those node kinds |
-| `authored` | person → issue/PR/commit | when the author is resolvable to a node |
-| `mentioned_in` | repository → repository | README link extraction (`confidence 0.5`) |
-| `related_to` | repository → repository | shares ≥ 2 topics with a repo already on the board (`confidence 0.4`) |
-| `has_file` | repository → code_file | file added from the Files tab |
+| Edge             | From → To                        | Created when                                                          |
+| ---------------- | -------------------------------- | --------------------------------------------------------------------- |
+| `owned_by`       | repository → person/organization | always                                                                |
+| `contributed_to` | person → repository              | contributor import (opt-in, top N chosen by the user)                 |
+| `forked_from`    | repository → repository          | `isFork` and parent known                                             |
+| `depends_on`     | repository → package/repository  | dependency import (opt-in, only direct deps)                          |
+| `released`       | repository → release             | release import                                                        |
+| `references`     | issue/PR → repository            | always for those node kinds                                           |
+| `authored`       | person → issue/PR/commit         | when the author is resolvable to a node                               |
+| `mentioned_in`   | repository → repository          | README link extraction (`confidence 0.5`)                             |
+| `related_to`     | repository → repository          | shares ≥ 2 topics with a repo already on the board (`confidence 0.4`) |
+| `has_file`       | repository → code_file           | file added from the Files tab                                         |
 
 Default proposal size guard: a dependency import proposes at most **40** package nodes; beyond
 that it proposes one `dependency_group` summary node per ecosystem with a count and an "expand"
@@ -988,6 +1103,7 @@ onSecondaryLimit(resp):
 ```
 
 Additional hard rules regardless of remaining quota:
+
 - max **10 concurrent** requests per credential,
 - max **1 write-ish request per second** (we have none, but the limiter is shared),
 - serialize requests to the same repository (no parallel storms on one repo),
@@ -1013,18 +1129,18 @@ estimate before running ("This analysis will use up to 12 API requests").
 
 ### 8.4 Graceful degradation when unauthenticated
 
-| Feature | Authenticated | Anonymous |
-|---|---|---|
-| Repo metadata | full | full (public only) |
-| README | full | full |
-| Releases | 20 | 5 |
-| Issues | 30, filterable | 10, open only |
-| Contributors | 30 | 10 |
-| Files tree | full lazy tree | root + one level |
-| Dependencies | all manifests | first 2 manifests |
-| Analysis | full pipeline | budget-capped (§5.9), `completeness < 1` |
-| Private repos | with `repo` scope | not available — explicit copy, never a blank card |
-| Refresh cadence | TTL as §4.4 | ×4 TTLs |
+| Feature         | Authenticated     | Anonymous                                         |
+| --------------- | ----------------- | ------------------------------------------------- |
+| Repo metadata   | full              | full (public only)                                |
+| README          | full              | full                                              |
+| Releases        | 20                | 5                                                 |
+| Issues          | 30, filterable    | 10, open only                                     |
+| Contributors    | 30                | 10                                                |
+| Files tree      | full lazy tree    | root + one level                                  |
+| Dependencies    | all manifests     | first 2 manifests                                 |
+| Analysis        | full pipeline     | budget-capped (§5.9), `completeness < 1`          |
+| Private repos   | with `repo` scope | not available — explicit copy, never a blank card |
+| Refresh cadence | TTL as §4.4       | ×4 TTLs                                           |
 
 The degradation is always **visible**, never silent: the affected panel shows a compact
 "Connect GitHub to see all N" affordance with the exact benefit stated.
@@ -1036,44 +1152,44 @@ The degradation is always **visible**, never silent: the affected panel shows a 
 Every message follows `00_MASTER.md` §10.5 (what happened / why / what to do). Codes are stable and
 used in telemetry.
 
-| Code | Trigger | Title | Body | Primary action |
-|---|---|---|---|---|
-| `GH_RATE_PRIMARY` | remaining = 0 | "GitHub rate limit reached" | "Your GitHub quota resets at 14:32 (in 22 min). Cached data is still shown." | "Connect an account" (anon) / "Notify me when it resets" |
-| `GH_RATE_SECONDARY` | 403/429 secondary | "GitHub is throttling requests" | "Too many requests in a short time. NEXUS paused GitHub calls for 2 min and will resume automatically." | "Retry now" (disabled until timer) |
-| `GH_NOT_FOUND` | 404 | "Repository not accessible" | "github.com/{o}/{r} returned 404 — it may be private, renamed or deleted. The data from {date} is still on the canvas." | "Open on GitHub" |
-| `GH_FORBIDDEN` | 403 non-rate | "Access denied by GitHub" | "Your GitHub connection lacks access to this resource. Private repositories need the `repo` scope." | "Reconnect with private access" |
-| `GH_AUTH_REVOKED` | 401 | "GitHub connection expired" | "Your GitHub authorization was revoked or expired. Existing data is intact." | "Reconnect" |
-| `GH_NETWORK` | timeout/DNS | "Could not reach GitHub" | "The request timed out after 15 s. This is usually temporary." | "Retry" |
-| `GH_PARSE` | malformed payload | "Unexpected response from GitHub" | "NEXUS could not read GitHub's response for this panel. The raw payload was saved for diagnostics." | "Report issue" (attaches run id) |
-| `GH_TOO_LARGE` | file > cap | "File too large to preview" | "This file is 12.4 MB; NEXUS previews up to 256 KB." | "Open on GitHub" |
-| `GH_ANALYSIS_PARTIAL` | completeness < 1 | "Partial analysis" | "4 of 10 steps were skipped because of the anonymous request budget." | "Connect GitHub and re-run" |
-| `GH_TRUNCATED_TREE` | tree truncated | "Large repository" | "This repository's file tree exceeds GitHub's single-response limit; NEXUS analyzed the {n} most relevant directories." | "See what was analyzed" |
+| Code                  | Trigger           | Title                             | Body                                                                                                                    | Primary action                                           |
+| --------------------- | ----------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `GH_RATE_PRIMARY`     | remaining = 0     | "GitHub rate limit reached"       | "Your GitHub quota resets at 14:32 (in 22 min). Cached data is still shown."                                            | "Connect an account" (anon) / "Notify me when it resets" |
+| `GH_RATE_SECONDARY`   | 403/429 secondary | "GitHub is throttling requests"   | "Too many requests in a short time. NEXUS paused GitHub calls for 2 min and will resume automatically."                 | "Retry now" (disabled until timer)                       |
+| `GH_NOT_FOUND`        | 404               | "Repository not accessible"       | "github.com/{o}/{r} returned 404 — it may be private, renamed or deleted. The data from {date} is still on the canvas." | "Open on GitHub"                                         |
+| `GH_FORBIDDEN`        | 403 non-rate      | "Access denied by GitHub"         | "Your GitHub connection lacks access to this resource. Private repositories need the `repo` scope."                     | "Reconnect with private access"                          |
+| `GH_AUTH_REVOKED`     | 401               | "GitHub connection expired"       | "Your GitHub authorization was revoked or expired. Existing data is intact."                                            | "Reconnect"                                              |
+| `GH_NETWORK`          | timeout/DNS       | "Could not reach GitHub"          | "The request timed out after 15 s. This is usually temporary."                                                          | "Retry"                                                  |
+| `GH_PARSE`            | malformed payload | "Unexpected response from GitHub" | "NEXUS could not read GitHub's response for this panel. The raw payload was saved for diagnostics."                     | "Report issue" (attaches run id)                         |
+| `GH_TOO_LARGE`        | file > cap        | "File too large to preview"       | "This file is 12.4 MB; NEXUS previews up to 256 KB."                                                                    | "Open on GitHub"                                         |
+| `GH_ANALYSIS_PARTIAL` | completeness < 1  | "Partial analysis"                | "4 of 10 steps were skipped because of the anonymous request budget."                                                   | "Connect GitHub and re-run"                              |
+| `GH_TRUNCATED_TREE`   | tree truncated    | "Large repository"                | "This repository's file tree exceeds GitHub's single-response limit; NEXUS analyzed the {n} most relevant directories." | "See what was analyzed"                                  |
 
 Quota UX states (`03_UX.md` state table format):
 
-| State | Visual |
-|---|---|
-| normal (> 20%) | nothing shown |
-| low (5–20%) | amber dot on the GitHub icon in the status bar; tooltip with numbers |
-| exhausted | status-bar strip "GitHub quota exhausted · resets in 22 min", background refresh badge on affected nodes turns to a clock icon |
-| throttled | same strip, spinner variant, "resuming automatically" |
-| disconnected | "GitHub not connected — public data only" chip in Integrations menu |
-| loading | skeleton card with the canonical URL already readable |
-| success | brief 180 ms border pulse using `--accent-success`, no toast (`03_UX.md` no-toast-for-expected-success rule) |
-| empty | per-tab empty copy (§4.3) |
-| undo | any accepted GitHub Proposal is one `Ctrl+Z` away; the undo toast names it: "Undid: import 12 nodes from github/sherlock" |
+| State          | Visual                                                                                                                         |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| normal (> 20%) | nothing shown                                                                                                                  |
+| low (5–20%)    | amber dot on the GitHub icon in the status bar; tooltip with numbers                                                           |
+| exhausted      | status-bar strip "GitHub quota exhausted · resets in 22 min", background refresh badge on affected nodes turns to a clock icon |
+| throttled      | same strip, spinner variant, "resuming automatically"                                                                          |
+| disconnected   | "GitHub not connected — public data only" chip in Integrations menu                                                            |
+| loading        | skeleton card with the canonical URL already readable                                                                          |
+| success        | brief 180 ms border pulse using `--accent-success`, no toast (`03_UX.md` no-toast-for-expected-success rule)                   |
+| empty          | per-tab empty copy (§4.3)                                                                                                      |
+| undo           | any accepted GitHub Proposal is one `Ctrl+Z` away; the undo toast names it: "Undid: import 12 nodes from github/sherlock"      |
 
 ---
 
 ## 10. Job definitions
 
-| Queue job | Payload | Concurrency | Retries | Idempotency key |
-|---|---|---|---|---|
-| `github.hydrate` | `{ nodeId, ref, boardId, userId }` | 8 | 3, exp backoff 2 s/8 s/30 s | `hydrate:{nodeId}:{refKey}` |
-| `github.tab` | `{ nodeId, tab, force }` | 8 | 2 | `tab:{nodeId}:{tab}` |
-| `github.analyze` | `{ repoKey, userId, boardId, force }` | 2 | 1 | `analyze:{repoKey}:{headSha}:{analyzerVersion}` |
-| `github.proposal` | `{ analysisId }` | 2 | 1 | `proposal:{analysisId}` |
-| `github.sweep` | `{ boardId }` cron 30 min | 1 | 0 | `sweep:{boardId}:{hour}` |
+| Queue job         | Payload                               | Concurrency | Retries                     | Idempotency key                                 |
+| ----------------- | ------------------------------------- | ----------- | --------------------------- | ----------------------------------------------- |
+| `github.hydrate`  | `{ nodeId, ref, boardId, userId }`    | 8           | 3, exp backoff 2 s/8 s/30 s | `hydrate:{nodeId}:{refKey}`                     |
+| `github.tab`      | `{ nodeId, tab, force }`              | 8           | 2                           | `tab:{nodeId}:{tab}`                            |
+| `github.analyze`  | `{ repoKey, userId, boardId, force }` | 2           | 1                           | `analyze:{repoKey}:{headSha}:{analyzerVersion}` |
+| `github.proposal` | `{ analysisId }`                      | 2           | 1                           | `proposal:{analysisId}`                         |
+| `github.sweep`    | `{ boardId }` cron 30 min             | 1           | 0                           | `sweep:{boardId}:{hour}`                        |
 
 All jobs are cancelable from the run history UI (`10_INTEGRATIONS.md` §9); cancellation aborts the
 in-flight fetch via `AbortController` and marks the run `canceled`, never `failed`.
@@ -1100,7 +1216,7 @@ in-flight fetch via `AbortController` and marks the run `canceled`, never `faile
 ## Open risks
 
 1. **GitHub API shape drift.** Field names and pagination behavior can change without notice.
-   Mitigation: every response is parsed through a *tolerant* zod schema (`.passthrough()`,
+   Mitigation: every response is parsed through a _tolerant_ zod schema (`.passthrough()`,
    optional fields, `catch` defaults); a parse deviation raises `GH_PARSE`, stores the raw payload,
    and never crashes a panel. A weekly synthetic check in CI hits 3 public endpoints and fails
    loudly on shape change.

@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { metricsPlugin, registry } from '../src/plugins/metrics.js';
-import { REQ_ID_HEADER, requestContextPlugin } from '../src/plugins/request-context.js';
+import { metricsPlugin, registry } from '../src/plugins/metrics.ts';
+import { REQ_ID_HEADER, requestContextPlugin } from '../src/plugins/request-context.ts';
 
 const build = async () => {
   const app = Fastify({

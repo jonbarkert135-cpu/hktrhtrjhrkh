@@ -101,7 +101,6 @@
     padding: var(--nx-space-8);
   }
 
-
   .nx-canvas-host {
     position: relative;
     display: grid;

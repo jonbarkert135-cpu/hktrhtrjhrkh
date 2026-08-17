@@ -16,16 +16,22 @@
     "db:seed": "pnpm --filter @nexus/db run seed",
     "bench": "pnpm --filter @nexus/bench exec tsx ../bench/harness.ts",
     "e2e": "playwright test -c e2e/playwright.config.ts",
-    "check:gates": "node scripts/check-no-todo.mjs && node scripts/check-skips.mjs && node scripts/check-bundle-secrets.mjs && node scripts/check-migration-safety.mjs",
+    "check:gates": "node scripts/check-no-todo.mjs && node scripts/check-skips.mjs && node scripts/check-bundle-secrets.mjs && node scripts/check-migration-safety.mjs && node scripts/check-runtime-sources.mjs",
     "depcruise": "depcruise apps packages --config .dependency-cruiser.cjs",
     "test:engine": "pnpm --filter @nexus/canvas-engine test"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.6.0",
     "@commitlint/config-conventional": "^19.6.0",
+    "@playwright/test": "1.49.1",
     "dependency-cruiser": "^16.7.0",
-    "prettier": "^3.4.2",
+    "prettier": "3.4.2",
     "turbo": "^2.3.3",
     "typescript": "5.7.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "deepmerge-ts": "^8.0.0"
+    }
   }
 }

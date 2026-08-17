@@ -55,7 +55,8 @@ const rule = {
     const check = (node, text) => {
       if (typeof text !== 'string' || text.length === 0) return;
       const kind = classify(text);
-      if (kind) context.report({ node, messageId: kind, data: { value: text.trim().slice(0, 40) } });
+      if (kind)
+        context.report({ node, messageId: kind, data: { value: text.trim().slice(0, 40) } });
     };
 
     return {

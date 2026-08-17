@@ -1,5 +1,31 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  // Turbo 2 runs tasks in *strict* environment mode by default: a task process only receives the
+  // variables listed here (plus Turbo's own defaults). Without this list `pnpm dev` — and therefore
+  // the API started by Playwright's webServer — never saw DATABASE_URL/REDIS_URL from the CI job
+  // and silently fell back to the localhost dummies in infra/ci/.env.ci, so /readyz answered 503.
+  // These are pass-through (not `globalEnv`): they must not participate in the cache hash, because
+  // they differ per machine/environment while the build output does not.
+  "globalPassThroughEnv": [
+    "CI",
+    "NODE_ENV",
+    "API_PORT",
+    "PORT",
+    "LOG_LEVEL",
+    "DATABASE_URL",
+    "DATABASE_POOL_MAX",
+    "REDIS_URL",
+    "AUTH_*",
+    "PUBLIC_APP_URL",
+    "S3_*",
+    "SYNC_*",
+    "RUNNER_*",
+    "EGRESS_*",
+    "AI_*",
+    "NEXUS_*",
+    "E2E_*",
+    "VITE_*"
+  ],
   "tasks": {
     "build": { "dependsOn": ["^build"], "outputs": ["dist/**", ".prisma/**"] },
     "typecheck": { "dependsOn": ["build"] },

@@ -4,6 +4,10 @@
     "lib": ["ES2023"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    // Relative imports inside apps/api carry the real `.ts` extension so that the production
+    // image can run the sources directly with `node --experimental-strip-types` (Node does not
+    // remap `.js` specifiers to `.ts` files). See infra/docker/api.Dockerfile.
+    "allowImportingTsExtensions": true,
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,

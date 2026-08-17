@@ -14,7 +14,8 @@ async function waitForReady(): Promise<void> {
     try {
       const res = await fetch(`${API_URL}/readyz`);
       if (res.ok) return;
-      lastError = `${res.status} ${res.statusText}`;
+      // /readyz names the failing dependency in its body; without it a 503 is undiagnosable in CI.
+      lastError = `${res.status} ${res.statusText} ${await res.text()}`;
     } catch (err) {
       lastError = err instanceof Error ? err.message : String(err);
     }

@@ -1,6 +1,7 @@
 # NEXUS — 20 — IMPLEMENTATION ROADMAP (phase prompts P1…P16)
 
 ## Scope
+
 This file is the executable plan. It contains one self-contained implementation prompt per phase
 from `00_MASTER.md` §7, each with the same 15 sections, written so a fresh coding AI with no memory
 of previous sessions can execute it by reading only this prompt plus the spec sections it names.
@@ -65,16 +66,19 @@ test + coverage floors, build (144.1 KB gzip initial JS), check:gates, depcruise
 visual and bench thresholds are verified in CI only (no Docker in the authoring environment).
 
 ## 1 Objective
+
 Stand up the monorepo, the design-token pipeline, the authenticated app shell, the database, the CI
 pipeline and the benchmark harness, so that every later phase has a working, gated, testable
 skeleton to build inside. At the end of P1 a user can sign up, sign in, see an empty application
 shell with a placeholder board surface, and CI enforces the full quality gate on every PR.
 
 ## 2 Context (what exists now)
+
 Only `NEXUS-SPEC/` exists. There is no code, no package manager workspace, no database, no CI.
 Everything in this phase is greenfield; there is nothing to preserve except the specification.
 
 ## 3 Existing architecture to respect
+
 - `00_MASTER.md` §2 (frozen stack — TypeScript 5.6 strict, React 19 + Vite 6, Fastify 5 + tRPC v11,
   Postgres 16 + Prisma, Better-Auth, Tailwind v4 preset generated from CSS custom properties),
   §5 (layer boundaries), §6 (monorepo layout — reproduce it exactly).
@@ -84,6 +88,7 @@ Everything in this phase is greenfield; there is nothing to preserve except the 
 - `18_TESTING.md` §2–3 (test layout, Vitest config), §9 (bench harness), §15 (seeding).
 
 ## 4 Files/modules affected
+
 ```text
 package.json, pnpm-workspace.yaml, turbo.json, tsconfig.base.json, .npmrc, .nvmrc
 packages/config/{eslint,tsconfig,vitest,tailwind,src/env.ts,src/flags.ts}
@@ -101,6 +106,7 @@ scripts/{check-no-todo.mjs,check-skips.mjs,check-coverage.mjs,diff-coverage.mjs,
 ```
 
 ## 5 Exact requirements (numbered, testable)
+
 1. pnpm workspace with Turborepo; `pnpm build`, `pnpm test`, `pnpm lint`, `pnpm typecheck` work from
    the root and are cached per package.
 2. TypeScript 5.6 `strict: true`, `noUncheckedIndexedAccess: true`, `exactOptionalPropertyTypes: true`,
@@ -138,6 +144,7 @@ scripts/{check-no-todo.mjs,check-skips.mjs,check-coverage.mjs,diff-coverage.mjs,
 16. `packages/db` migrations pass `scripts/check-migration-safety.mjs`.
 
 ## 6 UX requirements
+
 - Dark theme only (light theme is a later, token-only change). Background, surface, border and text
   tokens per `04_DESIGN_SYSTEM.md`; contrast ≥ 4.5:1 text, ≥ 3:1 UI (N6).
 - Auth screens: single-column, 400 px content width, states — idle, submitting (button spinner,
@@ -154,6 +161,7 @@ scripts/{check-no-todo.mjs,check-skips.mjs,check-coverage.mjs,diff-coverage.mjs,
   the real palette is P7). This reserves the shortcut and proves the shortcut system works.
 
 ## 7 Technical requirements
+
 - Vite build target `es2022`, code-splitting per route, initial JS ≤ 250 KB gzip (enforced by
   `scripts/check-bundle-budget.mjs`).
 - tRPC client with a single `TRPCProvider`, `superjson` transformer, and error mapping that turns
@@ -165,6 +173,7 @@ scripts/{check-no-todo.mjs,check-skips.mjs,check-coverage.mjs,diff-coverage.mjs,
 - Commit hooks: lint-staged (eslint + prettier) and commitlint.
 
 ## 8 Edge cases
+
 - Signup with an email that already exists → generic "If that address can be used, we sent a link"
   style response for enumeration resistance, but a clear inline message on login failure.
 - OAuth callback with a mismatched state or an expired code → error screen with a retry action.
@@ -177,6 +186,7 @@ scripts/{check-no-todo.mjs,check-skips.mjs,check-coverage.mjs,diff-coverage.mjs,
 - Clock skew between client and server does not affect session validity checks (server time only).
 
 ## 9 Security requirements
+
 - Password hashing by Better-Auth's default (argon2id or bcrypt with cost ≥ 12); never custom.
 - Rate limits: 10 login attempts / 5 min / IP+email, 5 signups / hour / IP, 100 API req/min/user;
   429 responses include `Retry-After`.
@@ -187,6 +197,7 @@ scripts/{check-no-todo.mjs,check-skips.mjs,check-coverage.mjs,diff-coverage.mjs,
 - No secret ever reaches the client bundle (`scripts/check-bundle-secrets.mjs` in CI).
 
 ## 10 Performance requirements
+
 - Cold SPA load on a 2020-class laptop over a simulated Fast 3G: first contentful paint ≤ 1.5 s,
   interactive shell ≤ 2.5 s.
 - API p95 for `auth.session` ≤ 60 ms warm, `project.list` ≤ 120 ms with 100 projects.
@@ -194,6 +205,7 @@ scripts/{check-no-todo.mjs,check-skips.mjs,check-coverage.mjs,diff-coverage.mjs,
   harness are wired correctly).
 
 ## 11 Tests to write (named)
+
 - `packages/config/test/env.test.ts` — valid/invalid matrices, production guard for test endpoints.
 - `packages/config/test/redact.test.ts` — secret redaction corpus.
 - `packages/ui/test/contrast.test.ts` — token contrast (N6).
@@ -208,6 +220,7 @@ scripts/{check-no-todo.mjs,check-skips.mjs,check-coverage.mjs,diff-coverage.mjs,
 - `bench/canvas.bench.ts` — records the metric JSON shape; `bench/compare.mjs` self-test.
 
 ## 12 Acceptance criteria (checkable)
+
 1. `git clone && pnpm i && docker compose up -d && pnpm db:migrate && pnpm db:seed && pnpm dev`
    yields a working app in ≤ 15 minutes on a clean machine, per the README.
 2. A new user can sign up, create a project and a board, and reload without losing session.
@@ -222,17 +235,20 @@ scripts/{check-no-todo.mjs,check-skips.mjs,check-coverage.mjs,diff-coverage.mjs,
 8. Booting the API with a missing `AUTH_SECRET` prints a readable error and exits code 1.
 
 ## 13 Definition of Done
+
 All acceptance criteria pass; the seven quality-gate checks are evidenced in the PR; README
 documents local setup and the compose path; `packages/*/README.md` exist for `config`, `ui`, `db`,
 `domain`; the progress tracker in this file is ticked for P1; no `TODO` in shipped code.
 
 ## 14 What NOT to break
+
 Nothing exists yet, but do not foreclose the future: do not add React to `packages/canvas-engine`
 (it must not exist as a React dependency), do not put business logic in `apps/web`, do not add a
 second styling system, do not introduce a global state library other than Zustand, and do not add
 any dependency that duplicates a frozen stack choice (`00_MASTER.md` §2).
 
 ## 15 Documentation to update
+
 `README.md` (setup, scripts, architecture overview), `packages/config/README.md`,
 `packages/ui/README.md` (token usage rules), `packages/db/README.md` (migration workflow),
 `19_DEPLOYMENT.md` if the CI job list changes, and the tracker in this file.
@@ -253,18 +269,21 @@ the visual/e2e suites still need CI, which is not running yet (see the repo READ
 Deviations from §4 are documented in `packages/canvas-engine/README.md`.
 
 ## 1 Objective
+
 Implement `packages/canvas-engine`: camera, spatial index, hybrid renderer (Canvas2D for edges,
 grid, LOD nodes and marquee; DOM overlay for visible near-zoom nodes), the interaction finite state
 machine, selection, dragging, snapping, grid and minimap — meeting N1 (5,000 nodes / 10,000 edges,
 p95 frame ≤ 16.6 ms) with the benchmark gate switched to enforcing.
 
 ## 2 Context (what exists now)
+
 P1 delivered the monorepo, tokens, app shell, auth, DB, CI and the bench harness, plus a
 placeholder canvas that only draws a grid. There is no scene graph, no node model beyond a
 placeholder, no persistence (that is P3). Nodes in this phase are plain in-memory objects supplied
 by `makeBoard()` from `packages/domain/test/factories.ts`.
 
 ## 3 Existing architecture to respect
+
 - `05_CANVAS_ENGINE.md` — the whole document: §2 hybrid rationale, §3 camera math, §4 render loop,
   §5 spatial index, §6 LOD thresholds, §7 interaction FSM, §8 performance budget.
 - `00_MASTER.md` §2 (canvas engine must not import React), §4 N1/N6/N8, §5 layer rules.
@@ -275,6 +294,7 @@ by `makeBoard()` from `packages/domain/test/factories.ts`.
   engine receives a resolved theme object, it never reads CSS variables at draw time.
 
 ## 4 Files/modules affected
+
 ```text
 packages/canvas-engine/src/
   index.ts                     public API: createEngine(options)
@@ -295,6 +315,7 @@ packages/canvas-engine/test/**
 ```
 
 ## 5 Exact requirements (numbered, testable)
+
 1. `createEngine({ target, scheduler, theme, initialScene })` returns an object with
    `setViewport`, `applyScenePatch`, `tick`, `dispose`, `state`, `on(event)`; it imports no React,
    no DOM globals at module scope, and works in Node with the recording target.
@@ -335,6 +356,7 @@ packages/canvas-engine/test/**
     empties the DOM overlay; a leak test asserts zero listeners remain.
 
 ## 6 UX requirements
+
 - Cursor states: default (arrow), hover-node (arrow), pressed-node (grabbing), space held (grab),
   panning (grabbing), marquee (crosshair), over resize handle (directional), over port (crosshair).
 - Selection visuals: 1.5 px accent outline at 1× zoom, scaling inversely with zoom so the outline
@@ -350,6 +372,7 @@ packages/canvas-engine/test/**
 - Reduced motion: camera animations become instant jumps; no easing.
 
 ## 7 Technical requirements
+
 - The engine owns no document state: it consumes a `Scene` and emits intents
   (`nodesMoved`, `selectionChanged`, `connectionRequested`); the host applies them to the document
   (P3 wires this to Yjs). This keeps N4 possible later.
@@ -365,6 +388,7 @@ packages/canvas-engine/test/**
 - All engine geometry uses plain numbers in world space; screen conversion happens once per frame.
 
 ## 8 Edge cases
+
 - 0 nodes; 1 node; 5,000 nodes all overlapping at the same coordinate (index degeneracy).
 - Node with zero or negative width/height → clamped to the minimum size, logged once per session.
 - Extreme coordinates (±1e7) → camera clamps to scene bounds + 2,000 px margin.
@@ -377,6 +401,7 @@ packages/canvas-engine/test/**
 - Trackpad pinch vs `Ctrl+wheel` vs plain wheel scroll must be distinguished per `05_CANVAS_ENGINE.md` §7.
 
 ## 9 Security requirements
+
 - Node content is not rendered by the engine in this phase (only geometry and titles); any text
   drawn on canvas is truncated to 256 characters to bound work.
 - DOM node hosts must never receive raw HTML in this phase; `textContent` only (rich content is
@@ -385,12 +410,14 @@ packages/canvas-engine/test/**
   interaction module (enforced by dependency-cruiser and a unit test stubbing globals).
 
 ## 10 Performance requirements
+
 - N1 enforced from this phase: `pan-zoom-5000` p95 ≤ 16.6 ms, p99 ≤ 33 ms, `first-interactive-5000`
   ≤ 2,500 ms, `select-all-5000` ≤ 120 ms, `drag-200-selected` p95 ≤ 16.6 ms, `memory-5000` ≤ 700 MB.
 - The bench gate becomes blocking (> 5 % regression fails the build).
 - Hit-testing at 5,000 nodes ≤ 0.3 ms p95; index update on a 200-node drag ≤ 2 ms per drop.
 
 ## 11 Tests to write (named)
+
 - `packages/canvas-engine/test/camera.test.ts` (transform round-trip, zoom-at-cursor, fit).
 - `packages/canvas-engine/test/spatial-index.property.test.ts` (vs brute force, `18_TESTING.md` §4.4).
 - `packages/canvas-engine/test/culling.test.ts`, `lod.test.ts` (thresholds, stable zoom level).
@@ -403,6 +430,7 @@ packages/canvas-engine/test/**
 - `bench/canvas.bench.ts` — all engine metrics real, baseline recorded.
 
 ## 12 Acceptance criteria (checkable)
+
 1. A 5,000-node/10,000-edge scene pans and zooms at p95 ≤ 16.6 ms in the CI bench.
 2. At `zoom = 0.3` no DOM node hosts are mounted; at `zoom = 1.0` only viewport-visible nodes are.
 3. Marquee-selecting 200 nodes and dragging them produces exactly one document patch.
@@ -413,16 +441,19 @@ packages/canvas-engine/test/**
 8. `pnpm test:engine` runs entirely in Node with no jsdom and no browser.
 
 ## 13 Definition of Done
+
 Acceptance criteria pass; bench baseline committed; `packages/canvas-engine/README.md` documents the
 public API, the `RenderTarget` seam and the LOD constants; visual snapshots `canvas-40-nodes-z1.0`
 and `canvas-500-nodes-z0.3` added; coverage ≥ 85 % lines on the package; tracker ticked.
 
 ## 14 What NOT to break
+
 P1's shell, routing, auth, CI jobs and token discipline. Do not introduce React into the engine, do
 not move rendering into React components, do not add a canvas library (React Flow, tldraw, konva,
 pixi) — the hybrid engine is a frozen decision (`00_MASTER.md` §2).
 
 ## 15 Documentation to update
+
 `packages/canvas-engine/README.md`, `05_CANVAS_ENGINE.md` (correct any detail the implementation
 proved wrong, in the same PR), `16_PERFORMANCE.md` (record measured numbers), tracker.
 
@@ -431,17 +462,20 @@ proved wrong, in the same PR), `16_PERFORMANCE.md` (record measured numbers), tr
 # P3 — Document & persistence
 
 ## 1 Objective
+
 Make the board a real document: define the `Y.Doc` schema, bind the canvas engine to it, persist
 locally with `y-indexeddb` and OPFS, implement undo/redo with `Y.UndoManager`, add the
 `Saved / Saving… / Offline` indicator, and add local snapshots plus board export/import (JSON v1)
 satisfying N2, N3 and N9.
 
 ## 2 Context (what exists now)
+
 P1: shell, auth, DB, CI. P2: a fully working canvas engine operating on an in-memory scene supplied
 by factories, emitting intents rather than mutating anything. There is no persistence, no undo, no
 sync (sync is P8; this phase is local-first only and must work with the network permanently off).
 
 ## 3 Existing architecture to respect
+
 - `08_DATA_MODEL.md` §1–4 (Y.Doc schema, node/edge shapes, export format v1, migrations).
 - `00_MASTER.md` §2 (Yjs document + Zustand for ephemeral UI only; `Y.UndoManager` scoped to the
   local origin; y-indexeddb + OPFS), §4 N2/N3/N8/N9.
@@ -450,6 +484,7 @@ sync (sync is P8; this phase is local-first only and must work with the network 
 - `03_UX.md` §6 (save indicator, undo affordances, conflict copy).
 
 ## 4 Files/modules affected
+
 ```text
 packages/domain/src/doc/{schema.ts,createBoardDoc.ts,observers.ts,transactions.ts,migrations.ts}
 packages/domain/src/entities/{node.ts,edge.ts,group.ts,provenance.ts}
@@ -463,6 +498,7 @@ e2e/persistence/{kill-tab.spec.ts,offline-basic.spec.ts}, e2e/undo/undo-matrix.s
 ```
 
 ## 5 Exact requirements (numbered, testable)
+
 1. `Y.Doc` root structure, frozen here and referenced by every later phase:
    `nodes: Y.Map<Y.Map<any>>`, `edges: Y.Map<Y.Map<any>>`, `groups: Y.Map<Y.Map<any>>`,
    `meta: Y.Map<any>` (`schemaVersion`, `boardId`, `title`, `createdAt`), and per-node rich text as
@@ -506,6 +542,7 @@ e2e/persistence/{kill-tab.spec.ts,offline-basic.spec.ts}, e2e/undo/undo-matrix.s
     message (protects N1 and memory).
 
 ## 6 UX requirements
+
 - Save indicator sits in the top bar, always visible, with a tooltip explaining the current state
   and the time of the last successful save ("Saved locally 3 s ago").
 - Undo/redo buttons next to it, with the name of the operation in the tooltip ("Undo: move 12 nodes").
@@ -519,6 +556,7 @@ e2e/persistence/{kill-tab.spec.ts,offline-basic.spec.ts}, e2e/undo/undo-matrix.s
 - Undo after a destructive action shows a toast with an inline "Undo" for 8 seconds.
 
 ## 7 Technical requirements
+
 - The doc provider mounts before the canvas and provides `{ doc, undoManager, status, boardId }`
   via context; Zustand holds only ephemeral UI (selection is engine state, panel open/closed, tool
   mode) and is never persisted.
@@ -532,6 +570,7 @@ e2e/persistence/{kill-tab.spec.ts,offline-basic.spec.ts}, e2e/undo/undo-matrix.s
   meaningful diffs).
 
 ## 8 Edge cases
+
 - Storage quota exceeded → `Error` state, an immediate export offer, and no data loss in memory.
 - Private/incognito mode without IndexedDB → the app runs in memory-only mode with a persistent
   warning banner and a forced export prompt before closing (beforeunload).
@@ -547,6 +586,7 @@ e2e/persistence/{kill-tab.spec.ts,offline-basic.spec.ts}, e2e/undo/undo-matrix.s
   ordering and `id` as a tiebreak.
 
 ## 9 Security requirements
+
 - Import validates every field with zod before it touches the doc; unknown node `type` values are
   imported as `unknown` nodes rendered as a generic card, never executed or trusted.
 - No HTML from an import is rendered; rich text is stored as structured Yjs XML and sanitized on
@@ -556,12 +596,14 @@ e2e/persistence/{kill-tab.spec.ts,offline-basic.spec.ts}, e2e/undo/undo-matrix.s
 - Export never includes session tokens, user emails beyond display names, or org secrets.
 
 ## 10 Performance requirements
+
 - Board with 5,000 nodes: initial doc load + first paint ≤ 2.5 s (N1) including IndexedDB read.
 - Applying a 200-node move patch: ≤ 8 ms of main-thread work.
 - Export of a 5,000-node board ≤ 1.2 s; import ≤ 2 s (both measured in the bench).
 - IndexedDB write amplification: a single node move produces ≤ 2 KB of update payload.
 
 ## 11 Tests to write (named)
+
 - `packages/domain/test/export.property.test.ts` (N9 round-trip, idempotence, unknown fields).
 - `packages/domain/test/doc.convergence.property.test.ts` (two replicas, interleavings, dangling
   edge pruning).
@@ -573,6 +615,7 @@ e2e/persistence/{kill-tab.spec.ts,offline-basic.spec.ts}, e2e/undo/undo-matrix.s
 - `e2e/journeys/J06-rich-text-reload.spec.ts` (placeholder text node version; full editor in P4).
 
 ## 12 Acceptance criteria (checkable)
+
 1. Create 10 nodes, kill the tab within 100 ms of the last edit, reopen: all 10 are present.
 2. With the network disabled for the whole session, every board feature of P2/P3 works.
 3. Undo reverses every mutation type introduced so far, redo restores it, 200 levels deep.
@@ -582,16 +625,19 @@ e2e/persistence/{kill-tab.spec.ts,offline-basic.spec.ts}, e2e/undo/undo-matrix.s
 7. A 5,000-node board opens from IndexedDB in ≤ 2.5 s.
 
 ## 13 Definition of Done
+
 Acceptance criteria pass; `08_DATA_MODEL.md` updated with any schema detail that changed;
 `packages/domain/README.md` documents the doc schema, origins and export format; undo matrix and
 offline suites are part of CI; tracker ticked.
 
 ## 14 What NOT to break
+
 The engine's independence (it still must not know about Yjs — bindings live in `apps/web`), N1
 performance, P1 auth/CI. Do not add a server round-trip to any local operation; P3 must be fully
 functional offline.
 
 ## 15 Documentation to update
+
 `08_DATA_MODEL.md`, `packages/domain/README.md`, `03_UX.md` §6 if indicator copy changed,
 `18_TESTING.md` §4 if new properties were added, tracker.
 
@@ -600,17 +646,20 @@ functional offline.
 # P4 — Node system
 
 ## 1 Objective
+
 Implement every node type with its schema, renderer, inspector editor and lifecycle: website, text,
 image, file, link, note/evidence, person/username, project/repository, plus the generic `unknown`
 fallback. Add rich text editing, file/image handling with upload, tagging, and the node inspector
 panel.
 
 ## 2 Context (what exists now)
+
 P2 renders geometry and titles only; P3 stores nodes in the `Y.Doc` with a `data` blob per type and
 a `Y.XmlFragment` `body` field reserved for rich text. There is no per-type UI, no upload path, no
 inspector. File storage exists locally in OPFS (P3); server-side upload is introduced here.
 
 ## 3 Existing architecture to respect
+
 - `06_NODE_SYSTEM.md` (registry, per-type schemas, editors, lifecycle) — the primary reference.
 - `08_DATA_MODEL.md` §2 (node fields, provenance), `03_UX.md` §4 (inspector), §7 (node states).
 - `05_CANVAS_ENGINE.md` §6 (LOD: what a node must render at each level).
@@ -618,6 +667,7 @@ inspector. File storage exists locally in OPFS (P3); server-side upload is intro
 - `04_DESIGN_SYSTEM.md` (card anatomy, density, typography scale).
 
 ## 4 Files/modules affected
+
 ```text
 packages/domain/src/nodes/{registry.ts,types/*.ts,schemas.ts,defaults.ts,lifecycle.ts}
 packages/ui/src/primitives/{Card,Badge,Tag,Field,Select,Tooltip,ContextMenu}/*
@@ -630,8 +680,9 @@ packages/canvas-engine/src/render/lod-glyphs.ts (per-type accent + glyph)
 ```
 
 ## 5 Exact requirements (numbered, testable)
+
 1. A node type registry: `defineNodeType({ id, label, icon, schema, defaults, minSize, maxSize,
-   render, editor, lodGlyph, searchText, exportFields })`. Adding a type touches only the registry
+render, editor, lodGlyph, searchText, exportFields })`. Adding a type touches only the registry
    directory — no `switch` statements anywhere else (a lint test greps for type-name switches).
 2. Types and their required `data` fields:
    - `website`: `url`, `title`, `description?`, `faviconFileId?`, `screenshotFileId?`, `siteName?`,
@@ -672,6 +723,7 @@ packages/canvas-engine/src/render/lod-glyphs.ts (per-type accent + glyph)
     30 days shows a subtle indicator).
 
 ## 6 UX requirements
+
 - Card anatomy per `04_DESIGN_SYSTEM.md`: 12 px radius, 1 px border, type accent as a 3 px left
   edge, 12/16 px padding, title 14 px/600, secondary 12 px/400, max 3 lines of preview text.
 - Hover reveals a compact action bar (open source, copy link, add edge, more menu) anchored to the
@@ -688,6 +740,7 @@ packages/canvas-engine/src/render/lod-glyphs.ts (per-type accent + glyph)
   it instead."
 
 ## 7 Technical requirements
+
 - Node renderers are pure presentational components receiving a plain node object; they never read
   the Y.Doc directly (the binding layer supplies props) to keep re-renders bounded.
 - Re-render isolation: a node re-renders only when its own map changes; verify with a render-count
@@ -700,6 +753,7 @@ packages/canvas-engine/src/render/lod-glyphs.ts (per-type accent + glyph)
 - Thumbnail jobs are idempotent by `fileId + variant`.
 
 ## 8 Edge cases
+
 - Paste of a 50 MB image → progress, and a warning that it will be downscaled for preview.
 - Unsupported file type → the node is created as `file` with a generic icon; no preview, no error.
 - Image with 20,000 × 20,000 pixels → rejected at decode with a clear message (decompression bomb).
@@ -712,6 +766,7 @@ packages/canvas-engine/src/render/lod-glyphs.ts (per-type accent + glyph)
 - Tag with only whitespace or an emoji-only tag → allowed if non-empty after trim; length enforced.
 
 ## 9 Security requirements
+
 - Upload constraints: ≤ 100 MB per file, allowlist of MIME types (`image/png|jpeg|webp|gif`,
   `application/pdf`, `text/plain`, `text/csv`, `application/json`, `application/zip`), sniffed
   server-side; SVG is rejected (`15_SECURITY.md` §5).
@@ -719,16 +774,18 @@ packages/canvas-engine/src/render/lod-glyphs.ts (per-type accent + glyph)
   non-image types and `X-Content-Type-Options: nosniff`.
 - Presigned URLs expire in 10 minutes and are scoped to a single key and method.
 - Any URL field is validated by the shared URL validator (P6 introduces `safeFetch`; the validator
-  for *storage* of URLs already applies scheme + shape rules here).
+  for _storage_ of URLs already applies scheme + shape rules here).
 - Filenames are sanitized for display; storage keys are server-generated.
 
 ## 10 Performance requirements
+
 - 500 visible rich cards render in ≤ 120 ms after a viewport jump (measured in the bench).
 - Editing a node's text does not re-render any other node (render-count assertion = 1).
 - Thumbnails are requested lazily for nodes within 400 px of the viewport.
 - Inspector open/close ≤ 100 ms with no canvas frame drop (no layout thrash).
 
 ## 11 Tests to write (named)
+
 - `packages/domain/test/nodes.registry.test.ts` (every type has all required capabilities).
 - `packages/domain/test/nodes.schemas.property.test.ts` (schema round-trips through export).
 - `apps/web/src/nodes/renderers/*.test.tsx` (state tables per `18_TESTING.md` §6).
@@ -739,6 +796,7 @@ packages/canvas-engine/src/render/lod-glyphs.ts (per-type accent + glyph)
 - `e2e/visual/nodes.spec.ts` (node-type × state snapshot matrix).
 
 ## 12 Acceptance criteria (checkable)
+
 1. Each of the nine node types can be created, edited, duplicated, deleted and undone.
 2. A dropped 5 MB PDF produces a `file` node with a page-1 thumbnail within 10 s.
 3. Rich text survives reload, and formatting round-trips through export/import.
@@ -748,16 +806,19 @@ packages/canvas-engine/src/render/lod-glyphs.ts (per-type accent + glyph)
 7. Visual snapshots for all node states are committed and reviewed.
 
 ## 13 Definition of Done
+
 Acceptance criteria pass; `06_NODE_SYSTEM.md` reflects the shipped schemas exactly; the node type
 registry is documented for plugin authors (feeds `17_PLUGIN_SDK.md`); undo matrix extended with node
 operations; tracker ticked.
 
 ## 14 What NOT to break
+
 N1 performance (rich cards are the main risk — keep DOM nodes bounded by culling), P3 persistence
 and undo semantics, engine/React separation. Do not put node-type conditionals inside the engine;
 the engine only receives an accent color and a glyph id.
 
 ## 15 Documentation to update
+
 `06_NODE_SYSTEM.md`, `packages/domain/README.md`, `packages/ui/README.md` (card primitives),
 `15_SECURITY.md` §5 (upload policy as shipped), tracker.
 
@@ -766,22 +827,26 @@ the engine only receives an accent color and a glyph id.
 # P5 — Edge system
 
 ## 1 Objective
+
 Implement typed edges with four routing modes (curved, orthogonal, straight, smart), labels,
 directionality, creation and editing interactions, waypoints, and edge selection/inspection — with
 routing running in a worker and meeting the 10,000-edge performance budget.
 
 ## 2 Context (what exists now)
+
 P2 paints straight canvas lines through an `EdgePath` interface; P3 stores edges in the doc; P4 gave
 nodes ports implicitly (edges attach to node borders). There is no edge type semantics, no routing,
 no labels, no edge editing UI.
 
 ## 3 Existing architecture to respect
+
 - `07_EDGE_SYSTEM.md` (semantics, routing algorithms, labels, editing) — primary reference.
 - `05_CANVAS_ENGINE.md` §4 (render order), §7 (the `connecting` FSM state reserved in P2).
 - `08_DATA_MODEL.md` §2 (edge fields), `18_TESTING.md` §4.3 (routing invariants).
 - `04_DESIGN_SYSTEM.md` (edge colors per type, stroke widths, label chips).
 
 ## 4 Files/modules affected
+
 ```text
 packages/domain/src/edges/{types.ts,semantics.ts,validation.ts,defaults.ts}
 packages/canvas-engine/src/edges/{router.worker.ts,routing/{curved,orthogonal,straight,smart}.ts,
@@ -792,6 +857,7 @@ packages/domain/test/edges.routing.property.test.ts
 ```
 
 ## 5 Exact requirements (numbered, testable)
+
 1. Edge types (closed union, extensible via the plugin registry later): `references`,
    `related_to`, `derived_from`, `owns`, `has_account`, `member_of`, `mentions`, `contradicts`,
    `same_as`, `custom` (with a user label). Each has: color token, default routing, directionality
@@ -810,7 +876,7 @@ packages/domain/test/edges.routing.property.test.ts
      `clamp(distance * 0.35, 32, 180)` px.
    - `orthogonal`: axis-aligned Manhattan path with 12 px corner radii, minimum 24 px stub off each
      anchor, choosing the variant with fewer bends and no node overlap.
-   - `smart`: A* on a sparse visibility grid built from the obstacle rectangles within the bounding
+   - `smart`: A\* on a sparse visibility grid built from the obstacle rectangles within the bounding
      box of the two endpoints inflated by 120 px; cell size 16 px; obstacle padding 12 px; bend
      penalty 12; budget 4 ms per edge — on budget exhaustion return the `curved` path with
      `degraded: true`.
@@ -835,6 +901,7 @@ packages/domain/test/edges.routing.property.test.ts
     `contradicts` renders with a small crossing tick at the midpoint.
 
 ## 6 UX requirements
+
 - Hovering a node shows the connection affordance (a subtle border highlight plus a `+` handle on
   each side) after a 120 ms delay so it does not flicker during pans.
 - While connecting, valid drop targets brighten and invalid ones dim to 40 % opacity; the cursor
@@ -849,6 +916,7 @@ packages/domain/test/edges.routing.property.test.ts
   within 40 px of the viewport border.
 
 ## 7 Technical requirements
+
 - `EdgePath` is a `Float32Array` of points plus a `kind` discriminator; the renderer never allocates
   per frame (paths are reused from the cache).
 - The obstacle set for smart routing is queried from the spatial index, not from a full node list.
@@ -860,6 +928,7 @@ packages/domain/test/edges.routing.property.test.ts
 - Edge painting batches by style: one `beginPath` per (color, width, dash) group.
 
 ## 8 Edge cases
+
 - Two nodes overlapping exactly → path degenerates to a small arc; must not produce NaN.
 - 10,000 edges with `smart` routing requested → the batch scheduler processes at most 400 edges per
   frame, prioritizing visible edges; offscreen edges keep their previous path.
@@ -871,18 +940,21 @@ packages/domain/test/edges.routing.property.test.ts
 - Undo of an edge type change restores the previous type and label together (one transaction).
 
 ## 9 Security requirements
+
 - Edge labels are plain text, length-capped at 200 stored characters, escaped on canvas (no HTML).
 - Custom edge types created by users are stored as data, never evaluated; their labels are sanitized.
 - Provenance on tool/AI-created edges is mandatory; a validation test asserts an edge cannot be
   created through `applyProposal` without it (prepares P9).
 
 ## 10 Performance requirements
+
 - 10,000 edges, curved mode: full repaint ≤ 6 ms; combined with nodes the frame stays ≤ 16.6 ms.
 - `route-smart-2000-edges` bench ≤ 900 ms wall time in the worker.
 - Dragging 200 nodes with 1,000 attached edges keeps p95 ≤ 16.6 ms.
 - Routing cache hit ratio ≥ 90 % during typical panning (asserted in the bench output).
 
 ## 11 Tests to write (named)
+
 - `packages/domain/test/edges.validation.test.ts` (self-loop, duplicates, type rules).
 - `packages/canvas-engine/test/routing/*.test.ts` per algorithm (geometry assertions).
 - `packages/domain/test/edges.routing.property.test.ts` (all six invariants, `18_TESTING.md` §4.3).
@@ -893,6 +965,7 @@ packages/domain/test/edges.routing.property.test.ts
 - `e2e/visual/edges.spec.ts` (4 routings × 3 states).
 
 ## 12 Acceptance criteria (checkable)
+
 1. All four routing modes render correctly for the same node pair and can be switched live.
 2. Smart routing avoids obstacles or reports `degraded` — never draws through a node silently.
 3. Dragging an edge endpoint re-anchors it; dropping on empty canvas offers node creation.
@@ -902,14 +975,17 @@ packages/domain/test/edges.routing.property.test.ts
 7. Keyboard-only connection creation works end to end.
 
 ## 13 Definition of Done
+
 Acceptance criteria pass; `07_EDGE_SYSTEM.md` matches the implementation including the exact
 constants; routing invariants are in the property suite; visual snapshots committed; tracker ticked.
 
 ## 14 What NOT to break
+
 N1 frame budget, node rendering isolation from P4, undo semantics, engine purity (routing lives in
 the engine package and its worker, with no domain imports beyond types).
 
 ## 15 Documentation to update
+
 `07_EDGE_SYSTEM.md`, `packages/canvas-engine/README.md` (worker protocol), `16_PERFORMANCE.md`
 (measured routing numbers), tracker.
 
@@ -918,22 +994,26 @@ the engine package and its worker, with no domain imports beyond types).
 # P6 — Capture
 
 ## 1 Objective
+
 Make collection frictionless: a paste pipeline that always produces the right node type, drag-and-
 drop from the OS and other browser tabs, a server-side unfurl service with SSRF protection, a quick-
 add command, and the browser-extension hook endpoint.
 
 ## 2 Context (what exists now)
+
 P4 defined node types including `website` with a `status: pending` state and `fetchedAt`; P5 gives
 edges. Nothing populates website metadata yet; there is no clipboard handling and no outbound HTTP
 from the server other than auth/OAuth.
 
 ## 3 Existing architecture to respect
+
 - `03_UX.md` §3 (paste as the front door), `06_NODE_SYSTEM.md` (target node shapes).
 - `09_BACKEND.md` §5 (unfurl job, queue, caching), `15_SECURITY.md` §4 (SSRF rules — mandatory).
 - `00_MASTER.md` §4 N7 (SSRF-safe URL handling with DNS pinning, denylist, redirect cap).
 - `18_TESTING.md` §11.1 (the SSRF corpus that must pass), §7.4 (fixture web server for e2e).
 
 ## 4 Files/modules affected
+
 ```text
 packages/domain/src/capture/{detect.ts,parse.ts,plan.ts}      clipboard payload → node plan
 packages/domain/src/net/{safeFetch.ts,urlValidator.ts,dnsPin.ts}
@@ -945,6 +1025,7 @@ e2e/fixtures-server/**
 ```
 
 ## 5 Exact requirements (numbered, testable)
+
 1. Paste detection order (first match wins), implemented as a pure function over `DataTransfer`:
    files → image bitmap → `text/html` (with a URL or rich content) → `text/uri-list` → plain text
    that parses as one or more URLs → plain text → nothing (show "Nothing to paste").
@@ -971,7 +1052,7 @@ e2e/fixtures-server/**
 11. Quick-add: `N` creates a note at the cursor, `L` opens a one-field URL input, `⌘/Ctrl+V` pastes,
     and a "+" button opens the same menu for pointer users.
 12. Browser-extension hook: `POST /api/v1/capture` accepting `{ url, title?, selection?, imageUrl?,
-    boardId? }` authenticated by a scoped API token; it creates a node in the target board's inbox
+boardId? }` authenticated by a scoped API token; it creates a node in the target board's inbox
     area (a reserved region 2,000 px left of the origin) and returns the node id. Rate limit 60/min.
 13. Every captured node records provenance: `source: 'paste'|'drop'|'extension'|'quick-add'`, the
     original URL, and `observedAt`.
@@ -980,6 +1061,7 @@ e2e/fixtures-server/**
     offer it (no dead controls).
 
 ## 6 UX requirements
+
 - Paste feedback within 100 ms: the node appears immediately in a `loading` state; metadata fills in
   when the unfurl returns. Never block the paste on the network.
 - Paste position: at the pointer if it is over the canvas, else at the viewport center; multi-item
@@ -994,6 +1076,7 @@ e2e/fixtures-server/**
   field and a clear explanation.
 
 ## 7 Technical requirements
+
 - Detection is a pure function tested with synthetic `DataTransfer` fixtures; the React hook is a
   thin wrapper.
 - Unfurl parsing uses a streaming HTML parser with a 512 KB head limit — the full body is never
@@ -1005,6 +1088,7 @@ e2e/fixtures-server/**
   drop and extension cannot diverge in behavior.
 
 ## 8 Edge cases
+
 - Paste of 500 URLs → capped at 50 with a message offering "Import as a list" (creates one node
   containing the list) — no silent truncation.
 - Paste of an image plus text (e.g. from a document) → image wins, text is attached as the node's
@@ -1019,6 +1103,7 @@ e2e/fixtures-server/**
 - File dropped while offline → stored in OPFS, uploaded on reconnect.
 
 ## 9 Security requirements
+
 - The SSRF corpus (`18_TESTING.md` §11.1) must pass in full; every new URL consumer must call
   `safeFetch` (ESLint bans direct `fetch` with a non-literal URL in server packages).
 - The unfurl worker runs with egress through the allowlisting proxy (`19_DEPLOYMENT.md` §3), so a
@@ -1030,11 +1115,13 @@ e2e/fixtures-server/**
 - Uploaded remote images pass the same sniffing and size rules as user uploads (P4 §9).
 
 ## 10 Performance requirements
+
 - Paste-to-visible-node ≤ 100 ms for up to 20 items.
 - Unfurl p95 end-to-end ≤ 3 s for a responsive site; the queue sustains 10 unfurls/s per org.
 - A 50-URL paste completes all unfurls within 20 s at default concurrency.
 
 ## 11 Tests to write (named)
+
 - `packages/domain/test/capture.detect.test.ts` (full `DataTransfer` matrix).
 - `packages/domain/test/ssrf.corpus.test.ts` + `net/dnsPin.test.ts` (rebinding, redirect chain).
 - `apps/worker/test/unfurl.test.ts` (fixture server: OG tags, no title, slow, 404, oversized).
@@ -1044,6 +1131,7 @@ e2e/fixtures-server/**
 - `e2e/persistence/offline-paste.spec.ts`.
 
 ## 12 Acceptance criteria (checkable)
+
 1. Pasting any of: URL, multiple URLs, image, text, HTML, file — produces the correct node type.
 2. Website nodes fill in title/description/favicon within 3 s on a normal site.
 3. Every hostile URL in the corpus is refused with the correct reason code.
@@ -1052,14 +1140,17 @@ e2e/fixtures-server/**
 6. All capture actions are undoable as a single step per paste/drop.
 
 ## 13 Definition of Done
+
 Acceptance criteria pass; `09_BACKEND.md` documents the unfurl job and cache; `15_SECURITY.md` §4
 documents `safeFetch` as shipped; the OpenAPI document includes `/api/v1/capture`; tracker ticked.
 
 ## 14 What NOT to break
+
 Offline-first (P3): no capture path may require the network to create a node. N1: a 50-node paste
 must not stall the frame loop (create nodes in one transaction, not 50).
 
 ## 15 Documentation to update
+
 `09_BACKEND.md`, `15_SECURITY.md`, `03_UX.md` §3 (final paste copy), OpenAPI spec, tracker.
 
 ---
@@ -1067,17 +1158,20 @@ must not stall the frame loop (create nodes in one transaction, not 50).
 # P7 — Projects & search
 
 ## 1 Objective
+
 Ship multi-project organization (orgs → projects → boards), board management (create, rename,
 duplicate, archive, delete, templates), global search across boards with Postgres FTS + `pg_trgm`,
 and the `⌘/Ctrl+K` command palette that exposes every action in the product.
 
 ## 2 Context (what exists now)
+
 P1 created `organizations`, `projects`, `boards` tables and a palette stub. P3–P6 fill boards with
 content stored primarily in the CRDT; the Postgres `nodes`/`edges` projection does not exist yet —
 this phase introduces a **local-only** search index path and defers the server projection to P8,
 where the sync service owns it.
 
 ## 3 Existing architecture to respect
+
 - `00_MASTER.md` §2 (Postgres FTS + pg_trgm now; pgvector later in P11/P13), §2 "Yjs as the
   document, Postgres as the projection".
 - `09_BACKEND.md` §3 (projects/boards API), §6 (search), `08_DATA_MODEL.md` §5 (indexes).
@@ -1085,6 +1179,7 @@ where the sync service owns it.
 - `18_TESTING.md` §11.3 (authz matrix — every new procedure must be added).
 
 ## 4 Files/modules affected
+
 ```text
 packages/db/prisma/schema.prisma            projects, boards, board_members, search columns
 apps/api/src/trpc/routers/{project.ts,board.ts,search.ts}
@@ -1096,6 +1191,7 @@ packages/domain/src/search/{localIndex.ts,tokenize.ts,score.ts}
 ```
 
 ## 5 Exact requirements (numbered, testable)
+
 1. Data model: `organizations 1—* projects 1—* boards`; `board` has `title`, `icon`, `archivedAt`,
    `templateOf?`, `lastOpenedAt`, `nodeCount`, `edgeCount` (denormalized counters updated by the
    projection in P8; until then updated on save from the client with a server-side sanity clamp).
@@ -1128,6 +1224,7 @@ packages/domain/src/search/{localIndex.ts,tokenize.ts,score.ts}
     with a tooltip explaining why (N-requirement for honest UI, J20).
 
 ## 6 UX requirements
+
 - Project switcher in the top-left: current project, search field, recent projects, "New project".
 - Board grid cards: thumbnail, title, node/edge count, last opened, a menu (rename, duplicate,
   move, archive, export, delete). Destructive items are separated and require typed confirmation
@@ -1142,6 +1239,7 @@ packages/domain/src/search/{localIndex.ts,tokenize.ts,score.ts}
 - Loading: skeleton cards for the board grid; a shimmer-free spinner for server search after 300 ms.
 
 ## 7 Technical requirements
+
 - Local index lives in the web app, rebuilt incrementally from Y.Doc observers; it must not block
   the main thread for more than 4 ms per update batch (chunk if larger).
 - Server search columns: `search_tsv tsvector GENERATED ALWAYS AS (...) STORED` on the projection
@@ -1152,6 +1250,7 @@ packages/domain/src/search/{localIndex.ts,tokenize.ts,score.ts}
 - Board duplication copies files by server-side object copy (no download/upload round-trip).
 
 ## 8 Edge cases
+
 - Search terms with special characters, quotes, or 500 characters → handled by `websearch_to_tsquery`
   and a 200-char input cap.
 - A board with 0 nodes has no thumbnail → deterministic placeholder derived from the board id.
@@ -1164,6 +1263,7 @@ packages/domain/src/search/{localIndex.ts,tokenize.ts,score.ts}
   shows a full-screen explanation and a link back to their projects (no silent blank page).
 
 ## 9 Security requirements
+
 - Every search query is scoped by membership at the SQL level (a join on memberships), never by
   post-filtering in JS.
 - Cross-org resources return 404, not 403, to avoid existence leaks (`18_TESTING.md` §11.3).
@@ -1172,12 +1272,14 @@ packages/domain/src/search/{localIndex.ts,tokenize.ts,score.ts}
 - Audit entries for: project/board create, rename, archive, delete, member add/remove/role change.
 
 ## 10 Performance requirements
+
 - Local search: ≤ 30 ms p95 on a 5,000-node board; index build ≤ 400 ms on open.
 - Server search p95 ≤ 300 ms at 1 M projected nodes (k6 scenario `search`).
 - Palette opens in ≤ 80 ms with 500 registered commands.
 - Board grid with 200 boards renders in ≤ 200 ms (virtualized above 60 cards).
 
 ## 11 Tests to write (named)
+
 - `packages/domain/test/search.localIndex.test.ts` (prefix, fuzzy, ranking, incremental updates).
 - `apps/api/test/search.query.test.ts` (filters, permission scoping, injection attempts).
 - `apps/api/test/project.board.crud.test.ts` + authz matrix rows for every new procedure.
@@ -1186,6 +1288,7 @@ packages/domain/src/search/{localIndex.ts,tokenize.ts,score.ts}
 - `e2e/a11y/palette-keyboard.spec.ts`.
 
 ## 12 Acceptance criteria (checkable)
+
 1. A user can create a project, three boards, rename, duplicate, archive and delete them, all
    audited and permission-checked.
 2. Searching a term present in a node on another board finds it and jumps to it.
@@ -1195,16 +1298,19 @@ packages/domain/src/search/{localIndex.ts,tokenize.ts,score.ts}
 6. Templates create working boards.
 
 ## 13 Definition of Done
+
 Acceptance criteria pass; `09_BACKEND.md` §3/§6 match the implementation; the authz matrix covers
 all new procedures; palette command list is documented; tracker ticked.
 
 ## 14 What NOT to break
+
 Offline behavior (search must degrade, not fail), the shortcut reserved in P1, N1 (indexing must not
 run on the frame path), and undo semantics for board-level operations (board metadata operations are
-server-side and are *not* in the CRDT undo stack — they get their own confirmation instead; state
+server-side and are _not_ in the CRDT undo stack — they get their own confirmation instead; state
 this explicitly in the UI).
 
 ## 15 Documentation to update
+
 `09_BACKEND.md`, `03_UX.md` §8–9, `08_DATA_MODEL.md` (search columns/indexes), tracker.
 
 ---
@@ -1212,16 +1318,19 @@ this explicitly in the UI).
 # P8 — Sync & collaboration
 
 ## 1 Objective
+
 Introduce the Hocuspocus sync service, the Postgres projection of the CRDT, real-time presence,
 comments, and the conflict/permission UX — turning the local-first app into a multi-user one without
 weakening offline guarantees.
 
 ## 2 Context (what exists now)
+
 P3 made the board a local Y.Doc with IndexedDB persistence and undo. P7 added projects, boards and
 search (server search currently has an empty projection to read from). No WebSocket server exists;
 `SYNC_URL` and `SYNC_SHARED_SECRET` are already in the env schema from P1.
 
 ## 3 Existing architecture to respect
+
 - `00_MASTER.md` §2 (Hocuspocus 4, one room per board, Redis extension, projection in the same
   transaction as the snapshot; projection is idempotent and replayable).
 - `09_BACKEND.md` §7 (sync service), `08_DATA_MODEL.md` §3 (projection tables and upsert rules).
@@ -1229,6 +1338,7 @@ search (server search currently has an empty projection to read from). No WebSoc
 - `03_UX.md` §11 (presence, comments, conflict copy), `18_TESTING.md` §7.6 (collab tests).
 
 ## 4 Files/modules affected
+
 ```text
 apps/sync/src/{server.ts,auth.ts,persistence.ts,projection.ts,awareness.ts,eviction.ts,metrics.ts}
 apps/api/src/trpc/routers/{boardToken.ts,comments.ts}
@@ -1240,6 +1350,7 @@ scripts/reproject.ts
 ```
 
 ## 5 Exact requirements (numbered, testable)
+
 1. `apps/sync` runs Hocuspocus with: `onAuthenticate` verifying a short-lived board token issued by
    the API (HMAC with `SYNC_SHARED_SECRET`, 5-minute TTL, containing `userId`, `boardId`, `role`),
    `onLoadDocument` restoring from `board_snapshots`, `onStoreDocument` writing snapshot + projection
@@ -1262,7 +1373,7 @@ scripts/reproject.ts
 7. Reconnection: exponential backoff 1 s → 30 s with jitter, resume with the state vector (no full
    document resend), and a visible "Reconnecting… attempt N" after the second failure.
 8. Presence: awareness carries `{ userId, name, color, cursor: {x,y}, selection: string[],
-   viewport: rect, activeNodeId? }` throttled to 20 Hz for cursors and 4 Hz for viewport.
+viewport: rect, activeNodeId? }` throttled to 20 Hz for cursors and 4 Hz for viewport.
 9. Presence UI: cursors with name labels, colored selection outlines for remote selections, avatar
    stack in the top bar with "follow" mode (camera follows a chosen user until any local pan).
 10. Comments: threads anchored to a node or to a canvas point; fields `id`, `boardId`, `anchor`,
@@ -1280,6 +1391,7 @@ scripts/reproject.ts
     refresh and the socket is closed with code 4403 and a clear UI message.
 
 ## 6 UX requirements
+
 - Presence is calm: cursors fade after 3 s of inactivity, labels only on movement or hover.
 - Remote selection uses a 30 %-opacity outline in the user's color; it never obscures local selection.
 - Conflict copy is honest and specific: "Alex moved this node while you were editing it. Your text
@@ -1292,6 +1404,7 @@ scripts/reproject.ts
 - Follow mode shows a border tint and an obvious exit affordance.
 
 ## 7 Technical requirements
+
 - The sync service imports `packages/domain` for schema validation of projected rows; it never
   imports UI or engine code.
 - Snapshot storage: `board_snapshots(board_id, seq, binary bytea, state_vector bytea, created_at)`,
@@ -1305,6 +1418,7 @@ scripts/reproject.ts
   code 1001 so clients reconnect elsewhere within 5 s.
 
 ## 8 Edge cases
+
 - Client clock far in the future/past → irrelevant to CRDT correctness, but comment timestamps use
   server time only.
 - A 5,000-node board opened by 10 users simultaneously → memory bound respected (one doc per room,
@@ -1319,6 +1433,7 @@ scripts/reproject.ts
   no data loss and bounded merge time (≤ 3 s).
 
 ## 9 Security requirements
+
 - Board tokens: HMAC-signed, 5-minute TTL, single board scope, role embedded; the sync service never
   queries permissions itself (single source: the API), and rejects unsigned/expired tokens with 4401.
 - Message size and rate limits per connection (100 msg/s, 10 MB/msg); violations disconnect.
@@ -1328,12 +1443,14 @@ scripts/reproject.ts
 - The projection writer uses a dedicated DB role with no DDL rights.
 
 ## 10 Performance requirements
+
 - Broadcast latency p95 ≤ 250 ms within a region (k6 `sync-fanout`, 200 clients / 20 boards).
 - Projection of a 5,000-node board ≤ 800 ms; incremental projection of a 50-node change ≤ 60 ms.
 - Sync pod holds ≥ 120 open rooms within a 2 GB limit (`19_DEPLOYMENT.md` §13).
 - Reconnect + resume for a 5,000-node board ≤ 1.5 s.
 
 ## 11 Tests to write (named)
+
 - `apps/sync/test/auth.test.ts` (valid/expired/wrong-board/viewer tokens).
 - `apps/sync/test/projection.idempotent.test.ts` and `projection.replay.test.ts`.
 - `packages/domain/test/projection.diff.test.ts` (property: diff+apply == full projection).
@@ -1344,6 +1461,7 @@ scripts/reproject.ts
 - `load/sync-fanout.js` (k6).
 
 ## 12 Acceptance criteria (checkable)
+
 1. Two browsers on one board converge within 1 s for every operation type.
 2. Offline edits for 10 minutes sync without duplication or loss on reconnect.
 3. The Postgres projection matches the CRDT for a 5,000-node board (`db:verify` reports zero drift),
@@ -1354,15 +1472,18 @@ scripts/reproject.ts
 7. All `nexus_sync_*` metrics from `19_DEPLOYMENT.md` §10.2 are emitted.
 
 ## 13 Definition of Done
+
 Acceptance criteria pass; runbooks `runbooks/projection.md`, `runbooks/sync.md`,
 `runbooks/sync-memory.md` written; alerts `SyncProjectionFailing`, `SyncBroadcastSlow`,
 `SyncMemoryHigh` configured; `09_BACKEND.md` §7 updated; tracker ticked.
 
 ## 14 What NOT to break
+
 N2 and the offline-first guarantee: the app must still fully work with the sync service down. Undo
 must remain local-origin-scoped (N3) — a remote change must never be undone by a local `⌘Z`. Do not
 move the source of truth to Postgres; the CRDT remains authoritative.
 
 ## 15 Documentation to update
+
 `09_BACKEND.md`, `08_DATA_MODEL.md` (projection tables), `03_UX.md` §11, `19_DEPLOYMENT.md` §13
 (measured memory), runbooks, tracker.

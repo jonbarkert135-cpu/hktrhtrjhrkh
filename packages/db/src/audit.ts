@@ -1,7 +1,7 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { newId, systemClock } from '@nexus/domain';
 import type { Clock } from '@nexus/domain';
-import { prisma } from './client';
+import { prisma } from './client.ts';
 
 /**
  * One audit entry. Timestamps are server-assigned (15_SECURITY.md C-45): the caller cannot pass a

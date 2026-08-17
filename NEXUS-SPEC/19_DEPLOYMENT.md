@@ -1,6 +1,7 @@
 # NEXUS — 19 — DEPLOYMENT, CI/CD AND OPERATIONS
 
 ## Scope
+
 Defines every environment NEXUS runs in and how code reaches them: config matrix, the reference
 `docker-compose.yml` for self-hosting, the Kubernetes manifest set (including the gVisor
 RuntimeClass and runner network isolation), the GitHub Actions pipeline, database migration policy,
@@ -13,21 +14,21 @@ a demo.
 
 ## 1. Environments
 
-| | local | preview (per-PR) | staging | production |
-|---|---|---|---|---|
-| Purpose | development | review a PR end-to-end | rehearse release, load/DR drills | users |
-| Topology | docker-compose | namespace per PR in the staging cluster | full k8s, 1 replica each | full k8s, HA |
-| Domain | `localhost` | `pr-<n>.preview.nexus.internal` | `staging.nexus.app` | `nexus.app` |
-| Postgres | container, ephemeral | shared cluster, DB per PR | dedicated, PITR on | dedicated HA, PITR on |
-| Redis | container | shared, DB index per PR | dedicated | dedicated, replicated |
-| Object storage | MinIO container | MinIO, bucket per PR | S3 bucket | S3 bucket, versioned |
-| Runner | docker, runc | k8s, gVisor | k8s, gVisor | k8s, gVisor, dedicated node pool |
-| Real tools | stubbed by default | stubbed | real, consented targets only | real |
-| AI provider | mock or dev key | mock | real, low quota | real |
-| Auth | email/password, mail to Mailpit | same | OAuth + email | OAuth + email, MFA for admins |
-| Data | seeded (`pnpm db:seed`) | seeded | anonymized restore of a prod backup | real |
-| Telemetry | console exporter | OTLP → staging collector | full stack | full stack + paging |
-| Retention | n/a | deleted on PR close or after 72 h | 14 days backups | 35 days PITR |
+|                | local                           | preview (per-PR)                        | staging                             | production                       |
+| -------------- | ------------------------------- | --------------------------------------- | ----------------------------------- | -------------------------------- |
+| Purpose        | development                     | review a PR end-to-end                  | rehearse release, load/DR drills    | users                            |
+| Topology       | docker-compose                  | namespace per PR in the staging cluster | full k8s, 1 replica each            | full k8s, HA                     |
+| Domain         | `localhost`                     | `pr-<n>.preview.nexus.internal`         | `staging.nexus.app`                 | `nexus.app`                      |
+| Postgres       | container, ephemeral            | shared cluster, DB per PR               | dedicated, PITR on                  | dedicated HA, PITR on            |
+| Redis          | container                       | shared, DB index per PR                 | dedicated                           | dedicated, replicated            |
+| Object storage | MinIO container                 | MinIO, bucket per PR                    | S3 bucket                           | S3 bucket, versioned             |
+| Runner         | docker, runc                    | k8s, gVisor                             | k8s, gVisor                         | k8s, gVisor, dedicated node pool |
+| Real tools     | stubbed by default              | stubbed                                 | real, consented targets only        | real                             |
+| AI provider    | mock or dev key                 | mock                                    | real, low quota                     | real                             |
+| Auth           | email/password, mail to Mailpit | same                                    | OAuth + email                       | OAuth + email, MFA for admins    |
+| Data           | seeded (`pnpm db:seed`)         | seeded                                  | anonymized restore of a prod backup | real                             |
+| Telemetry      | console exporter                | OTLP → staging collector                | full stack                          | full stack + paging              |
+| Retention      | n/a                             | deleted on PR close or after 72 h       | 14 days backups                     | 35 days PITR                     |
 
 ### 1.1 Configuration matrix
 
@@ -36,43 +37,45 @@ All configuration is environment variables, validated at boot by a zod schema in
 variable** — no defaults that silently weaken security.
 
 ```ts
-export const serverEnv = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']),
-  NEXUS_ENV: z.enum(['local', 'preview', 'staging', 'production']),
-  DATABASE_URL: z.string().url(),
-  DATABASE_POOL_MAX: z.coerce.number().int().min(2).max(200).default(20),
-  REDIS_URL: z.string().url(),
-  S3_ENDPOINT: z.string().url(),
-  S3_REGION: z.string().default('us-east-1'),
-  S3_BUCKET: z.string().min(1),
-  S3_ACCESS_KEY_ID: z.string().min(1),
-  S3_SECRET_ACCESS_KEY: z.string().min(1),
-  S3_FORCE_PATH_STYLE: z.coerce.boolean().default(false),   // true for MinIO
-  AUTH_SECRET: z.string().min(32),
-  AUTH_TRUSTED_ORIGINS: z.string().transform(s => s.split(',')),
-  PUBLIC_APP_URL: z.string().url(),
-  SYNC_URL: z.string().url(),
-  SYNC_SHARED_SECRET: z.string().min(32),         // API signs board tokens, sync verifies
-  RUNNER_URL: z.string().url(),
-  RUNNER_SHARED_SECRET: z.string().min(32),
-  EGRESS_PROXY_URL: z.string().url(),
-  EGRESS_ALLOWLIST: z.string().default(''),       // comma-separated host patterns
-  AI_PROVIDER: z.enum(['openai-compatible', 'mock']).default('mock'),
-  AI_BASE_URL: z.string().url().optional(),
-  AI_API_KEY: z.string().optional(),
-  AI_MONTHLY_BUDGET_USD: z.coerce.number().default(50),
-  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
-  OTEL_SERVICE_NAME: z.string().default('nexus-api'),
-  LOG_LEVEL: z.enum(['trace','debug','info','warn','error']).default('info'),
-  NEXUS_TEST_ENDPOINTS: z.coerce.boolean().default(false),
-  NEXUS_INTEGRATIONS_MODE: z.enum(['real','stub']).default('real'),
-  FEATURE_FLAGS: z.string().default(''),          // csv of enabled flags, see §9
-}).superRefine((v, ctx) => {
-  if (v.NODE_ENV === 'production' && v.NEXUS_TEST_ENDPOINTS)
-    ctx.addIssue({ code: 'custom', message: 'NEXUS_TEST_ENDPOINTS must be false in production' });
-  if (v.AI_PROVIDER !== 'mock' && !v.AI_API_KEY)
-    ctx.addIssue({ code: 'custom', message: 'AI_API_KEY required for a non-mock provider' });
-});
+export const serverEnv = z
+  .object({
+    NODE_ENV: z.enum(['development', 'test', 'production']),
+    NEXUS_ENV: z.enum(['local', 'preview', 'staging', 'production']),
+    DATABASE_URL: z.string().url(),
+    DATABASE_POOL_MAX: z.coerce.number().int().min(2).max(200).default(20),
+    REDIS_URL: z.string().url(),
+    S3_ENDPOINT: z.string().url(),
+    S3_REGION: z.string().default('us-east-1'),
+    S3_BUCKET: z.string().min(1),
+    S3_ACCESS_KEY_ID: z.string().min(1),
+    S3_SECRET_ACCESS_KEY: z.string().min(1),
+    S3_FORCE_PATH_STYLE: z.coerce.boolean().default(false), // true for MinIO
+    AUTH_SECRET: z.string().min(32),
+    AUTH_TRUSTED_ORIGINS: z.string().transform((s) => s.split(',')),
+    PUBLIC_APP_URL: z.string().url(),
+    SYNC_URL: z.string().url(),
+    SYNC_SHARED_SECRET: z.string().min(32), // API signs board tokens, sync verifies
+    RUNNER_URL: z.string().url(),
+    RUNNER_SHARED_SECRET: z.string().min(32),
+    EGRESS_PROXY_URL: z.string().url(),
+    EGRESS_ALLOWLIST: z.string().default(''), // comma-separated host patterns
+    AI_PROVIDER: z.enum(['openai-compatible', 'mock']).default('mock'),
+    AI_BASE_URL: z.string().url().optional(),
+    AI_API_KEY: z.string().optional(),
+    AI_MONTHLY_BUDGET_USD: z.coerce.number().default(50),
+    OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
+    OTEL_SERVICE_NAME: z.string().default('nexus-api'),
+    LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error']).default('info'),
+    NEXUS_TEST_ENDPOINTS: z.coerce.boolean().default(false),
+    NEXUS_INTEGRATIONS_MODE: z.enum(['real', 'stub']).default('real'),
+    FEATURE_FLAGS: z.string().default(''), // csv of enabled flags, see §9
+  })
+  .superRefine((v, ctx) => {
+    if (v.NODE_ENV === 'production' && v.NEXUS_TEST_ENDPOINTS)
+      ctx.addIssue({ code: 'custom', message: 'NEXUS_TEST_ENDPOINTS must be false in production' });
+    if (v.AI_PROVIDER !== 'mock' && !v.AI_API_KEY)
+      ctx.addIssue({ code: 'custom', message: 'AI_API_KEY required for a non-mock provider' });
+  });
 ```
 
 Client-side config is a separate schema (`clientEnv`) with a `VITE_` prefix and **no secrets**; a
@@ -83,22 +86,59 @@ staging use Kubernetes Secrets from the cluster's external secret store; product
 sealed and rotated quarterly (`15_SECURITY.md` §7). No secret is ever printed; the logger's
 redaction list is unit-tested (`18_TESTING.md` §11).
 
+Node processes resolve their configuration through `loadServerEnvFromProcess()`
+(`packages/config/src/env-file.ts`), which fills **only unset** variables from `.env` and — when
+`CI` is set — from the committed `infra/ci/.env.ci` (dummy values for ephemeral CI service
+containers). The real environment always wins, and nothing is read when `NODE_ENV=production`, so a
+deployed image can never be configured by a file that leaked into the build context. The browser
+bundle keeps importing `env.ts` only, which stays free of `node:fs`.
+
+**Anything started through Turbo must be listed in `globalPassThroughEnv` (`turbo.json`).** Turbo 2
+runs tasks in strict environment mode by default: a task process receives only the variables Turbo
+knows about. Without the list, `pnpm dev` (and therefore the API that Playwright's `webServer`
+starts in the `e2e` job) never saw `DATABASE_URL`/`REDIS_URL` from the job environment, silently
+fell back to the localhost dummies in `infra/ci/.env.ci` and answered `503` on `/readyz`. The list
+is _pass-through_, not `globalEnv`: these values differ per environment but must not change the
+build cache key. A new runtime variable is added to `packages/config/src/env.ts`, to
+`.env.example`, to `infra/ci/.env.ci` **and** to `globalPassThroughEnv`.
+
 ---
 
 ## 2. Service inventory
 
-| Service | Image | Port | Scaling unit | Notes |
-|---|---|---|---|---|
-| `web` | static build served by `caddy` | 8080 | CDN/replicas | immutable assets, `index.html` no-cache |
-| `api` | node:22-alpine | 3001 | CPU-bound, HPA on CPU 65 % | Fastify + tRPC + REST |
-| `sync` | node:22-alpine | 3002 | connection-bound, HPA on WS conns | Hocuspocus + projection |
-| `worker` | node:22-alpine | — | queue-depth driven (KEDA) | BullMQ consumers |
-| `runner` | node:22-alpine + docker/CRI client | 3003 | job-bound, dedicated pool | spawns tool containers |
-| `egress-proxy` | `envoy` or `squid` | 3128 | 2 replicas | allowlist enforcement for runner + unfurl |
-| `postgres` | postgres:16 (+pgvector) | 5432 | vertical + read replica | |
-| `redis` | redis:7 | 6379 | vertical | BullMQ + Hocuspocus fanout |
-| `minio` | minio (self-host only) | 9000/9001 | vertical | S3 in cloud |
-| `otel-collector` | otel/opentelemetry-collector | 4317 | 2 replicas | traces/metrics/logs pipeline |
+| Service          | Image                              | Port      | Scaling unit                      | Notes                                     |
+| ---------------- | ---------------------------------- | --------- | --------------------------------- | ----------------------------------------- |
+| `web`            | static build served by `caddy`     | 8080      | CDN/replicas                      | immutable assets, `index.html` no-cache   |
+| `api`            | node:22-alpine                     | 3001      | CPU-bound, HPA on CPU 65 %        | Fastify + tRPC + REST                     |
+| `sync`           | node:22-alpine                     | 3002      | connection-bound, HPA on WS conns | Hocuspocus + projection                   |
+| `worker`         | node:22-alpine                     | —         | queue-depth driven (KEDA)         | BullMQ consumers                          |
+| `runner`         | node:22-alpine + docker/CRI client | 3003      | job-bound, dedicated pool         | spawns tool containers                    |
+| `egress-proxy`   | `envoy` or `squid`                 | 3128      | 2 replicas                        | allowlist enforcement for runner + unfurl |
+| `postgres`       | postgres:16 (+pgvector)            | 5432      | vertical + read replica           |                                           |
+| `redis`          | redis:7                            | 6379      | vertical                          | BullMQ + Hocuspocus fanout                |
+| `minio`          | minio (self-host only)             | 9000/9001 | vertical                          | S3 in cloud                               |
+| `otel-collector` | otel/opentelemetry-collector       | 4317      | 2 replicas                        | traces/metrics/logs pipeline              |
+
+### 2.1 How the api image runs TypeScript
+
+`apps/api`, `packages/config`, `packages/db` and `packages/domain` are source-only packages (no
+build step). The production image therefore ships the sources and starts them with
+`node --experimental-strip-types apps/api/src/server.ts` instead of vendoring a bundler or `tsx`
+into the runtime — which also keeps `esbuild` out of the image (15_SECURITY.md §9.4).
+
+Node only _erases_ types there, which constrains what that code may contain:
+
+- **Relative imports must name the file that exists on disk** (`./env.ts`). Node does not remap
+  `./env.js` or extensionless specifiers to `.ts` files; `tsconfig.base.json` enables
+  `allowImportingTsExtensions` for this reason.
+- **Non-erasable TypeScript is forbidden**: parameter properties (`constructor(private x: T)`),
+  `enum`, `namespace` and decorators all fail with `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`. Use a field
+  plus an assignment, and `as const` objects instead of enums.
+
+Neither rule is enforced by `typecheck` or by Vitest (both resolve and transpile differently), so
+`scripts/check-runtime-sources.mjs` re-validates every runtime source in `pnpm check:gates`: it
+strips each file with `node:module`'s `stripTypeScriptTypes` and resolves every relative specifier
+against the filesystem.
 
 ---
 
@@ -120,7 +160,7 @@ x-node-common: &node-common
     S3_BUCKET: nexus
     S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
     S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
-    S3_FORCE_PATH_STYLE: "true"
+    S3_FORCE_PATH_STYLE: 'true'
     AUTH_SECRET: ${AUTH_SECRET}
     AUTH_TRUSTED_ORIGINS: ${PUBLIC_APP_URL}
     PUBLIC_APP_URL: ${PUBLIC_APP_URL}
@@ -134,7 +174,7 @@ x-node-common: &node-common
     LOG_LEVEL: ${LOG_LEVEL:-info}
   logging:
     driver: json-file
-    options: { max-size: "10m", max-file: "5" }
+    options: { max-size: '10m', max-file: '5' }
 
 services:
   postgres:
@@ -160,7 +200,7 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./backups:/backups
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U nexus -d nexus"]
+      test: ['CMD-SHELL', 'pg_isready -U nexus -d nexus']
       interval: 10s
       timeout: 5s
       retries: 12
@@ -169,10 +209,19 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "1gb", "--maxmemory-policy", "noeviction"]
+    command:
+      [
+        'redis-server',
+        '--appendonly',
+        'yes',
+        '--maxmemory',
+        '1gb',
+        '--maxmemory-policy',
+        'noeviction',
+      ]
     volumes: [redisdata:/data]
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 3s
       retries: 10
@@ -181,13 +230,13 @@ services:
   minio:
     image: minio/minio:latest
     restart: unless-stopped
-    command: ["server", "/data", "--console-address", ":9001"]
+    command: ['server', '/data', '--console-address', ':9001']
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     volumes: [miniodata:/data]
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ['CMD', 'mc', 'ready', 'local']
       interval: 15s
       timeout: 5s
       retries: 10
@@ -196,8 +245,8 @@ services:
   migrate:
     <<: *node-common
     image: ghcr.io/nexus/api:${NEXUS_VERSION}
-    restart: "no"
-    command: ["node", "dist/migrate.js", "deploy"]
+    restart: 'no'
+    command: ['node', 'dist/migrate.js', 'deploy']
     depends_on:
       postgres: { condition: service_healthy }
     networks: [core]
@@ -214,7 +263,7 @@ services:
       <<: *node-env
       OTEL_SERVICE_NAME: nexus-api
     healthcheck:
-      test: ["CMD", "node", "dist/healthcheck.js", "http://127.0.0.1:3001/healthz"]
+      test: ['CMD', 'node', 'dist/healthcheck.js', 'http://127.0.0.1:3001/healthz']
       interval: 15s
       timeout: 5s
       retries: 5
@@ -230,7 +279,7 @@ services:
       <<: *node-env
       OTEL_SERVICE_NAME: nexus-sync
     healthcheck:
-      test: ["CMD", "node", "dist/healthcheck.js", "http://127.0.0.1:3002/healthz"]
+      test: ['CMD', 'node', 'dist/healthcheck.js', 'http://127.0.0.1:3002/healthz']
       interval: 15s
       timeout: 5s
       retries: 5
@@ -255,8 +304,8 @@ services:
       RUNNER_TOOL_IMAGES: >-
         sherlock=sherlock/sherlock@sha256:${SHERLOCK_DIGEST},
         spiderfoot=ghcr.io/smicallef/spiderfoot@sha256:${SPIDERFOOT_DIGEST}
-      RUNNER_MAX_CONCURRENCY: "4"
-      RUNNER_DEFAULT_TIMEOUT_MS: "300000"
+      RUNNER_MAX_CONCURRENCY: '4'
+      RUNNER_DEFAULT_TIMEOUT_MS: '300000'
     # The runner spawns tool containers; it needs a container runtime socket.
     # Prefer a rootless/proxied socket. On Kubernetes this is replaced by the Job API (§4).
     volumes:
@@ -266,7 +315,7 @@ services:
   egress-proxy:
     image: envoyproxy/envoy:v1.31-latest
     restart: unless-stopped
-    command: ["-c", "/etc/envoy/envoy.yaml"]
+    command: ['-c', '/etc/envoy/envoy.yaml']
     volumes:
       - ./egress/envoy.yaml:/etc/envoy/envoy.yaml:ro
     networks: [core, egress]
@@ -280,7 +329,7 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
-    ports: ["80:80", "443:443"]
+    ports: ['80:80', '443:443']
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddydata:/data
@@ -291,14 +340,14 @@ services:
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
     restart: unless-stopped
-    command: ["--config=/etc/otel/config.yaml"]
+    command: ['--config=/etc/otel/config.yaml']
     volumes: [./otel/config.yaml:/etc/otel/config.yaml:ro]
     networks: [core]
 
 networks:
-  edge:   {}
-  core:   { internal: true }
-  egress: {}          # only worker + proxy; tool containers get no network at all
+  edge: {}
+  core: { internal: true }
+  egress: {} # only worker + proxy; tool containers get no network at all
 
 volumes:
   pgdata: {}
@@ -397,7 +446,7 @@ spec:
   template:
     metadata:
       labels: { app: nexus, component: api }
-      annotations: { prometheus.io/scrape: "true", prometheus.io/port: "9464" }
+      annotations: { prometheus.io/scrape: 'true', prometheus.io/port: '9464' }
     spec:
       serviceAccountName: nexus-api
       securityContext:
@@ -407,19 +456,32 @@ spec:
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: api
-          image: ghcr.io/nexus/api:v1.4.2   # never :latest; digest pinned by the release automation
+          image: ghcr.io/nexus/api:v1.4.2 # never :latest; digest pinned by the release automation
           ports: [{ containerPort: 3001 }, { containerPort: 9464, name: metrics }]
           envFrom: [{ configMapRef: { name: nexus-app } }, { secretRef: { name: nexus-secrets } }]
           resources:
-            requests: { cpu: "500m", memory: "512Mi" }
-            limits:   { cpu: "2",    memory: "1Gi" }
-          readinessProbe:  { httpGet: { path: /readyz,  port: 3001 }, initialDelaySeconds: 5,  periodSeconds: 5,  failureThreshold: 3 }
-          livenessProbe:   { httpGet: { path: /healthz, port: 3001 }, initialDelaySeconds: 20, periodSeconds: 15, failureThreshold: 4 }
-          startupProbe:    { httpGet: { path: /healthz, port: 3001 }, periodSeconds: 5, failureThreshold: 24 }
+            requests: { cpu: '500m', memory: '512Mi' }
+            limits: { cpu: '2', memory: '1Gi' }
+          readinessProbe:
+            {
+              httpGet: { path: /readyz, port: 3001 },
+              initialDelaySeconds: 5,
+              periodSeconds: 5,
+              failureThreshold: 3,
+            }
+          livenessProbe:
+            {
+              httpGet: { path: /healthz, port: 3001 },
+              initialDelaySeconds: 20,
+              periodSeconds: 15,
+              failureThreshold: 4,
+            }
+          startupProbe:
+            { httpGet: { path: /healthz, port: 3001 }, periodSeconds: 5, failureThreshold: 24 }
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
-            capabilities: { drop: ["ALL"] }
+            capabilities: { drop: ['ALL'] }
           volumeMounts: [{ name: tmp, mountPath: /tmp }]
       volumes: [{ name: tmp, emptyDir: { medium: Memory, sizeLimit: 64Mi } }]
       topologySpreadConstraints:
@@ -431,16 +493,16 @@ spec:
 
 Resource requests/limits for the rest:
 
-| Component | requests cpu/mem | limits cpu/mem | replicas (prod) |
-|---|---|---|---|
-| web (caddy) | 50m / 64Mi | 200m / 128Mi | 2 |
-| api | 500m / 512Mi | 2 / 1Gi | 3 (HPA 3–12) |
-| sync | 500m / 768Mi | 2 / 2Gi | 3 (HPA 3–10 on WS conns) |
-| worker | 300m / 512Mi | 2 / 1Gi | 2 (KEDA 2–20 on queue depth) |
-| runner (control) | 200m / 256Mi | 1 / 512Mi | 2 |
-| tool pod (per run) | 250m / 256Mi | 1 / 512Mi | ephemeral, gVisor |
-| egress-proxy | 200m / 128Mi | 1 / 512Mi | 2 |
-| otel-collector | 200m / 256Mi | 1 / 1Gi | 2 |
+| Component          | requests cpu/mem | limits cpu/mem | replicas (prod)              |
+| ------------------ | ---------------- | -------------- | ---------------------------- |
+| web (caddy)        | 50m / 64Mi       | 200m / 128Mi   | 2                            |
+| api                | 500m / 512Mi     | 2 / 1Gi        | 3 (HPA 3–12)                 |
+| sync               | 500m / 768Mi     | 2 / 2Gi        | 3 (HPA 3–10 on WS conns)     |
+| worker             | 300m / 512Mi     | 2 / 1Gi        | 2 (KEDA 2–20 on queue depth) |
+| runner (control)   | 200m / 256Mi     | 1 / 512Mi      | 2                            |
+| tool pod (per run) | 250m / 256Mi     | 1 / 512Mi      | ephemeral, gVisor            |
+| egress-proxy       | 200m / 128Mi     | 1 / 512Mi      | 2                            |
+| otel-collector     | 200m / 256Mi     | 1 / 1Gi        | 2                            |
 
 `sync` gets the largest memory limit because each open board holds a `Y.Doc` in memory; see §13.
 
@@ -455,9 +517,9 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   namespace: nexus-runs
-  labels: { app: nexus, component: tool-run, nexus/run-id: "<runId>", nexus/tool: "sherlock" }
+  labels: { app: nexus, component: tool-run, nexus/run-id: '<runId>', nexus/tool: 'sherlock' }
 spec:
-  backoffLimit: 0                 # a failed tool run is a domain event, never a silent retry
+  backoffLimit: 0 # a failed tool run is a domain event, never a silent retry
   activeDeadlineSeconds: 300
   ttlSecondsAfterFinished: 600
   template:
@@ -465,23 +527,24 @@ spec:
       runtimeClassName: gvisor
       restartPolicy: Never
       automountServiceAccountToken: false
-      serviceAccountName: nexus-tool-null      # zero permissions
-      securityContext: { runAsNonRoot: true, runAsUser: 65532, seccompProfile: { type: RuntimeDefault } }
+      serviceAccountName: nexus-tool-null # zero permissions
+      securityContext:
+        { runAsNonRoot: true, runAsUser: 65532, seccompProfile: { type: RuntimeDefault } }
       containers:
         - name: tool
           image: sherlock/sherlock@sha256:<pinned>
-          args: ["--json", "/work/out.json", "--timeout", "30", "<username>"]
+          args: ['--json', '/work/out.json', '--timeout', '30', '<username>']
           env:
-            - { name: HTTPS_PROXY, value: "http://egress-proxy.nexus.svc:3128" }
-            - { name: HTTP_PROXY,  value: "http://egress-proxy.nexus.svc:3128" }
-            - { name: NO_PROXY,    value: "" }
+            - { name: HTTPS_PROXY, value: 'http://egress-proxy.nexus.svc:3128' }
+            - { name: HTTP_PROXY, value: 'http://egress-proxy.nexus.svc:3128' }
+            - { name: NO_PROXY, value: '' }
           resources:
-            requests: { cpu: "250m", memory: "256Mi", ephemeral-storage: "128Mi" }
-            limits:   { cpu: "1",    memory: "512Mi", ephemeral-storage: "512Mi" }
+            requests: { cpu: '250m', memory: '256Mi', ephemeral-storage: '128Mi' }
+            limits: { cpu: '1', memory: '512Mi', ephemeral-storage: '512Mi' }
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
-            capabilities: { drop: ["ALL"] }
+            capabilities: { drop: ['ALL'] }
           volumeMounts: [{ name: work, mountPath: /work }]
       volumes: [{ name: work, emptyDir: { medium: Memory, sizeLimit: 256Mi } }]
 ```
@@ -498,10 +561,11 @@ kind: RuntimeClass
 metadata: { name: gvisor }
 handler: runsc
 scheduling:
-  nodeSelector: { nexus.io/sandbox: "gvisor" }
-  tolerations: [{ key: "nexus.io/sandbox", operator: "Equal", value: "gvisor", effect: "NoSchedule" }]
+  nodeSelector: { nexus.io/sandbox: 'gvisor' }
+  tolerations:
+    [{ key: 'nexus.io/sandbox', operator: 'Equal', value: 'gvisor', effect: 'NoSchedule' }]
 overhead:
-  podFixed: { cpu: "100m", memory: "128Mi" }
+  podFixed: { cpu: '100m', memory: '128Mi' }
 ```
 
 Tool pods run only on the tainted `gvisor` node pool; application pods never schedule there. If the
@@ -531,7 +595,7 @@ metadata: { name: tool-run-isolation, namespace: nexus-runs }
 spec:
   podSelector: { matchLabels: { component: tool-run } }
   policyTypes: [Ingress, Egress]
-  ingress: []                                  # nothing may talk to a tool pod
+  ingress: [] # nothing may talk to a tool pod
   egress:
     - to:
         - namespaceSelector: { matchLabels: { name: nexus } }
@@ -765,16 +829,16 @@ CVEs.
 
 `dependency-cruiser` config (`.dependency-cruiser.cjs`) encodes `00_MASTER.md` §5:
 
-| Rule | Forbidden |
-|---|---|
-| `no-ui-in-domain` | `packages/domain` → `apps/web`, `packages/ui`, `react` |
-| `no-react-in-engine` | `packages/canvas-engine` → `react`, `react-dom` |
-| `no-engine-in-data` | data layer modules → `packages/canvas-engine` |
-| `no-child-process-in-api` | `apps/api` → `child_process`, `node:child_process` (N5) |
-| `no-direct-graph-write` | any module except `packages/domain/src/proposal/applyProposal.ts` writing `Y.Map` node/edge roots (N4; ESLint rule, not depcruise) |
-| `no-cross-app-import` | `apps/a` → `apps/b` |
-| `no-circular` | any cycle |
-| `no-orphans` | unreferenced modules outside entrypoints |
+| Rule                      | Forbidden                                                                                                                          |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `no-ui-in-domain`         | `packages/domain` → `apps/web`, `packages/ui`, `react`                                                                             |
+| `no-react-in-engine`      | `packages/canvas-engine` → `react`, `react-dom`                                                                                    |
+| `no-engine-in-data`       | data layer modules → `packages/canvas-engine`                                                                                      |
+| `no-child-process-in-api` | `apps/api` → `child_process`, `node:child_process` (N5)                                                                            |
+| `no-direct-graph-write`   | any module except `packages/domain/src/proposal/applyProposal.ts` writing `Y.Map` node/edge roots (N4; ESLint rule, not depcruise) |
+| `no-cross-app-import`     | `apps/a` → `apps/b`                                                                                                                |
+| `no-circular`             | any cycle                                                                                                                          |
+| `no-orphans`              | unreferenced modules outside entrypoints                                                                                           |
 
 ---
 
@@ -785,12 +849,12 @@ require existing rows to satisfy it in one deploy.
 
 Three-phase change for any breaking schema edit:
 
-1. **Expand** (release *n*): add the new nullable column/table/index (`CREATE INDEX CONCURRENTLY`),
+1. **Expand** (release _n_): add the new nullable column/table/index (`CREATE INDEX CONCURRENTLY`),
    write to both old and new shapes from the application, read from old.
-2. **Backfill** (release *n*, background job): chunked backfill (10k rows per batch, throttled to
+2. **Backfill** (release _n_, background job): chunked backfill (10k rows per batch, throttled to
    keep replication lag < 5 s), idempotent and resumable, with a progress metric
    `nexus_backfill_rows_total{migration}`.
-3. **Contract** (release *n+2*, after the backfill is verified and *n+1* has been stable for ≥ 7
+3. **Contract** (release _n+2_, after the backfill is verified and _n+1_ has been stable for ≥ 7
    days): read from new, drop the old column, add the `NOT NULL`/`FK` constraint using
    `NOT VALID` + `VALIDATE CONSTRAINT`.
 
@@ -847,7 +911,7 @@ Two mechanisms, deliberately minimal (no third-party service):
    bootstrap payload. Rollout percentage is evaluated by a stable hash of `org_id + flag`.
 
 Rules: a flag has an **owner and an expiry date** recorded in `docs/flags.md`; a flag older than 90
-days fails a nightly lint. Flags gate *unfinished* surfaces (e.g. `views.map`, `ai.suggestLinks`),
+days fails a nightly lint. Flags gate _unfinished_ surfaces (e.g. `views.map`, `ai.suggestLinks`),
 never security controls. Flag state is included in error reports and in the support diagnostics
 bundle, because "works for me" is usually a flag difference.
 
@@ -863,16 +927,16 @@ internal orgs.
 Auto-instrumentation for HTTP, Fastify, Prisma, ioredis, BullMQ, WS; manual spans for the domain
 operations that matter:
 
-| Span | Attributes |
-|---|---|
-| `board.open` | `board.id`, `node.count`, `edge.count`, `cold` |
-| `board.projection` | `board.id`, `update.bytes`, `rows.upserted`, `rows.deleted` |
-| `proposal.apply` | `proposal.id`, `nodes.created`, `nodes.merged`, `edges.created` |
-| `run.execute` | `tool`, `manifest.version`, `image.digest`, `exit.code`, `duration.ms`, `output.bytes`, `truncated` |
-| `unfurl.fetch` | `url.host`, `redirects`, `bytes`, `blocked.reason` |
-| `ai.completion` | `provider`, `model`, `tokens.in`, `tokens.out`, `cost.usd`, `proposal.id` |
-| `search.query` | `mode` (fts/vector), `results`, `duration.ms` |
-| `export.board` | `format`, `nodes`, `bytes` |
+| Span               | Attributes                                                                                          |
+| ------------------ | --------------------------------------------------------------------------------------------------- |
+| `board.open`       | `board.id`, `node.count`, `edge.count`, `cold`                                                      |
+| `board.projection` | `board.id`, `update.bytes`, `rows.upserted`, `rows.deleted`                                         |
+| `proposal.apply`   | `proposal.id`, `nodes.created`, `nodes.merged`, `edges.created`                                     |
+| `run.execute`      | `tool`, `manifest.version`, `image.digest`, `exit.code`, `duration.ms`, `output.bytes`, `truncated` |
+| `unfurl.fetch`     | `url.host`, `redirects`, `bytes`, `blocked.reason`                                                  |
+| `ai.completion`    | `provider`, `model`, `tokens.in`, `tokens.out`, `cost.usd`, `proposal.id`                           |
+| `search.query`     | `mode` (fts/vector), `results`, `duration.ms`                                                       |
+| `export.board`     | `format`, `nodes`, `bytes`                                                                          |
 
 Trace context propagates from the browser (`traceparent` on tRPC calls) so a user-reported slow
 action can be opened as one trace. Sampling: 100 % of errors, 100 % of runs and proposals, 10 % of
@@ -965,25 +1029,25 @@ content, no node text, no URLs beyond host.
 
 ### 10.5 Alerts
 
-| Alert | Expression (5 m windows) | Severity | Runbook |
-|---|---|---|---|
-| `ApiErrorRateHigh` | `sum(rate(nexus_http_errors_total{status=~"5.."}[5m])) / sum(rate(nexus_http_requests_total[5m])) > 0.02` for 10 m | page | `runbooks/api-errors.md` |
-| `ApiLatencyHigh` | `histogram_quantile(0.95, nexus_http_request_duration_seconds) > 1` for 10 m | ticket | `runbooks/api-latency.md` |
-| `SyncProjectionFailing` | `rate(nexus_sync_projection_failures_total[5m]) > 0` for 5 m | page | `runbooks/projection.md` (repair: `db:reproject`) |
-| `SyncBroadcastSlow` | `histogram_quantile(0.95, nexus_sync_broadcast_latency_seconds) > 1` for 10 m | ticket | `runbooks/sync.md` |
-| `SyncMemoryHigh` | `nexus_sync_doc_memory_bytes > 1.5e9` | ticket | `runbooks/sync-memory.md` (evict idle docs) |
-| `QueueBacklog` | `nexus_queue_depth > 500` for 15 m | ticket | `runbooks/queues.md` |
-| `RunFailureRate` | `sum(rate(nexus_runs_total{status!="success"}[15m])) / sum(rate(nexus_runs_total[15m])) > 0.3` | ticket | `runbooks/runs.md` |
-| `SandboxViolation` | `increase(nexus_runner_sandbox_violations_total[5m]) > 0` | **page** | `runbooks/sandbox-violation.md` (isolate node pool, freeze tool image) |
-| `SsrfBlockSpike` | `increase(nexus_ssrf_blocks_total[10m]) > 50` | ticket | `runbooks/ssrf.md` (possible abuse) |
-| `AuthBruteForce` | `increase(nexus_auth_failed_logins_total[5m]) > 100` | ticket | `runbooks/auth.md` |
-| `DbPoolSaturation` | `nexus_db_pool_in_use / DATABASE_POOL_MAX > 0.9` for 10 m | page | `runbooks/db.md` |
-| `MigrationPending` | `nexus_migration_pending == 1` for 15 m | page | `runbooks/migrations.md` |
-| `AiBudgetExhausted` | `nexus_ai_budget_remaining_usd < 5` | ticket | `runbooks/ai-budget.md` |
-| `BackupMissing` | `time() - nexus_backup_last_success_timestamp > 93600` (26 h) | **page** | `runbooks/backup.md` |
-| `RestoreDrillOverdue` | drill timestamp older than 35 d | ticket | `runbooks/dr-drill.md` |
-| `ClientFrameBudgetBreach` | `nexus_client_frame_p95_ms{board_size_bucket="5000+"} > 20` for 30 m | ticket | `runbooks/canvas-perf.md` |
-| `CertExpiry` | `< 14 d` | ticket | `runbooks/tls.md` |
+| Alert                     | Expression (5 m windows)                                                                                           | Severity | Runbook                                                                |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------ | -------- | ---------------------------------------------------------------------- |
+| `ApiErrorRateHigh`        | `sum(rate(nexus_http_errors_total{status=~"5.."}[5m])) / sum(rate(nexus_http_requests_total[5m])) > 0.02` for 10 m | page     | `runbooks/api-errors.md`                                               |
+| `ApiLatencyHigh`          | `histogram_quantile(0.95, nexus_http_request_duration_seconds) > 1` for 10 m                                       | ticket   | `runbooks/api-latency.md`                                              |
+| `SyncProjectionFailing`   | `rate(nexus_sync_projection_failures_total[5m]) > 0` for 5 m                                                       | page     | `runbooks/projection.md` (repair: `db:reproject`)                      |
+| `SyncBroadcastSlow`       | `histogram_quantile(0.95, nexus_sync_broadcast_latency_seconds) > 1` for 10 m                                      | ticket   | `runbooks/sync.md`                                                     |
+| `SyncMemoryHigh`          | `nexus_sync_doc_memory_bytes > 1.5e9`                                                                              | ticket   | `runbooks/sync-memory.md` (evict idle docs)                            |
+| `QueueBacklog`            | `nexus_queue_depth > 500` for 15 m                                                                                 | ticket   | `runbooks/queues.md`                                                   |
+| `RunFailureRate`          | `sum(rate(nexus_runs_total{status!="success"}[15m])) / sum(rate(nexus_runs_total[15m])) > 0.3`                     | ticket   | `runbooks/runs.md`                                                     |
+| `SandboxViolation`        | `increase(nexus_runner_sandbox_violations_total[5m]) > 0`                                                          | **page** | `runbooks/sandbox-violation.md` (isolate node pool, freeze tool image) |
+| `SsrfBlockSpike`          | `increase(nexus_ssrf_blocks_total[10m]) > 50`                                                                      | ticket   | `runbooks/ssrf.md` (possible abuse)                                    |
+| `AuthBruteForce`          | `increase(nexus_auth_failed_logins_total[5m]) > 100`                                                               | ticket   | `runbooks/auth.md`                                                     |
+| `DbPoolSaturation`        | `nexus_db_pool_in_use / DATABASE_POOL_MAX > 0.9` for 10 m                                                          | page     | `runbooks/db.md`                                                       |
+| `MigrationPending`        | `nexus_migration_pending == 1` for 15 m                                                                            | page     | `runbooks/migrations.md`                                               |
+| `AiBudgetExhausted`       | `nexus_ai_budget_remaining_usd < 5`                                                                                | ticket   | `runbooks/ai-budget.md`                                                |
+| `BackupMissing`           | `time() - nexus_backup_last_success_timestamp > 93600` (26 h)                                                      | **page** | `runbooks/backup.md`                                                   |
+| `RestoreDrillOverdue`     | drill timestamp older than 35 d                                                                                    | ticket   | `runbooks/dr-drill.md`                                                 |
+| `ClientFrameBudgetBreach` | `nexus_client_frame_p95_ms{board_size_bucket="5000+"} > 20` for 30 m                                               | ticket   | `runbooks/canvas-perf.md`                                              |
+| `CertExpiry`              | `< 14 d`                                                                                                           | ticket   | `runbooks/tls.md`                                                      |
 
 Every alert must link to a runbook containing: what it means, the three most likely causes, the
 first diagnostic query, the mitigation, and the escalation path. An alert without a runbook is
@@ -995,13 +1059,13 @@ deleted, not muted.
 
 ### 11.1 What is backed up
 
-| Data | Method | Frequency | Retention | RPO | RTO |
-|---|---|---|---|---|---|
-| Postgres | `pgBackRest`/WAL-G: full weekly, incremental daily, WAL streaming continuous | continuous | 35 days PITR | ≤ 5 min | ≤ 60 min |
-| Object storage (files, snapshots) | bucket versioning + cross-region replication | continuous | 35 days versions | ≤ 15 min | ≤ 30 min |
-| Redis | not backed up (queues/ephemeral fanout) — jobs are recreated from DB state | — | — | n/a | n/a |
-| Secrets | external secret store's own backup | — | — | — | ≤ 30 min |
-| Board CRDT snapshots | stored in Postgres (`board_snapshots.binary`) + S3 copy every 6 h | 6 h | 90 days | ≤ 6 h (S3 copy) / ≤ 5 min (PG) | included above |
+| Data                              | Method                                                                       | Frequency  | Retention        | RPO                            | RTO            |
+| --------------------------------- | ---------------------------------------------------------------------------- | ---------- | ---------------- | ------------------------------ | -------------- |
+| Postgres                          | `pgBackRest`/WAL-G: full weekly, incremental daily, WAL streaming continuous | continuous | 35 days PITR     | ≤ 5 min                        | ≤ 60 min       |
+| Object storage (files, snapshots) | bucket versioning + cross-region replication                                 | continuous | 35 days versions | ≤ 15 min                       | ≤ 30 min       |
+| Redis                             | not backed up (queues/ephemeral fanout) — jobs are recreated from DB state   | —          | —                | n/a                            | n/a            |
+| Secrets                           | external secret store's own backup                                           | —          | —                | —                              | ≤ 30 min       |
+| Board CRDT snapshots              | stored in Postgres (`board_snapshots.binary`) + S3 copy every 6 h            | 6 h        | 90 days          | ≤ 6 h (S3 copy) / ≤ 5 min (PG) | included above |
 
 Redis holding no durable state is a deliberate design constraint: BullMQ jobs are re-enqueueable
 from `runs` rows with status `queued`, and Hocuspocus fanout is stateless. If this ever stops being
@@ -1052,16 +1116,16 @@ is worse than an hour of downtime for this product.
 
 ## 12. Data lifecycle and retention
 
-| Data | Retention | Deletion |
-|---|---|---|
-| Board content | until deleted by the org | soft-delete 30 days, then hard purge incl. snapshots and files |
-| Run raw payloads | 90 days (provenance requires the raw artifact) | purge job, provenance keeps a hash + summary |
-| Audit log | 12 months | append-only, never edited |
-| Uploaded files | with the board | purge on hard delete, verified by `storage:verify` |
-| Traces | 7 days | |
-| Metrics | 15 months downsampled | |
-| Logs | 30 days | |
-| Account deletion request | fulfilled within 30 days | tombstone row retained for audit |
+| Data                     | Retention                                      | Deletion                                                       |
+| ------------------------ | ---------------------------------------------- | -------------------------------------------------------------- |
+| Board content            | until deleted by the org                       | soft-delete 30 days, then hard purge incl. snapshots and files |
+| Run raw payloads         | 90 days (provenance requires the raw artifact) | purge job, provenance keeps a hash + summary                   |
+| Audit log                | 12 months                                      | append-only, never edited                                      |
+| Uploaded files           | with the board                                 | purge on hard delete, verified by `storage:verify`             |
+| Traces                   | 7 days                                         |                                                                |
+| Metrics                  | 15 months downsampled                          |                                                                |
+| Logs                     | 30 days                                        |                                                                |
+| Account deletion request | fulfilled within 30 days                       | tombstone row retained for audit                               |
 
 ---
 
@@ -1072,7 +1136,7 @@ planning numbers, not guarantees):
 
 - **Board memory in `sync`**: a 5,000-node/10,000-edge `Y.Doc` with history ≈ 40–70 MB resident.
   Budget 80 MB per open board. A `sync` pod with a 2 GB limit therefore holds ~20 concurrently open
-  large boards, or ~200 typical (200-node) boards. Scale `sync` by *open boards*, not by users;
+  large boards, or ~200 typical (200-node) boards. Scale `sync` by _open boards_, not by users;
   the HPA metric is `nexus_sync_rooms_open` with a target of 120 per pod.
 - **Idle eviction**: a room with zero clients for 60 s is snapshotted and evicted from memory.
 - **Postgres**: ~2.5 KB per node row (jsonb payload included), ~0.4 KB per edge row, plus snapshot
@@ -1103,6 +1167,7 @@ Must be fully ticked before GA (this is P16's exit criteria in `20_ROADMAP.md`):
 
 ```markdown
 **Security**
+
 - [ ] `NEXUS_TEST_ENDPOINTS=false` verified in production config; boot guard test green
 - [ ] All tool images pinned by digest; `RUNNER_ALLOW_UNSANDBOXED` unset; gvisor RuntimeClass present
 - [ ] Network policies applied; default-deny verified by an in-cluster probe pod
@@ -1113,6 +1178,7 @@ Must be fully ticked before GA (this is P16's exit criteria in `20_ROADMAP.md`):
 - [ ] Dependency and image scans clean of HIGH/CRITICAL (or documented exceptions with expiry)
 
 **Reliability**
+
 - [ ] Backups running; last restore drill within 35 days and inside RTO
 - [ ] PITR verified to a random timestamp in the last 7 days
 - [ ] `db:reproject` validated on a 5,000-node board
@@ -1121,17 +1187,20 @@ Must be fully ticked before GA (this is P16's exit criteria in `20_ROADMAP.md`):
 - [ ] Migration safety script enforced; last 10 migrations reviewed for expand/contract compliance
 
 **Performance**
+
 - [ ] N1 budget green on the release tag; bench baseline recorded
 - [ ] k6 scenarios meet thresholds on staging at 2× expected peak
 - [ ] Bundle budget met; assets immutable+CDN-cached; `index.html` no-store
 
 **Observability**
+
 - [ ] Every metric in §10.2 emitted (checked by `scripts/check-metrics.mjs` against a live scrape)
 - [ ] Every alert in §10.5 has a runbook file that exists and is non-empty
 - [ ] Traces propagate browser → api → sync → runner on a sample journey
 - [ ] Error tracking receives a deliberate test error with correct release and sourcemaps
 
 **Product/UX**
+
 - [ ] Quality gate (`00_MASTER.md` §8) passed on every phase P1–P16
 - [ ] a11y sweep zero violations; keyboard-only journeys pass
 - [ ] Status page, maintenance page, and a user-visible incident banner mechanism exist
@@ -1139,6 +1208,7 @@ Must be fully ticked before GA (this is P16's exit criteria in `20_ROADMAP.md`):
 - [ ] Acceptable-use notice and legal copy shipped (`15_SECURITY.md` §9)
 
 **Operations**
+
 - [ ] On-call rotation and escalation defined; paging tested end-to-end
 - [ ] Self-host compose verified from scratch on a clean host in ≤ 15 min following `README`
 - [ ] Version, changelog and upgrade notes published; rollback rehearsed on staging

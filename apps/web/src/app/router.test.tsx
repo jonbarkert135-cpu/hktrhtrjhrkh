@@ -8,6 +8,20 @@ vi.mock('../lib/auth', () => ({
   useSession: (): unknown => session(),
 }));
 
+// The shell fetches the project rail; the guard tests care about routing, not about data.
+vi.mock('../lib/trpc', () => ({
+  errorMessage: () => 'The server took too long to answer.',
+  trpc: {
+    useUtils: () => ({ project: { list: { invalidate: vi.fn() } } }),
+    project: {
+      list: {
+        useQuery: (): unknown => ({ isPending: false, error: null, data: [], refetch: vi.fn() }),
+      },
+      create: { useMutation: (): unknown => ({ mutate: vi.fn(), isPending: false, error: null }) },
+    },
+  },
+}));
+
 const { AppRoutes } = await import('./router');
 
 function go(url: string) {

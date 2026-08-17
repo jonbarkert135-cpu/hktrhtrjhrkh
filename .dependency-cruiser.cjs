@@ -58,7 +58,10 @@ module.exports = {
     exclude: { path: '(node_modules|dist|coverage|\\.turbo)' },
     tsPreCompilationDeps: true,
     tsConfig: { fileName: 'tsconfig.base.json' },
-    enhancedResolveOptions: { exportsFields: ['exports'], conditionNames: ['import', 'require', 'types'] },
+    enhancedResolveOptions: {
+      exportsFields: ['exports'],
+      conditionNames: ['import', 'require', 'types'],
+    },
     reporterOptions: { text: { highlightFocused: true } },
   },
 };

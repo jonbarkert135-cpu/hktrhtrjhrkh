@@ -1,0 +1,17 @@
+# Files that carry no diff-coverage obligation (scripts/diff-coverage.mjs).
+# Every entry must name the file and the reason; they mirror the `coverage.exclude` lists in the
+# package vitest configs, which vitest applies but the diff gate cannot read.
+# Syntax: one repo-relative path per line, `#` starts a comment.
+
+# Process bootstrap: binds a port and opens DB/Redis connections, so it can only be exercised by
+# the e2e job (apps/api/vitest.config.ts excludes it from coverage for the same reason).
+apps/api/src/server.ts
+
+# Better-Auth wiring: constructs the auth instance against a live Prisma client, so unit tests
+# cannot import it without a database. Exercised end to end by the e2e job (J01 signup).
+apps/api/src/auth/index.ts
+
+# Pure re-export barrels (no executable statements, so v8 reports no coverage entry at all).
+packages/config/src/index.ts
+packages/db/src/index.ts
+packages/domain/src/index.ts

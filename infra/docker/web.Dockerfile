@@ -20,6 +20,9 @@ ENV VITE_API_URL=$VITE_API_URL
 RUN pnpm --filter @nexus/ui run build && pnpm --filter @nexus/web run build
 
 FROM caddy:2-alpine AS runtime
+# Pick up the Alpine security updates published after the base image was built (Trivy gates the
+# image on HIGH/CRITICAL; 15_SECURITY.md §9.4).
+RUN apk upgrade --no-cache
 COPY --from=build --chown=65532:65532 /repo/apps/web/dist /srv
 COPY infra/docker/web.Caddyfile /etc/caddy/Caddyfile
 USER 65532:65532

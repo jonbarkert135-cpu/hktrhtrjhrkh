@@ -1,4 +1,4 @@
-export { prisma } from './client';
+export { prisma } from './client.ts';
 export type { Prisma } from '@prisma/client';
 export type {
   Account,
@@ -12,5 +12,5 @@ export type {
   User,
 } from '@prisma/client';
 
-export { recordAudit } from './audit';
-export type { AuditEntry } from './audit';
+export { recordAudit } from './audit.ts';
+export type { AuditEntry } from './audit.ts';

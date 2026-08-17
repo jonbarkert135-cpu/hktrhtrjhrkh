@@ -34,7 +34,7 @@ packages/canvas-engine/src/lod/  L0/L1 canvas painters (no React, no DOM)
 
 Hard boundary (enforced by dependency-cruiser, `00_MASTER.md` §5): `packages/domain` contains the
 schema, defaults, validation, actions and canvas painters registered as **plain functions**;
-`packages/ui` contains the React components. The registry object therefore holds *two* renderer
+`packages/ui` contains the React components. The registry object therefore holds _two_ renderer
 surfaces: `paint` (canvas, engine-safe) and `component` (React, resolved lazily by the UI layer
 through a `componentId` string, never an imported React element inside `domain`).
 
@@ -69,25 +69,25 @@ export const Confidence = z.enum(['confirmed', 'high', 'medium', 'low', 'unverif
 export type Confidence = z.infer<typeof Confidence>;
 
 export const ProvenanceKind = z.enum([
-  'manual',        // typed/drawn by a human
-  'paste',         // clipboard pipeline (06 §7.1, 03_UX.md §6)
-  'import',        // file/board import
-  'unfurl',        // link unfurl worker
-  'tool',          // integration run (sherlock/spiderfoot/github/…)
-  'ai',            // accepted AI proposal
-  'derived',       // computed by NEXUS (merge, cluster, analysis)
+  'manual', // typed/drawn by a human
+  'paste', // clipboard pipeline (06 §7.1, 03_UX.md §6)
+  'import', // file/board import
+  'unfurl', // link unfurl worker
+  'tool', // integration run (sherlock/spiderfoot/github/…)
+  'ai', // accepted AI proposal
+  'derived', // computed by NEXUS (merge, cluster, analysis)
 ]);
 
 export const Provenance = z.object({
   kind: ProvenanceKind,
-  source: z.string().max(2048).nullable(),      // URL, file name, tool target, or null for manual
-  tool: z.string().max(64).nullable(),          // integration id, e.g. 'sherlock'
-  runId: z.string().ulid().nullable(),          // IntegrationRun.id (08 §4.14)
-  proposalId: z.string().ulid().nullable(),     // AIProposal / ImportProposal that created it
-  rawRef: z.string().max(512).nullable(),       // S3 key of the raw payload
-  observedAt: z.string().datetime(),            // when the fact was observed at the source
-  importedAt: z.string().datetime(),            // when it entered this board
-  actorId: z.string().ulid().nullable(),        // user who accepted/created
+  source: z.string().max(2048).nullable(), // URL, file name, tool target, or null for manual
+  tool: z.string().max(64).nullable(), // integration id, e.g. 'sherlock'
+  runId: z.string().ulid().nullable(), // IntegrationRun.id (08 §4.14)
+  proposalId: z.string().ulid().nullable(), // AIProposal / ImportProposal that created it
+  rawRef: z.string().max(512).nullable(), // S3 key of the raw payload
+  observedAt: z.string().datetime(), // when the fact was observed at the source
+  importedAt: z.string().datetime(), // when it entered this board
+  actorId: z.string().ulid().nullable(), // user who accepted/created
 });
 
 export const EntityBase = z.object({
@@ -98,10 +98,10 @@ export const EntityBase = z.object({
   y: z.number().finite(),
   w: z.number().min(24).max(8000),
   h: z.number().min(24).max(8000),
-  rotation: z.literal(0),               // reserved; rotation is not supported in v1 (hit-testing
-                                        // and DOM overlay cost outweigh the value) — see §12 risk
-  z: z.number().int(),                  // paint order within the board
-  parentId: z.string().ulid().nullable(),   // group/frame membership
+  rotation: z.literal(0), // reserved; rotation is not supported in v1 (hit-testing
+  // and DOM overlay cost outweigh the value) — see §12 risk
+  z: z.number().int(), // paint order within the board
+  parentId: z.string().ulid().nullable(), // group/frame membership
   locked: z.boolean().default(false),
   hidden: z.boolean().default(false),
   // knowledge-graph fields
@@ -109,7 +109,11 @@ export const EntityBase = z.object({
   tags: z.array(z.string().min(1).max(48)).max(64).default([]),
   confidence: Confidence.default('unverified'),
   provenance: Provenance,
-  color: z.string().regex(/^--node-[a-z0-9-]+$/).nullable().default(null), // token name only
+  color: z
+    .string()
+    .regex(/^--node-[a-z0-9-]+$/)
+    .nullable()
+    .default(null), // token name only
   starred: z.boolean().default(false),
   // enrichment + lifecycle
   status: z.enum(['draft', 'active', 'archived']).default('active'),
@@ -122,8 +126,8 @@ export const EntityBase = z.object({
   }),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
-  version: z.number().int().min(1),     // bumped by the versioning rules of §9.6
-  data: z.unknown(),                    // narrowed per type
+  version: z.number().int().min(1), // bumped by the versioning rules of §9.6
+  data: z.unknown(), // narrowed per type
 });
 export type EntityBase = z.infer<typeof EntityBase>;
 ```
@@ -165,7 +169,7 @@ export interface NodeTypeDefinition<TData> {
     /** 'free' | 'width' | 'ratio' — resize behaviour; 'ratio' keeps aspect */
     resize: 'free' | 'width' | 'ratio' | 'none';
     data: TData;
-    autoHeight: boolean;              // height follows content (text/sticky)
+    autoHeight: boolean; // height follows content (text/sticky)
   };
 
   /** canvas painters, pure functions, no DOM, no React (run inside canvas-engine) */
@@ -187,14 +191,14 @@ export interface NodeTypeDefinition<TData> {
   actions: NodeAction<TData>[];
 
   capabilities: {
-    editableText: boolean;      // has inline-editable rich text
+    editableText: boolean; // has inline-editable rich text
     resizable: boolean;
-    connectable: boolean;       // can be an edge endpoint
-    groupable: boolean;         // can be placed in a group/frame
-    enrichable: boolean;        // participates in async enrichment (§9.4)
+    connectable: boolean; // can be an edge endpoint
+    groupable: boolean; // can be placed in a group/frame
+    enrichable: boolean; // participates in async enrichment (§9.4)
     duplicatable: boolean;
-    hasMedia: boolean;          // owns File rows
-    isContainer: boolean;       // owns children (group/frame)
+    hasMedia: boolean; // owns File rows
+    isContainer: boolean; // owns children (group/frame)
     aiSummarizable: boolean;
   };
 
@@ -203,18 +207,20 @@ export interface NodeTypeDefinition<TData> {
 
   /** fields fed into Postgres FTS + the client index (07 search, 09_BACKEND.md §7) */
   searchFields(n: EntityBase & { data: TData }): {
-    title: string; body: string; keywords: string[];
+    title: string;
+    body: string;
+    keywords: string[];
   };
 
   /** capture: can this type be produced from a pasted/dropped payload? (06 §7.1) */
   capture?: {
-    match(input: CaptureInput): number;              // 0..1 confidence
+    match(input: CaptureInput): number; // 0..1 confidence
     build(input: CaptureInput): Partial<TData> & { title?: string };
   };
 
   io: {
-    toExport(n: EntityBase & { data: TData }): unknown;       // nexus.board.v1 payload
-    fromExport(raw: unknown): EntityBase & { data: TData };   // must round-trip (N9)
+    toExport(n: EntityBase & { data: TData }): unknown; // nexus.board.v1 payload
+    fromExport(raw: unknown): EntityBase & { data: TData }; // must round-trip (N9)
     toMarkdown(n: EntityBase & { data: TData }): string;
     csvColumns: string[];
     toCsvRow(n: EntityBase & { data: TData }): (string | number | null)[];
@@ -228,11 +234,27 @@ export interface NodeTypeDefinition<TData> {
 }
 
 export interface InspectorField {
-  key: string;                       // dot-path into the entity, e.g. 'data.url'
+  key: string; // dot-path into the entity, e.g. 'data.url'
   label: string;
-  control: 'text' | 'textarea' | 'url' | 'email' | 'number' | 'select' | 'multiselect'
-         | 'date' | 'datetime' | 'toggle' | 'tags' | 'confidence' | 'color' | 'richtext'
-         | 'file' | 'coords' | 'readonly' | 'json';
+  control:
+    | 'text'
+    | 'textarea'
+    | 'url'
+    | 'email'
+    | 'number'
+    | 'select'
+    | 'multiselect'
+    | 'date'
+    | 'datetime'
+    | 'toggle'
+    | 'tags'
+    | 'confidence'
+    | 'color'
+    | 'richtext'
+    | 'file'
+    | 'coords'
+    | 'readonly'
+    | 'json';
   options?: { value: string; label: string }[];
   placeholder?: string;
   help?: string;
@@ -242,11 +264,11 @@ export interface InspectorField {
 }
 
 export interface NodeAction<TData> {
-  id: string;                        // 'website.open', 'username.run-sherlock'
+  id: string; // 'website.open', 'username.run-sherlock'
   label: string;
   icon: string;
   group: 'primary' | 'transform' | 'tool' | 'ai' | 'danger';
-  shortcut?: string;                 // registered in the command palette (03_UX.md §5)
+  shortcut?: string; // registered in the command palette (03_UX.md §5)
   enabled(n: EntityBase & { data: TData }, ctx: ActionContext): boolean;
   run(n: EntityBase & { data: TData }, ctx: ActionContext): Promise<ActionResult>;
 }
@@ -265,12 +287,12 @@ fixture in `packages/domain/test/fixtures/nodes/<type>.json`.
 
 Levels come from `05_CANVAS_ENGINE.md` §5. Restated here as the contract node types must satisfy:
 
-| Level | Zoom | Surface | Node must render |
-|---|---|---|---|
-| L0 | `zoom < 0.28` | Canvas2D | a 6–10 px rounded glyph in the type color; no text; selection = 2 px outline |
-| L1 | `0.28 ≤ zoom < 0.55` | Canvas2D | rounded rect, type color 12% fill, 1 px border, icon 12 px, truncated title (1 line, ellipsis measured with cached `TextMetrics`), optional cached bitmap (favicon/thumb) |
-| L2 | `0.55 ≤ zoom < 1.6` | DOM | full card, no inline editing, previews at ≤ 256 px, badges collapsed to icons |
-| L3 | `zoom ≥ 1.6` | DOM | full card + inline editing enabled, full-resolution preview (≤ 1024 px), all badges with text |
+| Level | Zoom                 | Surface  | Node must render                                                                                                                                                          |
+| ----- | -------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| L0    | `zoom < 0.28`        | Canvas2D | a 6–10 px rounded glyph in the type color; no text; selection = 2 px outline                                                                                              |
+| L1    | `0.28 ≤ zoom < 0.55` | Canvas2D | rounded rect, type color 12% fill, 1 px border, icon 12 px, truncated title (1 line, ellipsis measured with cached `TextMetrics`), optional cached bitmap (favicon/thumb) |
+| L2    | `0.55 ≤ zoom < 1.6`  | DOM      | full card, no inline editing, previews at ≤ 256 px, badges collapsed to icons                                                                                             |
+| L3    | `zoom ≥ 1.6`         | DOM      | full card + inline editing enabled, full-resolution preview (≤ 1024 px), all badges with text                                                                             |
 
 Painters must be allocation-free per frame: no `new`, no string concatenation, no `toFixed` in
 `paint.l0`/`paint.l1`. Precomputed strings live in a per-node paint cache keyed by
@@ -278,23 +300,23 @@ Painters must be allocation-free per frame: no `new`, no string concatenation, n
 
 ### 3.2 Card state table (applies to every DOM card, L2/L3)
 
-| State | Trigger | Visual contract |
-|---|---|---|
-| initial | mounted, data ready | border `--border-subtle`, bg `--surface-1`, shadow none |
-| hover | pointer over card | border `--border-strong`, shadow `--shadow-1`, action rail fades in over 90 ms |
-| focus | keyboard focus | 2 px `--focus-ring` outline, offset 2 px, always visible (N6) |
-| selected | in selection set | 2 px `--accent` border + 1 px inner ring; resize handles at L3 only |
-| multi-selected | ≥2 selected | same as selected, action rail hidden, bounding box drawn on canvas |
-| drag | pointer drag | opacity 0.85, shadow `--shadow-3`, DOM card is `will-change: transform`, snapping guides on canvas |
-| editing | double-click / Enter at L3 | border `--accent`, content becomes editable, Esc commits |
-| loading | `enrichment.state ∈ {queued, running}` | skeleton blocks (no spinner) for unresolved regions, header shows animated 2 px top bar; reduced-motion → static striped bar |
-| partial | `enrichment.state = 'partial'` | resolved regions rendered, unresolved show inline `Not available` in `--text-muted` |
-| success | enrichment transitions to `ready` | 320 ms border pulse to `--positive` then back; reduced-motion → no pulse |
-| error | `enrichment.state = 'failed'` | left 3 px `--danger` bar, card body shows `what/why/what to do` (`03_UX.md` §12), `Retry` button |
-| empty | required data missing (e.g. url === '') | dashed border, centered call-to-action ("Add a URL"), single input focused on click |
-| stale | `enrichment.state = 'stale'` | clock badge + tooltip "Data captured {relative}. Refresh" |
-| locked | `locked === true` | lock badge, no handles, drag/resize refused with a 120 ms shake (reduced-motion → toast) |
-| undo-highlight | node touched by an undo/redo | 500 ms outline in `--accent-muted`, non-blocking |
+| State          | Trigger                                 | Visual contract                                                                                                              |
+| -------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| initial        | mounted, data ready                     | border `--border-subtle`, bg `--surface-1`, shadow none                                                                      |
+| hover          | pointer over card                       | border `--border-strong`, shadow `--shadow-1`, action rail fades in over 90 ms                                               |
+| focus          | keyboard focus                          | 2 px `--focus-ring` outline, offset 2 px, always visible (N6)                                                                |
+| selected       | in selection set                        | 2 px `--accent` border + 1 px inner ring; resize handles at L3 only                                                          |
+| multi-selected | ≥2 selected                             | same as selected, action rail hidden, bounding box drawn on canvas                                                           |
+| drag           | pointer drag                            | opacity 0.85, shadow `--shadow-3`, DOM card is `will-change: transform`, snapping guides on canvas                           |
+| editing        | double-click / Enter at L3              | border `--accent`, content becomes editable, Esc commits                                                                     |
+| loading        | `enrichment.state ∈ {queued, running}`  | skeleton blocks (no spinner) for unresolved regions, header shows animated 2 px top bar; reduced-motion → static striped bar |
+| partial        | `enrichment.state = 'partial'`          | resolved regions rendered, unresolved show inline `Not available` in `--text-muted`                                          |
+| success        | enrichment transitions to `ready`       | 320 ms border pulse to `--positive` then back; reduced-motion → no pulse                                                     |
+| error          | `enrichment.state = 'failed'`           | left 3 px `--danger` bar, card body shows `what/why/what to do` (`03_UX.md` §12), `Retry` button                             |
+| empty          | required data missing (e.g. url === '') | dashed border, centered call-to-action ("Add a URL"), single input focused on click                                          |
+| stale          | `enrichment.state = 'stale'`            | clock badge + tooltip "Data captured {relative}. Refresh"                                                                    |
+| locked         | `locked === true`                       | lock badge, no handles, drag/resize refused with a 120 ms shake (reduced-motion → toast)                                     |
+| undo-highlight | node touched by an undo/redo            | 500 ms outline in `--accent-muted`, non-blocking                                                                             |
 
 ---
 
@@ -324,12 +346,12 @@ export const WebsiteData = z.object({
   screenshotFileId: z.string().ulid().nullable(),
   ogImageFileId: z.string().ulid().nullable(),
   httpStatus: z.number().int().min(100).max(599).nullable(),
-  finalUrl: z.string().url().max(2048).nullable(),   // after redirects (SSRF-capped, N7)
+  finalUrl: z.string().url().max(2048).nullable(), // after redirects (SSRF-capped, N7)
   contentType: z.string().max(120).nullable(),
   lang: z.string().max(16).nullable(),
   publishedAt: z.string().datetime().nullable(),
   author: z.string().max(200).nullable(),
-  excerpt: z.string().max(4000).nullable(),          // readability extract, sanitized text
+  excerpt: z.string().max(4000).nullable(), // readability extract, sanitized text
   archiveUrl: z.string().url().max(2048).nullable(), // user-supplied or wayback, never auto-fetched
   notes: RichTextRef.nullable(),
 });
@@ -348,7 +370,7 @@ export const WebsiteData = z.object({
   `website.copy-url`, `website.refresh` (re-enqueue unfurl), `website.screenshot` (worker job),
   `website.extract-entities` (AI proposal: emails/domains/usernames found in `excerpt`),
   `website.to-domain` (creates a `domain` node + `resolves_to` edge).
-- Validation: URL must pass the SSRF guard's *static* checks client-side (scheme in `http/https`,
+- Validation: URL must pass the SSRF guard's _static_ checks client-side (scheme in `http/https`,
   host not in private ranges, no credentials in the URL); the authoritative check is server-side
   (`15_SECURITY.md` §5). Issue code `URL_PRIVATE_RANGE` blocks enrichment but not node creation.
 - States: **empty** when `url === ''` (paste target card); **loading** during unfurl; **partial**
@@ -380,8 +402,8 @@ The primary writing surface. Backed by a `Y.XmlFragment` (see §5, `08_DATA_MODE
 
 ```ts
 export const TextData = z.object({
-  fragmentKey: z.string().min(1).max(64),   // key into Y.Doc `richtext` map
-  plain: z.string().max(20000),             // denormalized plain text for search/L1
+  fragmentKey: z.string().min(1).max(64), // key into Y.Doc `richtext` map
+  plain: z.string().max(20000), // denormalized plain text for search/L1
   format: z.enum(['rich', 'markdown', 'code']).default('rich'),
   codeLanguage: z.string().max(32).nullable(),
   collapsed: z.boolean().default(false),
@@ -404,7 +426,7 @@ export const TextData = z.object({
 
 ```ts
 export const ImageData = z.object({
-  fileId: z.string().ulid(),                 // File row (08 §4.13)
+  fileId: z.string().ulid(), // File row (08 §4.13)
   naturalWidth: z.number().int().positive(),
   naturalHeight: z.number().int().positive(),
   crop: z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() }).nullable(),
@@ -412,8 +434,11 @@ export const ImageData = z.object({
   alt: z.string().max(500).default(''),
   caption: z.string().max(1000).nullable(),
   sourceUrl: z.string().url().max(2048).nullable(),
-  ocrText: z.string().max(20000).nullable(),      // enrichment, opt-in per workspace
-  dominantColor: z.string().regex(/^#[0-9a-f]{6}$/).nullable(),
+  ocrText: z.string().max(20000).nullable(), // enrichment, opt-in per workspace
+  dominantColor: z
+    .string()
+    .regex(/^#[0-9a-f]{6}$/)
+    .nullable(),
   blurhash: z.string().max(64).nullable(),
 });
 ```
@@ -440,7 +465,7 @@ export const FileData = z.object({
   fileName: z.string().max(255),
   mime: z.string().max(160),
   size: z.number().int().nonnegative(),
-  previewFileId: z.string().ulid().nullable(),   // rendered page-1 / waveform / poster
+  previewFileId: z.string().ulid().nullable(), // rendered page-1 / waveform / poster
   pageCount: z.number().int().positive().nullable(),
   durationMs: z.number().int().nonnegative().nullable(),
   extractedText: z.string().max(200000).nullable(),
@@ -465,12 +490,12 @@ differentiates NEXUS from a whiteboard.
 ```ts
 export const EvidenceData = z.object({
   claim: z.string().min(1).max(2000),
-  fragmentKey: z.string().max(64).nullable(),    // rich body/reasoning
+  fragmentKey: z.string().max(64).nullable(), // rich body/reasoning
   sourceUrls: z.array(z.string().url().max(2048)).max(20).default([]),
   sourceFileIds: z.array(z.string().ulid()).max(20).default([]),
   method: z.enum(['observation', 'tool', 'inference', 'testimony', 'document']),
-  reliability: z.enum(['A', 'B', 'C', 'D', 'E', 'F']),      // Admiralty source reliability
-  credibility: z.enum(['1', '2', '3', '4', '5', '6']),      // Admiralty information credibility
+  reliability: z.enum(['A', 'B', 'C', 'D', 'E', 'F']), // Admiralty source reliability
+  credibility: z.enum(['1', '2', '3', '4', '5', '6']), // Admiralty information credibility
   collectedAt: z.string().datetime(),
   collectorId: z.string().ulid().nullable(),
 });
@@ -485,7 +510,7 @@ export const EvidenceData = z.object({
   (creates `supports` or `contradicts` edge — type chosen in the dialog), `evidence.copy-citation`
   (formats `claim — source (observedAt)` as Markdown).
 - Validation: at least one of `sourceUrls`/`sourceFileIds` **or** `method === 'inference'`; violation
-  is a *warning* rendered in the card footer ("Unsourced claim"), never a hard block.
+  is a _warning_ rendered in the card footer ("Unsourced claim"), never a hard block.
 
 ### 4.7 `person` (identity)
 
@@ -498,14 +523,20 @@ export const PersonData = z.object({
   phones: z.array(z.string().max(40)).max(20).default([]),
   avatarFileId: z.string().ulid().nullable(),
   birthDate: z.string().date().nullable(),
-  country: z.string().length(2).nullable(),          // ISO 3166-1 alpha-2
+  country: z.string().length(2).nullable(), // ISO 3166-1 alpha-2
   city: z.string().max(120).nullable(),
   employer: z.string().max(200).nullable(),
   role: z.string().max(200).nullable(),
-  profileUrls: z.array(z.object({
-    platform: z.string().max(60), url: z.string().url().max(2048),
-    verified: z.boolean().default(false),
-  })).max(100).default([]),
+  profileUrls: z
+    .array(
+      z.object({
+        platform: z.string().max(60),
+        url: z.string().url().max(2048),
+        verified: z.boolean().default(false),
+      }),
+    )
+    .max(100)
+    .default([]),
   riskFlags: z.array(z.enum(['minor', 'sensitive-category', 'legal-hold'])).default([]),
   fragmentKey: z.string().max(64).nullable(),
 });
@@ -527,11 +558,11 @@ export const PersonData = z.object({
 ```ts
 export const UsernameData = z.object({
   handle: z.string().min(1).max(120),
-  platform: z.string().max(60).nullable(),          // null = platform-agnostic handle
+  platform: z.string().max(60).nullable(), // null = platform-agnostic handle
   profileUrl: z.string().url().max(2048).nullable(),
   exists: z.enum(['yes', 'no', 'unknown']).default('unknown'),
   checkedAt: z.string().datetime().nullable(),
-  checkedBy: z.string().max(64).nullable(),          // 'sherlock' | 'manual' | 'spiderfoot'
+  checkedBy: z.string().max(64).nullable(), // 'sherlock' | 'manual' | 'spiderfoot'
   followers: z.number().int().nonnegative().nullable(),
   bio: z.string().max(2000).nullable(),
   avatarFileId: z.string().ulid().nullable(),
@@ -549,7 +580,7 @@ export const UsernameData = z.object({
   `username.mark-exists` / `mark-not-exists` (sets `checkedBy='manual'`).
 - Loading state during a Sherlock run: card shows `Checking N sites…` with a determinate bar fed by
   run progress events; if progress is unavailable the bar is indeterminate (adapter assumption:
-  Sherlock's stdout line cadence is *not* a stable API — the fallback is the indeterminate bar and a
+  Sherlock's stdout line cadence is _not_ a stable API — the fallback is the indeterminate bar and a
   final result diff, see `13_SHERLOCK.md` §6).
 
 ### 4.9 `email`
@@ -557,10 +588,10 @@ export const UsernameData = z.object({
 ```ts
 export const EmailData = z.object({
   address: z.string().email().max(320),
-  local: z.string().max(64),          // derived, denormalized for search
-  domain: z.string().max(255),        // derived
+  local: z.string().max(64), // derived, denormalized for search
+  domain: z.string().max(255), // derived
   valid: z.enum(['syntax-ok', 'mx-ok', 'invalid', 'unknown']).default('syntax-ok'),
-  breachCount: z.number().int().nonnegative().nullable(),  // only from an installed integration
+  breachCount: z.number().int().nonnegative().nullable(), // only from an installed integration
   disposable: z.boolean().nullable(),
   firstSeen: z.string().datetime().nullable(),
 });
@@ -576,16 +607,22 @@ export const EmailData = z.object({
 
 ```ts
 export const DomainData = z.object({
-  name: z.string().max(255),                       // punycode-normalized, lowercased, no trailing dot
+  name: z.string().max(255), // punycode-normalized, lowercased, no trailing dot
   unicodeName: z.string().max(255).nullable(),
   registrar: z.string().max(200).nullable(),
   registeredAt: z.string().datetime().nullable(),
   expiresAt: z.string().datetime().nullable(),
   nameservers: z.array(z.string().max(255)).max(20).default([]),
-  records: z.array(z.object({
-    type: z.enum(['A', 'AAAA', 'MX', 'NS', 'TXT', 'CNAME', 'SOA']),
-    value: z.string().max(2048), ttl: z.number().int().nullable(),
-  })).max(200).default([]),
+  records: z
+    .array(
+      z.object({
+        type: z.enum(['A', 'AAAA', 'MX', 'NS', 'TXT', 'CNAME', 'SOA']),
+        value: z.string().max(2048),
+        ttl: z.number().int().nullable(),
+      }),
+    )
+    .max(200)
+    .default([]),
   tlsIssuer: z.string().max(200).nullable(),
   tlsExpiresAt: z.string().datetime().nullable(),
   asn: z.string().max(32).nullable(),
@@ -665,7 +702,7 @@ export const RepositoryData = z.object({
   pushedAt: z.string().datetime().nullable(),
   archived: z.boolean().nullable(),
   readmeFragmentKey: z.string().max(64).nullable(),
-  analysisId: z.string().ulid().nullable(),        // RepositoryAnalysis row (08 §4.18)
+  analysisId: z.string().ulid().nullable(), // RepositoryAnalysis row (08 §4.18)
   lastAnalyzedAt: z.string().datetime().nullable(),
 });
 ```
@@ -684,8 +721,8 @@ The immutable record of one integration run rendered on the canvas. Never edited
 
 ```ts
 export const ToolResultData = z.object({
-  tool: z.string().max(64),                 // 'sherlock' | 'spiderfoot' | 'github' | plugin id
-  toolVersion: z.string().max(40),          // e.g. 'sherlock 0.16.0'
+  tool: z.string().max(64), // 'sherlock' | 'spiderfoot' | 'github' | plugin id
+  toolVersion: z.string().max(40), // e.g. 'sherlock 0.16.0'
   runId: z.string().ulid(),
   target: z.string().max(500),
   status: z.enum(['queued', 'running', 'succeeded', 'partial', 'failed', 'cancelled', 'timeout']),
@@ -693,8 +730,8 @@ export const ToolResultData = z.object({
   finishedAt: z.string().datetime().nullable(),
   durationMs: z.number().int().nonnegative().nullable(),
   summary: z.string().max(2000).nullable(),
-  counts: z.record(z.string().max(40), z.number().int()).default({}),  // e.g. {found: 12, checked: 412}
-  rawRef: z.string().max(512).nullable(),   // S3 key of raw JSON
+  counts: z.record(z.string().max(40), z.number().int()).default({}), // e.g. {found: 12, checked: 412}
+  rawRef: z.string().max(512).nullable(), // S3 key of raw JSON
   producedNodeIds: z.array(z.string().ulid()).max(5000).default([]),
   exitCode: z.number().int().nullable(),
   errorCode: z.string().max(80).nullable(),
@@ -707,7 +744,7 @@ export const ToolResultData = z.object({
   `producedNodeIds` on the canvas), `run.export-json`.
 - States: `running` → progress card with elapsed timer and `Cancel`; `timeout`/`failed` → error card
   with the runner's structured error (`10_INTEGRATIONS.md` §8 error taxonomy) and `Rerun with a
-  longer timeout`; `partial` → yellow bar + "N of M sites answered".
+longer timeout`; `partial` → yellow bar + "N of M sites answered".
 
 ### 4.15 `hypothesis`
 
@@ -715,10 +752,10 @@ export const ToolResultData = z.object({
 export const HypothesisData = z.object({
   statement: z.string().min(1).max(1000),
   status: z.enum(['open', 'supported', 'contradicted', 'inconclusive', 'closed']).default('open'),
-  probability: z.number().min(0).max(1).nullable(),  // analyst estimate, manual
+  probability: z.number().min(0).max(1).nullable(), // analyst estimate, manual
   rationaleFragmentKey: z.string().max(64).nullable(),
-  supportCount: z.number().int().nonnegative().default(0),      // derived, recomputed on edge change
-  contradictCount: z.number().int().nonnegative().default(0),   // derived
+  supportCount: z.number().int().nonnegative().default(0), // derived, recomputed on edge change
+  contradictCount: z.number().int().nonnegative().default(0), // derived
   decidedAt: z.string().datetime().nullable(),
 });
 ```
@@ -728,7 +765,7 @@ export const HypothesisData = z.object({
   the same Yjs transaction as the edge mutation so undo restores them atomically.
 - 340×180; L1 shows the status glyph (open ◦, supported ▲, contradicted ▼) + first words.
 - Actions: `hypothesis.set-status`, `hypothesis.gather-evidence` (selects all connected evidence),
-  `hypothesis.ai-assess` (AI proposal that only *suggests* a status + rationale; never applies).
+  `hypothesis.ai-assess` (AI proposal that only _suggests_ a status + rationale; never applies).
 
 ### 4.16 `group` (frame)
 
@@ -740,13 +777,16 @@ export const GroupData = z.object({
   autoLayout: z.enum(['none', 'grid', 'stack', 'force']).default('none'),
   padding: z.number().int().min(0).max(200).default(24),
   childIds: z.array(z.string().ulid()).max(5000).default([]),
-  background: z.string().regex(/^--node-[a-z0-9-]+$/).nullable(),
+  background: z
+    .string()
+    .regex(/^--node-[a-z0-9-]+$/)
+    .nullable(),
 });
 ```
 
 - `isContainer: true`. Children reference the group through `parentId`; `childIds` is the ordered
   mirror used for stable z-order and layout. The invariant `child.parentId === group.id ⟺
-  group.data.childIds.includes(child.id)` is asserted by `checkGraphInvariants()` and repaired on
+group.data.childIds.includes(child.id)` is asserted by `checkGraphInvariants()` and repaired on
   load (`08_DATA_MODEL.md` §7.3).
 - Default 640×420; min 160×120; `resize: 'free'`; painted **behind** all non-group nodes (z floor).
 - Collapsed: renders as a 280×72 bar with the label + child count; children are `hidden` for the
@@ -763,7 +803,7 @@ cannot become a hidden document.
 ```ts
 export const StickyData = z.object({
   text: z.string().max(2000),
-  colorIndex: z.number().int().min(0).max(7).default(0),   // maps to --sticky-0..7
+  colorIndex: z.number().int().min(0).max(7).default(0), // maps to --sticky-0..7
   fontSize: z.enum(['s', 'm', 'l', 'auto']).default('auto'),
   align: z.enum(['left', 'center']).default('left'),
 });
@@ -780,9 +820,13 @@ export const StickyData = z.object({
 ```ts
 export const EmbedData = z.object({
   url: z.string().url().max(2048),
-  providerId: z.string().max(60),            // 'youtube' | 'vimeo' | 'figma' | 'generic'
+  providerId: z.string().max(60), // 'youtube' | 'vimeo' | 'figma' | 'generic'
   embedUrl: z.string().url().max(2048),
-  aspect: z.number().min(0.2).max(5).default(16 / 9),
+  aspect: z
+    .number()
+    .min(0.2)
+    .max(5)
+    .default(16 / 9),
   thumbnailFileId: z.string().ulid().nullable(),
   title: z.string().max(300).nullable(),
   allowInteractive: z.boolean().default(false),
@@ -791,7 +835,7 @@ export const EmbedData = z.object({
 
 - Iframes are **never** mounted automatically. The card shows the thumbnail + play affordance; the
   iframe mounts only after an explicit click, into a `sandbox="allow-scripts allow-same-origin
-  allow-popups"` frame with `referrerpolicy="no-referrer"` and `allow=""` (no camera/mic/geo).
+allow-popups"` frame with `referrerpolicy="no-referrer"` and `allow=""` (no camera/mic/geo).
   Unmounts on deselect or when it leaves the viewport. Rationale: an autoplaying third-party iframe
   destroys the frame budget (N1) and is an untrusted execution surface (`15_SECURITY.md` §6).
 - Provider list is a static allowlist table in `packages/domain/src/nodes/types/embed.ts`; unknown
@@ -853,29 +897,29 @@ data loss.
 
 ### 4.22 Type summary table
 
-| type | default w×h | resize | connectable | enrichable | container | color token |
-|---|---|---|---|---|---|---|
-| website | 320×188 | width | ✓ | ✓ | – | `--node-web` |
-| link | 260×64 | width | ✓ | – | – | `--node-link` |
-| text | 320×200 | free | ✓ | – | – | `--node-text` |
-| image | ≤360 box | ratio | ✓ | ✓ | – | `--node-media` |
-| file | 280×120 | width | ✓ | ✓ | – | `--node-file` |
-| evidence | 320×220 | width | ✓ | – | – | `--node-evidence` |
-| person | 300×160 | width | ✓ | ✓ | – | `--node-identity` |
-| username | 240×96 | width | ✓ | ✓ | – | `--node-identity` |
-| email | 240×88 | width | ✓ | ✓ | – | `--node-identity` |
-| domain | 300×140 | width | ✓ | ✓ | – | `--node-infra` |
-| ip | 280×132 | width | ✓ | ✓ | – | `--node-infra` |
-| organization | 300×150 | width | ✓ | ✓ | – | `--node-org` |
-| repository | 360×220 | width | ✓ | ✓ | – | `--node-code` |
-| tool-result | 340×200 | width | ✓ | – | – | `--node-tool` |
-| hypothesis | 340×180 | width | ✓ | – | – | `--node-hypothesis` |
-| group | 640×420 | free | – | – | ✓ | `--node-group` |
-| sticky | 200×200 | free | ✓ | – | – | `--sticky-0..7` |
-| embed | 480×270 | ratio | ✓ | ✓ | – | `--node-media` |
-| location | 300×200 | width | ✓ | ✓ | – | `--node-geo` |
-| timeline-event | 320×140 | width | ✓ | – | – | `--node-time` |
-| unknown | 280×140 | free | ✓ | – | – | `--node-unknown` |
+| type           | default w×h | resize | connectable | enrichable | container | color token         |
+| -------------- | ----------- | ------ | ----------- | ---------- | --------- | ------------------- |
+| website        | 320×188     | width  | ✓           | ✓          | –         | `--node-web`        |
+| link           | 260×64      | width  | ✓           | –          | –         | `--node-link`       |
+| text           | 320×200     | free   | ✓           | –          | –         | `--node-text`       |
+| image          | ≤360 box    | ratio  | ✓           | ✓          | –         | `--node-media`      |
+| file           | 280×120     | width  | ✓           | ✓          | –         | `--node-file`       |
+| evidence       | 320×220     | width  | ✓           | –          | –         | `--node-evidence`   |
+| person         | 300×160     | width  | ✓           | ✓          | –         | `--node-identity`   |
+| username       | 240×96      | width  | ✓           | ✓          | –         | `--node-identity`   |
+| email          | 240×88      | width  | ✓           | ✓          | –         | `--node-identity`   |
+| domain         | 300×140     | width  | ✓           | ✓          | –         | `--node-infra`      |
+| ip             | 280×132     | width  | ✓           | ✓          | –         | `--node-infra`      |
+| organization   | 300×150     | width  | ✓           | ✓          | –         | `--node-org`        |
+| repository     | 360×220     | width  | ✓           | ✓          | –         | `--node-code`       |
+| tool-result    | 340×200     | width  | ✓           | –          | –         | `--node-tool`       |
+| hypothesis     | 340×180     | width  | ✓           | –          | –         | `--node-hypothesis` |
+| group          | 640×420     | free   | –           | –          | ✓         | `--node-group`      |
+| sticky         | 200×200     | free   | ✓           | –          | –         | `--sticky-0..7`     |
+| embed          | 480×270     | ratio  | ✓           | ✓          | –         | `--node-media`      |
+| location       | 300×200     | width  | ✓           | ✓          | –         | `--node-geo`        |
+| timeline-event | 320×140     | width  | ✓           | –          | –         | `--node-time`       |
+| unknown        | 280×140     | free   | ✓           | –          | –         | `--node-unknown`    |
 
 ---
 
@@ -918,22 +962,22 @@ beyond default, embedded HTML, raw iframes. Rationale: they break the token syst
 `toMarkdown` / `fromMarkdown` live in `packages/domain/src/richtext/markdown.ts` and use
 CommonMark + GFM tables/task lists.
 
-| Construct | MD out | MD in | Lossless round-trip |
-|---|---|---|---|
-| paragraph, heading 1–3 | `#`,`##`,`###` | yes | ✓ |
-| bold/italic/strike/code | `**`,`*`,`~~`,`` ` `` | yes | ✓ |
-| link | `[t](url)` | yes | ✓ |
-| bullet/ordered list | `-`, `1.` | yes | ✓ |
-| task list | `- [ ]` / `- [x]` | yes | ✓ |
-| blockquote | `>` | yes | ✓ |
-| code block | fenced + lang | yes | ✓ |
-| table | GFM pipe table | yes | ✓ (alignment normalized to left) |
-| horizontal rule | `---` | yes | ✓ |
-| image | `![alt](nexus-file:<fileId>)` | yes | ✓ within a project archive |
-| callout | `> [!INFO]` GFM-alert syntax | yes | ✓ |
-| mention | `[@Name](nexus-node:<id>)` | yes | ✓ |
-| tag | `#tag` | yes | ✓ unless the text legitimately starts with `#` at line start → escaped `\#` |
-| highlight | `==text==` | yes | ✓ (non-CommonMark; documented extension) |
+| Construct               | MD out                        | MD in | Lossless round-trip                                                         |
+| ----------------------- | ----------------------------- | ----- | --------------------------------------------------------------------------- |
+| paragraph, heading 1–3  | `#`,`##`,`###`                | yes   | ✓                                                                           |
+| bold/italic/strike/code | `**`,`*`,`~~`,`` ` ``         | yes   | ✓                                                                           |
+| link                    | `[t](url)`                    | yes   | ✓                                                                           |
+| bullet/ordered list     | `-`, `1.`                     | yes   | ✓                                                                           |
+| task list               | `- [ ]` / `- [x]`             | yes   | ✓                                                                           |
+| blockquote              | `>`                           | yes   | ✓                                                                           |
+| code block              | fenced + lang                 | yes   | ✓                                                                           |
+| table                   | GFM pipe table                | yes   | ✓ (alignment normalized to left)                                            |
+| horizontal rule         | `---`                         | yes   | ✓                                                                           |
+| image                   | `![alt](nexus-file:<fileId>)` | yes   | ✓ within a project archive                                                  |
+| callout                 | `> [!INFO]` GFM-alert syntax  | yes   | ✓                                                                           |
+| mention                 | `[@Name](nexus-node:<id>)`    | yes   | ✓                                                                           |
+| tag                     | `#tag`                        | yes   | ✓ unless the text legitimately starts with `#` at line start → escaped `\#` |
+| highlight               | `==text==`                    | yes   | ✓ (non-CommonMark; documented extension)                                    |
 
 Import of unsupported Markdown (footnotes, definition lists, raw HTML) degrades to plain paragraphs
 and raises a non-blocking import warning listing the dropped constructs and their line numbers.
@@ -942,7 +986,7 @@ and raises a non-blocking import warning listing the dropped constructs and thei
 
 - `@` opens the node mention menu: fuzzy search over the board's search index (title + type +
   identity keys), 8 results, keyboard-navigable, Enter inserts a `mention` mark bound to the node
-  id. Inserting a mention **also** creates a `references` edge as a *suggestion chip* in the card
+  id. Inserting a mention **also** creates a `references` edge as a _suggestion chip_ in the card
   footer ("Link these nodes?") — never automatically (principle 3, `00_MASTER.md` §3).
 - `#` opens tag autocomplete: existing project tags ranked by usage, then "Create tag `x`".
   Tag names are normalized: NFKC, lowercase, spaces → `-`, max 48 chars, `[a-z0-9-_/]` only
@@ -975,16 +1019,16 @@ Pipeline for a paste into the editor (`03_UX.md` §6 covers canvas-level paste):
 
 ### 6.1 Accepted formats
 
-| Class | Accepted | Preview strategy |
-|---|---|---|
-| Raster image | png, jpeg, webp, avif, gif (first frame), bmp, tiff | decoded + re-encoded thumbnails |
-| Vector | svg | sanitized (see below), rasterized preview at 512 px |
-| Document | pdf | page 1 rendered to webp at 1024 px, text extracted |
-| Office | docx, xlsx, pptx | icon + extracted text; no visual render in v1 |
-| Text/data | txt, md, csv, tsv, json, log, yaml | first 40 lines in a monospace preview; csv/tsv render a 10×6 table |
-| Archive | zip, tar, tar.gz | listing of up to 200 entries, no extraction |
-| Audio/video | mp3, wav, m4a, mp4, webm, mov | poster frame (video) / waveform png (audio) + duration; playback only in the fullscreen viewer |
-| Other | any | generic file card, download only |
+| Class        | Accepted                                            | Preview strategy                                                                               |
+| ------------ | --------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Raster image | png, jpeg, webp, avif, gif (first frame), bmp, tiff | decoded + re-encoded thumbnails                                                                |
+| Vector       | svg                                                 | sanitized (see below), rasterized preview at 512 px                                            |
+| Document     | pdf                                                 | page 1 rendered to webp at 1024 px, text extracted                                             |
+| Office       | docx, xlsx, pptx                                    | icon + extracted text; no visual render in v1                                                  |
+| Text/data    | txt, md, csv, tsv, json, log, yaml                  | first 40 lines in a monospace preview; csv/tsv render a 10×6 table                             |
+| Archive      | zip, tar, tar.gz                                    | listing of up to 200 entries, no extraction                                                    |
+| Audio/video  | mp3, wav, m4a, mp4, webm, mov                       | poster frame (video) / waveform png (audio) + duration; playback only in the fullscreen viewer |
+| Other        | any                                                 | generic file card, download only                                                               |
 
 SVG is sanitized server-side (strip `script`, `foreignObject`, event attributes, external
 references) and is **never** rendered inline in the app; only its rasterization is displayed.
@@ -1063,22 +1107,22 @@ every registered type, sorts descending, and returns the candidates ≥ 0.35. Th
 (clipboard item ordering, drag-drop, file drops) is specified in `03_UX.md` §6; this document owns
 only the per-type matchers. Baseline matcher scores:
 
-| Input | Winner | Score | Runner-up |
-|---|---|---|---|
-| `http(s)://…` single URL | website | 0.95 | link 0.6 |
-| URL matching an embed provider | embed | 0.9 | website 0.8 |
-| `github.com/<owner>/<repo>` | repository | 0.97 | website 0.8 |
-| multiple URLs, one per line | link ×N | 0.8 | – |
-| `user@host.tld` | email | 0.95 | text 0.3 |
-| bare domain (`example.com`) | domain | 0.85 | link 0.5 |
-| IPv4/IPv6 literal | ip | 0.95 | text 0.2 |
-| `@handle` | username | 0.8 | text 0.3 |
-| image blob / `data:image/*` | image | 0.99 | file 0.5 |
-| other file blob | file | 0.9 | – |
-| text with Markdown signals | text (`format: rich`) | 0.8 | sticky 0.4 |
-| plain text ≤ 140 chars | sticky | 0.6 | text 0.55 |
-| plain text > 140 chars | text | 0.85 | – |
-| `nexus/clipboard-v1` JSON | (internal paste of nodes+edges) | 1.0 | – |
+| Input                          | Winner                          | Score | Runner-up   |
+| ------------------------------ | ------------------------------- | ----- | ----------- |
+| `http(s)://…` single URL       | website                         | 0.95  | link 0.6    |
+| URL matching an embed provider | embed                           | 0.9   | website 0.8 |
+| `github.com/<owner>/<repo>`    | repository                      | 0.97  | website 0.8 |
+| multiple URLs, one per line    | link ×N                         | 0.8   | –           |
+| `user@host.tld`                | email                           | 0.95  | text 0.3    |
+| bare domain (`example.com`)    | domain                          | 0.85  | link 0.5    |
+| IPv4/IPv6 literal              | ip                              | 0.95  | text 0.2    |
+| `@handle`                      | username                        | 0.8   | text 0.3    |
+| image blob / `data:image/*`    | image                           | 0.99  | file 0.5    |
+| other file blob                | file                            | 0.9   | –           |
+| text with Markdown signals     | text (`format: rich`)           | 0.8   | sticky 0.4  |
+| plain text ≤ 140 chars         | sticky                          | 0.6   | text 0.55   |
+| plain text > 140 chars         | text                            | 0.85  | –           |
+| `nexus/clipboard-v1` JSON      | (internal paste of nodes+edges) | 1.0   | –           |
 
 Ties within 0.05 surface a paste chooser popover at the drop point (arrow keys + Enter), default
 preselected; the choice is remembered per input class for the session.
@@ -1119,6 +1163,7 @@ Complexity: the spiral visits `O(r²)` candidates; each `index.intersects` is an
 per node, enforced by `bench/placement.bench.ts`).
 
 Mode specifics:
+
 - `below-source`: anchor = `(source.x, source.y + source.h + gap)`, spiral biased downward (offsets
   with `dy > 0` are visited first). Used by "expand" actions so children appear under their parent.
 - `grid`: pure row/column packing for bulk imports (≥ 8 nodes) inside a temporary `group` frame,
@@ -1147,6 +1192,7 @@ viewport, in which case a 240 ms eased pan brings its bounding box into view (re
 ### 9.1 create
 
 `createNode(type, partial, ctx)`:
+
 1. `def = registry.get(type)`; unknown type → error `NODE_TYPE_UNKNOWN`.
 2. Compose `{...EntityBase defaults, ...def.defaults, ...partial}`; generate ULID; set
    `createdAt = updatedAt = now`, `version = 1`, `status = 'draft'` while a creation dialog is open
@@ -1157,6 +1203,7 @@ viewport, in which case a 240 ms eased pan brings its bounding box into view (re
 ### 9.2 validate
 
 Two tiers:
+
 - **Schema** (`def.schema.safeParse`) — hard. A node that fails schema validation is never written
   to the CRDT. On import, failing nodes are converted to `unknown` (§4.21) so nothing is lost.
 - **Semantic** (`def.validate`) — soft. Returns `ValidationIssue[]` with
@@ -1186,19 +1233,19 @@ See §8. Placement happens before the node is visible; the node fades in over 12
 
 Rules:
 
-| Transition | Trigger | Side effects |
-|---|---|---|
-| `idle → queued` | node created with enrichable data, or `Refresh` action | job enqueued on BullMQ queue `enrich`, `jobId` stored |
-| `queued → running` | worker picks the job | card shows loading state; `updatedAt` **not** bumped |
-| `running → ready` | worker returns a complete payload | fields patched in one transaction, origin `'remote:enrich'`; `version` bumped; success pulse |
-| `running → partial` | some sub-fetches failed (e.g. og image 404 but HTML ok) | patch what succeeded, `lastError` holds the first failure |
-| `running → failed` | fetch error, SSRF block, timeout (15 s default) | `attempts++`; retry with backoff 2 s / 10 s / 60 s ± 20% jitter; after 3 attempts stays `failed` |
-| `ready → stale` | `now - enrichment.updatedAt > ttl` (website 30 d, domain 7 d, repository 24 h, ip 7 d, username 14 d) | badge only; no automatic refetch (network calls are never implicit) |
-| `* → idle` | user cancels | job removed; partial data kept |
+| Transition          | Trigger                                                                                               | Side effects                                                                                     |
+| ------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `idle → queued`     | node created with enrichable data, or `Refresh` action                                                | job enqueued on BullMQ queue `enrich`, `jobId` stored                                            |
+| `queued → running`  | worker picks the job                                                                                  | card shows loading state; `updatedAt` **not** bumped                                             |
+| `running → ready`   | worker returns a complete payload                                                                     | fields patched in one transaction, origin `'remote:enrich'`; `version` bumped; success pulse     |
+| `running → partial` | some sub-fetches failed (e.g. og image 404 but HTML ok)                                               | patch what succeeded, `lastError` holds the first failure                                        |
+| `running → failed`  | fetch error, SSRF block, timeout (15 s default)                                                       | `attempts++`; retry with backoff 2 s / 10 s / 60 s ± 20% jitter; after 3 attempts stays `failed` |
+| `ready → stale`     | `now - enrichment.updatedAt > ttl` (website 30 d, domain 7 d, repository 24 h, ip 7 d, username 14 d) | badge only; no automatic refetch (network calls are never implicit)                              |
+| `* → idle`          | user cancels                                                                                          | job removed; partial data kept                                                                   |
 
 Enrichment writes use origin `'remote:enrich'` and are therefore **excluded from the local undo
 stack** (`08_DATA_MODEL.md` §2.5): the user cannot "undo" a background metadata fetch, which would
-be confusing; they can `Clear enrichment` explicitly, which *is* undoable. Enrichment never changes
+be confusing; they can `Clear enrichment` explicitly, which _is_ undoable. Enrichment never changes
 `title` if the user has edited it (`titleEditedByUser` flag stored in `data._meta.titleLocked`,
 set on the first manual title edit).
 
@@ -1208,14 +1255,15 @@ group limits (`09_BACKEND.md` §6). All enrichment fetches go through the SSRF-g
 ### 9.5 edit
 
 Inline (L3) or inspector. Both write through `patchNode(id, patch, origin)` which:
+
 1. Deep-merges the patch into the node `Y.Map` **key by key** (never wholesale replace — that would
    destroy concurrent edits to sibling keys).
 2. Rich text is edited directly in the fragment by the editor binding; it never goes through `patch`.
-3. Runs schema validation on the merged result *before* committing; a failing patch is rejected with
+3. Runs schema validation on the merged result _before_ committing; a failing patch is rejected with
    the field-level issue and the input reverts with a 120 ms shake.
 4. Bumps `updatedAt`; bumps `version` per §9.6.
 5. Text inputs debounce structural writes at 180 ms; the CRDT itself receives keystrokes immediately
-   for text fragments (that is the point of Yjs), but *scalar* fields debounce to keep update volume
+   for text fragments (that is the point of Yjs), but _scalar_ fields debounce to keep update volume
    low.
 
 ### 9.6 version
@@ -1241,7 +1289,7 @@ group archives its children (recorded as one history event so one undo restores 
   render set, edges marked `orphaned` but retained. Immediately undoable (N8), and listed in the
   board Trash for 30 days.
 - Deleting a group asks: `Delete frame only` (children reparent to the board) vs `Delete frame and
-  contents`. Default is frame only.
+contents`. Default is frame only.
 - Restore from Trash restores geometry, parent (if the parent still exists, else board root) and
   edges whose other endpoint still exists.
 - **Purge** (hard delete) happens on the 30-day sweep or by explicit `Delete permanently` in Trash;
@@ -1257,18 +1305,18 @@ group archives its children (recorded as one history event so one undo restores 
 
 `scoreDuplicate(a, b) → 0..1` combines weighted signals; the pair is a candidate at ≥ 0.62 and an
 auto-suggested merge at ≥ 0.85. Only same-type pairs are compared, except the explicit cross-type
-pairs `username ↔ person` and `domain ↔ organization`, which produce a *link* suggestion, never a merge.
+pairs `username ↔ person` and `domain ↔ organization`, which produce a _link_ suggestion, never a merge.
 
-| Signal | Weight | Definition |
-|---|---|---|
-| identity key equality | 0.60 | any shared value from `def.identityKeys()` (exact, normalized) |
-| URL equality after normalization | 0.20 | lowercase host, strip `www.`, strip trailing `/`, drop tracking params (`utm_*`, `fbclid`, `gclid`, `ref`, `mc_eid`) |
-| title similarity | 0.12 | trigram Jaccard ≥ 0.72 |
-| content hash | 0.15 | sha256 of `File` bytes, or of normalized `plain` text |
-| tag overlap | 0.05 | Jaccard of tag sets |
-| shared neighbors | 0.08 | Jaccard of adjacent node ids ≥ 0.5 |
-| temporal proximity | 0.03 | `abs(observedAt delta) < 24 h` |
-| same producing run | −0.25 | two nodes from the same tool run are usually intentionally distinct |
+| Signal                           | Weight | Definition                                                                                                           |
+| -------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------- |
+| identity key equality            | 0.60   | any shared value from `def.identityKeys()` (exact, normalized)                                                       |
+| URL equality after normalization | 0.20   | lowercase host, strip `www.`, strip trailing `/`, drop tracking params (`utm_*`, `fbclid`, `gclid`, `ref`, `mc_eid`) |
+| title similarity                 | 0.12   | trigram Jaccard ≥ 0.72                                                                                               |
+| content hash                     | 0.15   | sha256 of `File` bytes, or of normalized `plain` text                                                                |
+| tag overlap                      | 0.05   | Jaccard of tag sets                                                                                                  |
+| shared neighbors                 | 0.08   | Jaccard of adjacent node ids ≥ 0.5                                                                                   |
+| temporal proximity               | 0.03   | `abs(observedAt delta) < 24 h`                                                                                       |
+| same producing run               | −0.25  | two nodes from the same tool run are usually intentionally distinct                                                  |
 
 The score is the weight sum clamped to `[0,1]`. Detection runs (a) incrementally on create/patch
 against the identity index only (O(1) hash lookup), and (b) as a full pass in a Web Worker when the
@@ -1282,17 +1330,21 @@ not O(n²).
 
 ```ts
 interface MergePlan {
-  survivorId: string;               // default: oldest createdAt, or the one with more edges
-  mergedIds: string[];              // 1..9 others
+  survivorId: string; // default: oldest createdAt, or the one with more edges
+  mergedIds: string[]; // 1..9 others
   fieldResolutions: Array<{
-    path: string;                   // 'data.url', 'title', 'tags'
+    path: string; // 'data.url', 'title', 'tags'
     strategy: 'survivor' | 'other' | 'union' | 'concat' | 'manual';
     chosenValue: unknown;
     conflicting: boolean;
   }>;
-  edgeRewires: Array<{ edgeId: string; action: 'rewire' | 'drop-duplicate' | 'keep'; newEndpoint?: string }>;
+  edgeRewires: Array<{
+    edgeId: string;
+    action: 'rewire' | 'drop-duplicate' | 'keep';
+    newEndpoint?: string;
+  }>;
   provenance: { kind: 'derived'; source: 'merge'; mergedFrom: string[] };
-  geometry: { x: number; y: number; w: number; h: number };  // survivor keeps its own
+  geometry: { x: number; y: number; w: number; h: number }; // survivor keeps its own
   warnings: string[];
 }
 ```
@@ -1304,17 +1356,17 @@ merged without confirmation (N4/N8). The whole merge is one Yjs transaction ⇒ 
 
 ### 10.3 Field resolution defaults
 
-| Field kind | Default strategy |
-|---|---|
-| scalar, equal | survivor |
-| scalar, one empty | non-empty value |
-| scalar, both non-empty and different | **manual** (marked `conflicting`) |
-| arrays (`tags`, `aliases`, `usernames`, `emails`, `sourceUrls`) | union, deduped, order = survivor first |
-| rich text fragments | concat: survivor fragment, `---` rule, then each merged fragment under an H3 "Merged from {title}" |
-| `confidence` | the **higher** of the two (confirmed > high > medium > low > unverified) |
-| `provenance` | new `derived` provenance; originals preserved in `data._meta.mergedProvenance[]` |
-| `createdAt` | earliest | 
-| files/media | survivor's; merged files become attachments listed in the inspector |
+| Field kind                                                      | Default strategy                                                                                   |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| scalar, equal                                                   | survivor                                                                                           |
+| scalar, one empty                                               | non-empty value                                                                                    |
+| scalar, both non-empty and different                            | **manual** (marked `conflicting`)                                                                  |
+| arrays (`tags`, `aliases`, `usernames`, `emails`, `sourceUrls`) | union, deduped, order = survivor first                                                             |
+| rich text fragments                                             | concat: survivor fragment, `---` rule, then each merged fragment under an H3 "Merged from {title}" |
+| `confidence`                                                    | the **higher** of the two (confirmed > high > medium > low > unverified)                           |
+| `provenance`                                                    | new `derived` provenance; originals preserved in `data._meta.mergedProvenance[]`                   |
+| `createdAt`                                                     | earliest                                                                                           |
+| files/media                                                     | survivor's; merged files become attachments listed in the inspector                                |
 
 ### 10.4 Edge rewiring rules
 

@@ -43,7 +43,9 @@ describe('logger', () => {
   });
 
   it('redacts nested fields', () => {
-    const line = capture((log) => log.info({ req: { headers: { authorization: 'Bearer abcdefghijkl' } } }, 'm'));
+    const line = capture((log) =>
+      log.info({ req: { headers: { authorization: 'Bearer abcdefghijkl' } } }, 'm'),
+    );
     expect(JSON.stringify(line)).not.toContain('abcdefghijkl');
   });
 
