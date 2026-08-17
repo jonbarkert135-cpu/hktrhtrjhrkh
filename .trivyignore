@@ -1,0 +1,30 @@
+# Trivy suppressions — read by the `docker` job of CI (aquasecurity/trivy-action reads
+# `.trivyignore` from the workspace root). Policy (15_SECURITY.md §9.4):
+#
+#   * only findings we cannot fix ourselves may be listed here;
+#   * every entry states the affected component, why it is not exploitable for NEXUS and the date
+#     it must be re-checked (plain `.trivyignore` holds bare IDs, so the review date is a comment);
+#   * anything fixable is fixed in the Dockerfile or the lockfile, never suppressed.
+#
+# ---------------------------------------------------------------------------------------------
+# usr/bin/caddy (gobinary) in `caddy:2-alpine`
+#
+# The static web image serves pre-built assets from /srv over plain HTTP on :8080 behind the
+# platform ingress: no DNS resolution of untrusted names, no TLS/ACME client, no XML/ASN.1/MIME
+# parsing and no Go html/template rendering happen in that configuration. The CVEs below are in
+# the Go standard library and golang.org/x/* linked into the upstream Caddy release binary; they
+# can only be cleared by an upstream rebuild against Go >= 1.26.6, so they are suppressed here.
+# RE-CHECK BY 2026-10-01: bump `caddy:2-alpine` and delete every line below that Trivy no longer
+# reports.
+CVE-2026-27145
+CVE-2026-33818
+CVE-2026-39821
+CVE-2026-39822
+CVE-2026-42504
+CVE-2026-46600
+CVE-2026-56852
+CVE-2026-56853
+CVE-2026-56858
+CVE-2026-56859
+CVE-2026-56860
+CVE-2026-56862

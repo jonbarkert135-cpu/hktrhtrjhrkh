@@ -93,6 +93,15 @@ containers). The real environment always wins, and nothing is read when `NODE_EN
 deployed image can never be configured by a file that leaked into the build context. The browser
 bundle keeps importing `env.ts` only, which stays free of `node:fs`.
 
+**Anything started through Turbo must be listed in `globalPassThroughEnv` (`turbo.json`).** Turbo 2
+runs tasks in strict environment mode by default: a task process receives only the variables Turbo
+knows about. Without the list, `pnpm dev` (and therefore the API that Playwright's `webServer`
+starts in the `e2e` job) never saw `DATABASE_URL`/`REDIS_URL` from the job environment, silently
+fell back to the localhost dummies in `infra/ci/.env.ci` and answered `503` on `/readyz`. The list
+is _pass-through_, not `globalEnv`: these values differ per environment but must not change the
+build cache key. A new runtime variable is added to `packages/config/src/env.ts`, to
+`.env.example`, to `infra/ci/.env.ci` **and** to `globalPassThroughEnv`.
+
 ---
 
 ## 2. Service inventory

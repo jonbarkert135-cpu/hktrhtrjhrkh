@@ -1111,6 +1111,29 @@ The API sets `Vary: Origin, Cookie` where relevant.
 | Secrets scanning | gitleaks in pre-commit and CI on the full history of the PR branch                                                                                                                                                          |
 | CI hardening     | least-privilege `GITHUB_TOKEN` permissions per job, no `pull_request_target` with checkout of untrusted code, actions pinned by commit SHA                                                                                  |
 
+### 9.4 Container image hardening and vulnerability suppressions
+
+The `docker` job builds `api` and `web` and fails on **HIGH/CRITICAL, fixed** findings
+(`trivy-action`, `ignore-unfixed: true`). Two rules keep that gate meaningful instead of noisy:
+
+1. **Nothing that we can remove stays in a runtime image.**
+   - The API runtime installs its dependency tree in a dedicated `proddeps` stage
+     (`pnpm install --prod --filter "@nexus/api..."`). `pnpm prune --prod` is not sufficient in a
+     workspace: it only rewrites the root links and leaves every dev package (esbuild, babel,
+     vitest …) inside `node_modules/.pnpm`, where Trivy finds it.
+   - The Prisma client is generated with a pinned, throw-away CLI (`pnpm dlx prisma@<lockfile
+version>`), so the CLI never enters the image.
+   - The package managers bundled into `node:22-alpine` (npm, corepack, yarn) are deleted from the
+     runtime stage: the container only executes `node`, and npm vendors its own copies of `tar`,
+     `sigstore`, `ip-address` and `brace-expansion`.
+   - Both runtime stages run `apk upgrade --no-cache` to pick up Alpine security updates published
+     after the base image was tagged.
+2. **Everything else is suppressed explicitly, never silently.** `.trivyignore` at the repository
+   root holds bare CVE IDs with a comment block per component: the affected binary, why the code
+   path is unreachable in our deployment, and a dated re-check obligation. Only findings that can
+   solely be fixed upstream (currently the Go standard library linked into the released `caddy`
+   binary) qualify. Lowering `severity` or setting `exit-code: 0` in the workflow is not an option.
+
 ---
 
 ## 10. Audit log

@@ -19,18 +19,52 @@ FROM deps AS build
 COPY . .
 # @nexus/db is the only dependency of the api with a build step (prisma generate).
 RUN pnpm --filter @nexus/db run build
-# Prune to production dependencies; the runtime image carries no dev deps.
-RUN pnpm prune --prod
+
+# Production dependency tree, installed from scratch.
+#
+# `pnpm prune --prod` is NOT enough in a workspace: it rewrites the root node_modules links but
+# leaves every dev package inside the virtual store (node_modules/.pnpm), so the runtime image
+# still shipped esbuild, babel, vitest & co. — and the Trivy gate flagged their vulnerabilities
+# (15_SECURITY.md §9.4). A separate, filtered `--prod` install produces a tree that only contains
+# what `node apps/api/src/server.ts` actually loads.
+FROM deps AS proddeps
+WORKDIR /repo
+COPY packages/db/prisma packages/db/prisma
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    rm -rf node_modules apps/*/node_modules packages/*/node_modules bench/node_modules e2e/node_modules && \
+    pnpm install --frozen-lockfile --prod --filter "@nexus/api..."
+# The Prisma CLI is a dev dependency, so it is fetched for this single command instead of being
+# installed into the tree. The version is pinned to the one in pnpm-lock.yaml (@prisma/client).
+RUN pnpm dlx prisma@6.19.3 generate --schema=packages/db/prisma/schema.prisma
+# A workspace package without production dependencies gets no node_modules directory; the runtime
+# stage copies these paths unconditionally, so make sure they exist.
+RUN mkdir -p apps/api/node_modules packages/config/node_modules packages/db/node_modules \
+             packages/domain/node_modules
 
 FROM node:22-alpine AS runtime
 ENV NODE_ENV=production
+# The runtime only ever runs `node`. Removing the package managers bundled into the base image
+# drops their vendored dependencies (npm bundles tar, sigstore, ip-address, brace-expansion …)
+# from the attack surface and from the vulnerability report.
+RUN apk upgrade --no-cache && \
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+           /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn-* \
+           /usr/local/bin/yarn /usr/local/bin/yarnpkg
 WORKDIR /repo
-COPY --from=build --chown=65532:65532 /repo/node_modules ./node_modules
+# Sources first, then the production dependency tree on top: the per-package node_modules of the
+# build stage point into a virtual store that does not exist here, so they are replaced wholesale.
 COPY --from=build --chown=65532:65532 /repo/package.json ./package.json
 COPY --from=build --chown=65532:65532 /repo/apps/api ./apps/api
 COPY --from=build --chown=65532:65532 /repo/packages/config ./packages/config
 COPY --from=build --chown=65532:65532 /repo/packages/db ./packages/db
 COPY --from=build --chown=65532:65532 /repo/packages/domain ./packages/domain
+RUN rm -rf node_modules apps/api/node_modules packages/config/node_modules \
+           packages/db/node_modules packages/domain/node_modules
+COPY --from=proddeps --chown=65532:65532 /repo/node_modules ./node_modules
+COPY --from=proddeps --chown=65532:65532 /repo/apps/api/node_modules ./apps/api/node_modules
+COPY --from=proddeps --chown=65532:65532 /repo/packages/config/node_modules ./packages/config/node_modules
+COPY --from=proddeps --chown=65532:65532 /repo/packages/db/node_modules ./packages/db/node_modules
+COPY --from=proddeps --chown=65532:65532 /repo/packages/domain/node_modules ./packages/domain/node_modules
 USER 65532:65532
 EXPOSE 3001 9464
 # Internal packages are source-only (no build step), so the runtime strips types natively
