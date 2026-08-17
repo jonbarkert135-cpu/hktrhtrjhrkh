@@ -8,7 +8,7 @@ import { createLogger } from '@nexus/config/log';
 import { prisma } from '@nexus/db';
 import Redis from 'ioredis';
 import type { FastifyBaseLogger, FastifyInstance } from 'fastify';
-import { loadServerEnv } from './env.js';
+import { loadServerEnvFromProcess } from './env.js';
 import type { ServerEnv } from './env.js';
 import { createAuth, auditAuthEvent } from './auth/index.js';
 import { USER_API_RULE } from './auth/rate-limit.js';
@@ -152,7 +152,7 @@ async function enumerationSafeBody(pathname: string, response: Response): Promis
 async function main(): Promise<void> {
   let env: ServerEnv;
   try {
-    env = loadServerEnv();
+    env = loadServerEnvFromProcess();
   } catch (error) {
     process.stderr.write(
       `Invalid configuration — the API cannot start:\n${error instanceof Error ? error.message : String(error)}\n`,

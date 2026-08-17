@@ -13,7 +13,8 @@
     "./tsconfig/base": "./tsconfig/base.json",
     "./tsconfig/react": "./tsconfig/react.json",
     "./tsconfig/node": "./tsconfig/node.json",
-    "./vitest": "./vitest/base.ts"
+    "./vitest": "./vitest/base.ts",
+    "./env-file": "./src/env-file.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",

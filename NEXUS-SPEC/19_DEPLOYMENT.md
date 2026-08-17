@@ -86,6 +86,13 @@ staging use Kubernetes Secrets from the cluster's external secret store; product
 sealed and rotated quarterly (`15_SECURITY.md` §7). No secret is ever printed; the logger's
 redaction list is unit-tested (`18_TESTING.md` §11).
 
+Node processes resolve their configuration through `loadServerEnvFromProcess()`
+(`packages/config/src/env-file.ts`), which fills **only unset** variables from `.env` and — when
+`CI` is set — from the committed `infra/ci/.env.ci` (dummy values for ephemeral CI service
+containers). The real environment always wins, and nothing is read when `NODE_ENV=production`, so a
+deployed image can never be configured by a file that leaked into the build context. The browser
+bundle keeps importing `env.ts` only, which stays free of `node:fs`.
+
 ---
 
 ## 2. Service inventory

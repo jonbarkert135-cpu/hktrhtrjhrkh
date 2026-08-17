@@ -1,8 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
-import { loadServerEnv } from '@nexus/config/env';
+import { loadServerEnvFromProcess } from '@nexus/config/env-file';
 
-const env = loadServerEnv();
+const env = loadServerEnvFromProcess();
 
 /**
  * Prisma connection pool size comes from DATABASE_POOL_MAX (19_DEPLOYMENT.md §1.1). Prisma reads it
