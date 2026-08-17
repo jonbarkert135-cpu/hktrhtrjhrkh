@@ -158,6 +158,17 @@ correct names/sizes before the Postgres `files` row is reachable.
 Rule of thumb enforced in review: **if two users editing it concurrently do not need a merge, it is
 not in the document.**
 
+#### 2.2.7 Implementation note (P3)
+
+The schema above is implemented in `packages/domain/src/doc/`. Two details were pinned down while
+building it:
+
+- Node/edge/group records are `Y.Map`s of plain JSON values; nested `Y.Map` payloads for the types
+  listed in §2.2.2 arrive with the node registry in P4. Unknown keys are already preserved on read,
+  write, export and import, so that change is additive.
+- `order` is repaired (`pruneOrder`) inside the same transaction as any node delete, so invariant
+  §7.4 cannot be violated between two transactions.
+
 ### 2.4 Transactions and origins
 
 Every mutation goes through one helper:

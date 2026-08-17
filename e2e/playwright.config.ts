@@ -31,6 +31,9 @@ export default defineConfig({
         webServer: {
           command: 'pnpm dev',
           cwd: '..',
+          // Every board spec signs a fresh user up; the production budget is 5 signups/hour/IP,
+          // which the suite legitimately exceeds. Honoured only outside NEXUS_ENV=production.
+          env: { AUTH_SIGNUP_LIMIT: '500' },
           url: baseURL,
           reuseExistingServer: true,
           timeout: 120_000,

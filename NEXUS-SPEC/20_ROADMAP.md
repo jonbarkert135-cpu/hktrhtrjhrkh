@@ -461,6 +461,19 @@ proved wrong, in the same PR), `16_PERFORMANCE.md` (record measured numbers), tr
 
 # P3 — Document & persistence
 
+**Status: DONE** — implemented in `phase/p03-document-persistence`. `@nexus/domain` ships the board
+`Y.Doc` schema (eight roots), the `tx(doc, origin, fn)` write path with the `no-direct-graph-write`
+lint rule, zod entity schemas, observers, invariants, forward-only migrations, the origin-scoped
+`Y.UndoManager` wrapper and the `nexus.board.v1` export/import with a lossless round-trip property
+test. `apps/web` ships `data/{docProvider,persistence,opfs,snapshots,syncStatus}`, the
+document ⇄ engine bindings, the save indicator, undo/redo, version history and the import dialog;
+`e2e/{persistence,undo}` cover kill-tab, offline and the undo matrix.
+
+Deviation from §5.1 recorded here on purpose: rich text is stored in the top-level `richtext`
+`Y.Map<Y.XmlFragment>` keyed by `fragmentKey` (referenced from `node.data.fragmentKey`), exactly as
+`08_DATA_MODEL.md` §2.2.5 specifies, instead of a per-node `body` key. `08_DATA_MODEL.md` is the
+single source of truth for the document schema.
+
 ## 1 Objective
 
 Make the board a real document: define the `Y.Doc` schema, bind the canvas engine to it, persist
