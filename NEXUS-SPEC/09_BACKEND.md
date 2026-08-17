@@ -165,6 +165,12 @@ auth.revokeApiToken: mutation({ id: Id }) => Ok
 
 Login/logout/OAuth callbacks are Better-Auth HTTP routes at `/auth/*`, not tRPC.
 
+The mount point is `/auth`, **not** Better-Auth's default `/api/auth`. Both sides must say so:
+the server passes `basePath: '/auth'` (`apps/api/src/auth/index.ts`) and the browser client passes
+`basePath: AUTH_BASE_PATH` (`apps/web/src/lib/auth.ts`). If only one side is configured, every
+auth call 404s and the UI surfaces it as a generic "couldn't reach the server" banner — the
+failure mode that broke e2e J01 in CI run 32071533040.
+
 ### 3.2 `projects`
 
 ```ts
