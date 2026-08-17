@@ -74,3 +74,21 @@ export const authLimiter = new FixedWindowLimiter();
 export const loginKey = (ip: string, email: string): string =>
   `login:${ip}:${email.trim().toLowerCase()}`;
 export const signupKey = (ip: string): string => `signup:${ip}`;
+
+/**
+ * The signup budget with the non-production override applied.
+ *
+ * The e2e suite creates a throw-away account per spec from a single IP, which legitimately exceeds
+ * the production budget of 5/hour and made the whole board suite fail with 429s. `AUTH_SIGNUP_LIMIT`
+ * raises the ceiling for dev/CI only: in `production` the constant always wins, so a mis-set
+ * variable can never weaken a real deployment.
+ */
+export function resolveSignupRule(
+  nexusEnv: 'local' | 'preview' | 'staging' | 'production',
+  raw: string | undefined,
+): RateLimitRule {
+  if (nexusEnv === 'production' || raw === undefined) return SIGNUP_RULE;
+  const limit = Number(raw);
+  if (!Number.isInteger(limit) || limit <= 0) return SIGNUP_RULE;
+  return { limit, windowMs: SIGNUP_RULE.windowMs };
+}

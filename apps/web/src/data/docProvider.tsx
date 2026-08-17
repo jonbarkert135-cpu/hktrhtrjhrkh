@@ -42,6 +42,14 @@ export interface BoardDocValue {
 
 const BoardDocContext = createContext<BoardDocValue | null>(null);
 
+interface Bundle {
+  doc: Y.Doc;
+  history: BoardHistory;
+  snapshotStore: SnapshotStore;
+  snapshots: SnapshotScheduler;
+  blobs: BlobStore;
+}
+
 export interface BoardDocProviderProps {
   boardId: string;
   children: ReactNode;
@@ -62,16 +70,20 @@ export function BoardDocProvider({
   const [ready, setReady] = useState(false);
   const [storageWarning, setStorageWarning] = useState<string | null>(null);
   const persistenceRef = useRef<PersistenceHandle | null>(null);
+  // The whole stack is created *inside* the effect, not in a `useMemo`. React StrictMode (the dev
+  // server, which is what e2e drives) mounts every effect twice: mount → cleanup → mount. A memoised
+  // bundle would survive that cleanup already destroyed — the undo manager stayed dead and the Undo
+  // button never left its disabled state in dev. Creating and destroying in the same effect makes
+  // the second mount get a fresh, live bundle.
+  const [bundle, setBundle] = useState<Bundle | null>(null);
 
-  const bundle = useMemo(() => {
+  useEffect(() => {
     const doc = createBoardDoc({ boardId, now: new Date().toISOString() });
     const history = createBoardHistory(doc);
     const snapshotStore =
       snapshotStoreImpl ??
-      createSnapshotStore(
-        // A browser without IndexedDB gets a store that fails loudly rather than silently.
-        globalThis.indexedDB,
-      );
+      // A browser without IndexedDB gets a store that fails loudly rather than silently.
+      createSnapshotStore(globalThis.indexedDB);
     const snapshots = createSnapshotScheduler({ boardId, doc, store: snapshotStore });
     const blobs =
       blobStoreImpl ??
@@ -83,49 +95,57 @@ export function BoardDocProvider({
               : 'This browser has no OPFS support; attachments are stored in IndexedDB instead.',
           ),
       });
-    return { doc, history, snapshotStore, snapshots, blobs };
-  }, [boardId, snapshotStoreImpl, blobStoreImpl]);
 
-  useEffect(() => {
     const factory = createPersistenceImpl ?? createPersistence;
-    const handle = factory({ boardId, doc: bundle.doc });
+    const handle = factory({ boardId, doc });
     persistenceRef.current = handle;
     const off = handle.subscribe(setStatus);
+
+    setBundle({ doc, history, snapshotStore, snapshots, blobs });
+    setReady(false);
 
     let cancelled = false;
     void handle.whenLoaded.then(() => {
       if (cancelled) return;
       // A document restored from IndexedDB may predate the current schema (08 §8.6).
-      if (readMeta(bundle.doc) !== undefined) migrateDocument(bundle.doc, new Date().toISOString());
+      if (readMeta(doc) !== undefined) migrateDocument(doc, new Date().toISOString());
       setReady(true);
     });
 
     return () => {
       cancelled = true;
       off();
-      bundle.snapshots.destroy();
-      bundle.history.destroy();
+      snapshots.destroy();
+      history.destroy();
       void handle.destroy();
       persistenceRef.current = null;
+      setBundle(null);
+      setReady(false);
     };
-  }, [boardId, bundle, createPersistenceImpl]);
+  }, [boardId, createPersistenceImpl, snapshotStoreImpl, blobStoreImpl]);
 
-  const value = useMemo<BoardDocValue>(
-    () => ({
-      boardId,
-      doc: bundle.doc,
-      history: bundle.history,
-      snapshots: bundle.snapshots,
-      snapshotStore: bundle.snapshotStore,
-      blobs: bundle.blobs,
-      status,
-      ready,
-      storageWarning,
-      retry: () => persistenceRef.current?.retry(),
-    }),
+  const value = useMemo<BoardDocValue | null>(
+    () =>
+      bundle === null
+        ? null
+        : {
+            boardId,
+            doc: bundle.doc,
+            history: bundle.history,
+            snapshots: bundle.snapshots,
+            snapshotStore: bundle.snapshotStore,
+            blobs: bundle.blobs,
+            status,
+            ready,
+            storageWarning,
+            retry: () => persistenceRef.current?.retry(),
+          },
     [boardId, bundle, status, ready, storageWarning],
   );
 
+  // One tick with nothing rendered while the effect builds the stack: children must never run
+  // without a live document, and `useBoardDoc`'s error must keep meaning "no provider above me".
+  if (value === null) return null;
   return <BoardDocContext.Provider value={value}>{children}</BoardDocContext.Provider>;
 }
 

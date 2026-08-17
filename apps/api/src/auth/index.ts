@@ -6,7 +6,7 @@ import { z } from 'zod';
 import type { ServerEnv } from '../env.ts';
 import { audit } from '../audit.ts';
 import type { AuditLogger } from '../audit.ts';
-import { authLimiter, loginKey, signupKey, LOGIN_RULE, SIGNUP_RULE } from './rate-limit.ts';
+import { authLimiter, loginKey, signupKey, resolveSignupRule, LOGIN_RULE } from './rate-limit.ts';
 import { ensurePersonalOrg } from './personal-org.ts';
 
 const githubEnv = z
@@ -20,6 +20,8 @@ const clientIp = (headers: Headers, fallback: string): string =>
 
 export function createAuth(env: ServerEnv) {
   const secureCookies = env.NEXUS_ENV !== 'local';
+  // Production always uses the constant; dev/CI may raise it (see resolveSignupRule).
+  const signupRule = resolveSignupRule(env.NEXUS_ENV, process.env['AUTH_SIGNUP_LIMIT']);
 
   return betterAuth({
     appName: 'nexus',
@@ -93,7 +95,7 @@ export function createAuth(env: ServerEnv) {
         }
 
         if (ctx.path === '/sign-up/email') {
-          const result = authLimiter.hit(signupKey(ip), SIGNUP_RULE);
+          const result = authLimiter.hit(signupKey(ip), signupRule);
           if (!result.allowed) throw tooMany(result.retryAfterSec);
         }
         return Promise.resolve();

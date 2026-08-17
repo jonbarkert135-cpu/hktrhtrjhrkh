@@ -4,6 +4,7 @@ import {
   LOGIN_RULE,
   SIGNUP_RULE,
   loginKey,
+  resolveSignupRule,
   signupKey,
 } from '../src/auth/rate-limit.ts';
 
@@ -40,5 +41,25 @@ describe('auth rate limits', () => {
 
     clock.t += SIGNUP_RULE.windowMs + 1;
     expect(limiter.hit(key, SIGNUP_RULE).allowed).toBe(true);
+  });
+});
+
+describe('resolveSignupRule', () => {
+  it('never lets the override weaken production', () => {
+    expect(resolveSignupRule('production', '5000')).toEqual(SIGNUP_RULE);
+  });
+
+  it('raises the ceiling outside production so e2e can create one account per spec', () => {
+    expect(resolveSignupRule('local', '500')).toEqual({
+      limit: 500,
+      windowMs: SIGNUP_RULE.windowMs,
+    });
+  });
+
+  it('falls back to the production budget for a missing or nonsense value', () => {
+    expect(resolveSignupRule('local', undefined)).toEqual(SIGNUP_RULE);
+    expect(resolveSignupRule('local', 'lots')).toEqual(SIGNUP_RULE);
+    expect(resolveSignupRule('local', '0')).toEqual(SIGNUP_RULE);
+    expect(resolveSignupRule('preview', '2.5')).toEqual(SIGNUP_RULE);
   });
 });

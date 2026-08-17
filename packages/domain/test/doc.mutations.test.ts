@@ -186,13 +186,11 @@ describe('board document mutations', () => {
     expect(nodeBudget(doc)).toEqual({ count: 1, warn: false, blocked: false });
     expect(() => assertCanCreateNodes(doc, NODE_HARD_LIMIT)).toThrow(DocLimitError);
     try {
-      addNodes(
-        doc,
-        Array.from({ length: NODE_HARD_LIMIT }, (_v, i) =>
-          makeNode({ id: `x${String(i)}`, x: 0, y: 0 }, T0),
-        ),
-        opts,
-      );
+      // The batch is built by repeating one validated node: `addNodes` checks the budget before it
+      // touches the payload, so validating 20 000 distinct nodes would only make the test slow
+      // (it timed out at 5 s on CI runners) without testing anything extra.
+      const filler = makeNode({ id: 'x0', x: 0, y: 0 }, T0);
+      addNodes(doc, new Array<typeof filler>(NODE_HARD_LIMIT).fill(filler), opts);
       expect.unreachable('the hard limit must reject the batch');
     } catch (error) {
       expect((error as DocLimitError).limit).toBe(NODE_HARD_LIMIT);
