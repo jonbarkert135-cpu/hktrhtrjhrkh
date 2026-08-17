@@ -110,6 +110,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/bootstrap
       - run: pnpm db:migrate && pnpm db:seed
+      # Playwright's webServer starts `pnpm dev` (api on :3001, web on :5173) and e2e/global.setup.ts
+      # waits for /readyz before the first spec runs.
       - run: pnpm e2e
       - uses: actions/upload-artifact@v4
         if: failure()
@@ -137,8 +139,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/bootstrap
+      - uses: actions/download-artifact@v4
+        with: { name: dist, path: apps }
       - run: pnpm exec playwright install --with-deps chromium
+      # bench/canvas.bench.ts drives a real browser against the production build; nothing else in
+      # this job starts a server, so the preview server is started here and awaited explicitly.
+      - name: Serve the production web build on :5173
+        run: |
+          nohup pnpm --filter @nexus/web exec vite preview --port 5173 --strictPort --host 127.0.0.1 \
+            > /tmp/bench-web.log 2>&1 &
+          for _ in $(seq 1 60); do
+            if curl -sfo /dev/null http://localhost:5173/; then echo 'web preview is up'; exit 0; fi
+            sleep 2
+          done
+          echo 'web preview did not start within 120s:'; cat /tmp/bench-web.log; exit 1
       - run: pnpm bench
+      - name: Web preview log
+        if: failure()
+        run: cat /tmp/bench-web.log || true
       # P2: the engine metrics are real, so the absolute N1 budgets are enforced. The 5 % delta gate
       # only bites once bench/baseline.json holds numbers recorded on a CI runner — comparing a CI
       # run against a developer laptop would fail for hardware reasons, not for regressions.
@@ -148,13 +166,24 @@ jobs:
 
   audit:
     runs-on: ubuntu-latest
+    # CodeQL uploads SARIF to the code-scanning API, which needs its own token scopes.
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/bootstrap
       - run: pnpm audit --audit-level=high --prod
+      # Code scanning is a paid GitHub Advanced Security feature on private repositories: without
+      # it the API answers "Resource not accessible by integration". The dependency audit above
+      # still gates every run; CodeQL turns itself on automatically once the repo is public (or
+      # GHAS is enabled — then drop the `if:`).
       - uses: github/codeql-action/init@v3
+        if: github.event.repository.visibility == 'public'
         with: { languages: javascript-typescript }
       - uses: github/codeql-action/analyze@v3
+        if: github.event.repository.visibility == 'public'
 
   docker:
     needs: build
@@ -175,7 +204,7 @@ jobs:
           tags: ghcr.io/nexus/${{ matrix.app }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - uses: aquasecurity/trivy-action@0.24.0
+      - uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ghcr.io/nexus/${{ matrix.app }}:${{ github.sha }}
           severity: 'HIGH,CRITICAL'
