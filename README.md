@@ -111,7 +111,6 @@ audit log; all outbound traffic leaves through an allowlist-only egress proxy. U
 people or systems you have no permission to investigate is outside the product's intended use and
 may be illegal in your jurisdiction. See [`NEXUS-SPEC/15_SECURITY.md`](NEXUS-SPEC/15_SECURITY.md) §9.
 
-
 ## CI workflow file
 
 CI lives at `.github/workflows/ci.yml` and is active: every push to `main` and every PR runs the
