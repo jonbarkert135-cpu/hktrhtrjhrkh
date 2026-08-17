@@ -4,7 +4,11 @@ const js = require('@eslint/js');
 const tseslint = require('typescript-eslint');
 const reactHooks = require('eslint-plugin-react-hooks');
 const jsxA11y = require('eslint-plugin-jsx-a11y');
-const { plugin: nexusPlugin } = require('./rules/no-hardcoded-design-values.cjs');
+const { plugin: designPlugin } = require('./rules/no-hardcoded-design-values.cjs');
+const { plugin: graphPlugin } = require('./rules/no-direct-graph-write.cjs');
+
+/** One `nexus/*` plugin namespace for every workspace rule. */
+const nexusPlugin = { rules: { ...designPlugin.rules, ...graphPlugin.rules } };
 
 const TS_FILES = ['**/*.ts', '**/*.tsx'];
 
@@ -34,6 +38,18 @@ const base = [
       ],
       'no-console': ['error', { allow: ['warn', 'error'] }],
       eqeqeq: ['error', 'always'],
+      // Board documents are mutated only through @nexus/domain's doc helpers (08 §2.4).
+      'nexus/no-direct-graph-write': [
+        'error',
+        {
+          allowFiles: [
+            'packages/domain/src/doc/',
+            'packages/domain/test/',
+            '\\.test\\.tsx?$',
+            'bench/',
+          ],
+        },
+      ],
     },
   },
 ];

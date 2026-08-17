@@ -378,6 +378,27 @@ export function listNodes(doc: Y.Doc): BoardNode[] {
   return nodes.sort((a, b) => (a.z === b.z ? a.id.localeCompare(b.id) : a.z - b.z));
 }
 
+/** Cheap size read for snapshots, budgets and telemetry. */
+export function countEntities(doc: Y.Doc): { nodes: number; edges: number; groups: number } {
+  const roots = boardRoots(doc);
+  return { nodes: roots.nodes.size, edges: roots.edges.size, groups: roots.groups.size };
+}
+
+export function getEdge(doc: Y.Doc, id: string): BoardEdge | undefined {
+  const map = boardRoots(doc).edges.get(id);
+  if (map === undefined) return undefined;
+  const parsed = EdgeSchema.safeParse(map.toJSON());
+  return parsed.success ? parsed.data : undefined;
+}
+
+export function hasNode(doc: Y.Doc, id: string): boolean {
+  return boardRoots(doc).nodes.has(id);
+}
+
+export function hasEdge(doc: Y.Doc, id: string): boolean {
+  return boardRoots(doc).edges.has(id);
+}
+
 export function listEdges(doc: Y.Doc): BoardEdge[] {
   const edges: BoardEdge[] = [];
   boardRoots(doc).edges.forEach((map) => {

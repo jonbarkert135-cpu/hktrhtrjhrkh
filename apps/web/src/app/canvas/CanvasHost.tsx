@@ -5,22 +5,33 @@
  * React renders this shell exactly once per mount; every frame after that is painted by the engine.
  */
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { useCanvasEngine } from './useCanvasEngine';
-import type { SceneSnapshot } from '@nexus/canvas-engine';
+import type { Engine, Intent, SceneSnapshot } from '@nexus/canvas-engine';
 
 const ZOOM_STOPS = [0.25, 0.5, 1, 2] as const;
 
 export interface CanvasHostProps {
   scene?: SceneSnapshot;
+  /** Engine intents, forwarded to the document binding (P3 §5.14). */
+  onIntent?: ((intent: Intent) => void) | undefined;
+  /** Called once the engine exists, so the page can push scene patches into it. */
+  onEngine?: ((engine: Engine | null) => void) | undefined;
 }
 
-export function CanvasHost({ scene }: CanvasHostProps) {
-  const { canvasRef, overlayRef, engineRef, zoom, nodeCount } = useCanvasEngine(
-    scene === undefined ? {} : { scene },
-  );
+export function CanvasHost({ scene, onIntent, onEngine }: CanvasHostProps) {
+  const { canvasRef, overlayRef, engineRef, zoom, nodeCount } = useCanvasEngine({
+    ...(scene === undefined ? {} : { scene }),
+    ...(onIntent === undefined ? {} : { onIntent }),
+  });
   const rootRef = useRef<HTMLDivElement | null>(null);
+
+  // The engine is created in an effect inside the hook, so it exists on the first commit.
+  useEffect(() => {
+    onEngine?.(engineRef.current);
+    return () => onEngine?.(null);
+  }, [engineRef, onEngine]);
 
   const centre = useCallback(() => {
     const box = canvasRef.current?.getBoundingClientRect();

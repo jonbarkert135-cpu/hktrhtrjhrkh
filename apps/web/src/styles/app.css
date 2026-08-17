@@ -101,6 +101,60 @@
     padding: var(--nx-space-8);
   }
 
+  /* Board page: a fixed top bar over a full-height canvas (P3 §6). */
+  .nx-board {
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .nx-board-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--nx-space-3);
+    padding: var(--nx-space-3);
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--surface-1);
+  }
+
+  .nx-sync-cluster {
+    display: flex;
+    align-items: center;
+    gap: var(--nx-space-2);
+    margin-left: auto;
+  }
+
+  .nx-sync-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--nx-space-2);
+    padding: var(--nx-space-1) var(--nx-space-3);
+    border-radius: var(--nx-radius-2);
+    background: var(--surface-2);
+    color: var(--fg-secondary);
+    font: var(--text-body-sm);
+  }
+
+  .nx-sync-indicator[data-state='saved'] {
+    color: var(--status-success-fg);
+  }
+
+  .nx-sync-indicator[data-state='offline'] {
+    color: var(--status-warn-fg);
+  }
+
+  .nx-sync-indicator[data-state='error'] {
+    color: var(--status-danger-fg);
+  }
+
+  .nx-row {
+    display: flex;
+    align-items: center;
+    gap: var(--nx-space-3);
+    justify-content: space-between;
+  }
+
   .nx-canvas-host {
     position: relative;
     display: grid;
