@@ -5,7 +5,8 @@ import type { Context } from '../src/trpc/context.ts';
 export const prismaMock = {
   project: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
   board: { findMany: vi.fn(), create: vi.fn() },
-  membership: { findFirst: vi.fn() },
+  membership: { findFirst: vi.fn(), create: vi.fn() },
+  organization: { create: vi.fn() },
 };
 
 export const recordAuditMock = vi.fn();

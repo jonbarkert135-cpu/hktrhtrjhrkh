@@ -13,12 +13,20 @@ export type ShellProps = {
   error?: string | undefined;
   onRetry?: (() => void) | undefined;
   projects?: ShellProject[] | undefined;
+  /** Opens the "New project" dialog. Absent while the shell renders without a session. */
+  onCreateProject?: (() => void) | undefined;
   boardTitle?: string | undefined;
   orgName?: string | undefined;
   userName?: string | undefined;
 };
 
-function ProjectRail({ loading, error, onRetry, projects }: Omit<ShellProps, 'children'>) {
+function ProjectRail({
+  loading,
+  error,
+  onRetry,
+  projects,
+  onCreateProject,
+}: Omit<ShellProps, 'children'>) {
   if (loading) {
     return (
       <div aria-busy="true" aria-label="Loading projects" className="nx-stack">
@@ -46,21 +54,26 @@ function ProjectRail({ loading, error, onRetry, projects }: Omit<ShellProps, 'ch
     return (
       <div className="nx-stack">
         <p className="nx-muted">A project holds the boards, runs and files of one investigation.</p>
-        <Button>Create your first project</Button>
+        <Button onClick={onCreateProject}>Create your first project</Button>
       </div>
     );
   }
 
   return (
-    <ul className="nx-stack">
-      {projects.map((project) => (
-        <li key={project.id}>
-          <NavLink className="nx-rail-row" to={`/p/${project.id}`}>
-            {project.name}
-          </NavLink>
-        </li>
-      ))}
-    </ul>
+    <div className="nx-stack">
+      <ul className="nx-stack">
+        {projects.map((project) => (
+          <li key={project.id}>
+            <NavLink className="nx-rail-row" to={`/p/${project.id}`}>
+              {project.name}
+            </NavLink>
+          </li>
+        ))}
+      </ul>
+      <Button variant="ghost" onClick={onCreateProject}>
+        New project
+      </Button>
+    </div>
   );
 }
 
@@ -70,6 +83,7 @@ export function Shell({
   error,
   onRetry,
   projects,
+  onCreateProject,
   boardTitle = 'Untitled board',
   orgName = 'Personal',
   userName = 'Account',
@@ -93,7 +107,7 @@ export function Shell({
 
       <div className="nx-body">
         <nav className="nx-rail" aria-label="Projects">
-          <ProjectRail {...{ loading, error, onRetry, projects }} />
+          <ProjectRail {...{ loading, error, onRetry, projects, onCreateProject }} />
         </nav>
 
         <main id="nx-main" className="nx-surface" tabIndex={-1}>

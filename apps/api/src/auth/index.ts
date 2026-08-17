@@ -7,6 +7,7 @@ import type { ServerEnv } from '../env.ts';
 import { audit } from '../audit.ts';
 import type { AuditLogger } from '../audit.ts';
 import { authLimiter, loginKey, signupKey, LOGIN_RULE, SIGNUP_RULE } from './rate-limit.ts';
+import { ensurePersonalOrg } from './personal-org.ts';
 
 const githubEnv = z
   .object({ GITHUB_CLIENT_ID: z.string().min(1), GITHUB_CLIENT_SECRET: z.string().min(1) })
@@ -50,6 +51,17 @@ export function createAuth(env: ServerEnv) {
         sameSite: 'lax',
         secure: secureCookies,
         path: '/',
+      },
+    },
+    databaseHooks: {
+      user: {
+        create: {
+          // Without a membership the user is authenticated but authorized for nothing, so the
+          // personal org is created in the same request as the account (see personal-org.ts).
+          after: async (user) => {
+            await ensurePersonalOrg({ id: user.id, email: user.email, name: user.name });
+          },
+        },
       },
     },
     hooks: {

@@ -171,6 +171,14 @@ the server passes `basePath: '/auth'` (`apps/api/src/auth/index.ts`) and the bro
 auth call 404s and the UI surfaces it as a generic "couldn't reach the server" banner — the
 failure mode that broke e2e J01 in CI run 32071533040.
 
+**Signup creates the personal org.** Authorization is org-scoped end to end (`orgProcedure`), so a
+user without a membership is authenticated but allowed nothing: every project/board call answers
+`FORBIDDEN`. A Better-Auth `databaseHooks.user.create.after` hook calls
+`ensurePersonalOrg()` (`apps/api/src/auth/personal-org.ts`), which creates one organization named
+after the user plus an `owner` membership, inside the same request as the account. The helper is
+idempotent (an existing membership wins), so replays and OAuth account linking never create a
+second org. Multi-org invites and `auth.switchOrg` still arrive in P7.
+
 ### 3.2 `projects`
 
 ```ts

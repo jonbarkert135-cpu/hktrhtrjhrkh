@@ -7,9 +7,10 @@ import {
   useLocation,
   useSearchParams,
 } from 'react-router-dom';
-import { Skeleton } from '@nexus/ui';
+import { Skeleton, VisuallyHidden } from '@nexus/ui';
 import { useSession } from '../lib/auth';
 import { Shell } from './shell/Shell';
+import { ShellContainer } from './shell/ShellContainer';
 
 const LoginPage = lazy(() => import('./auth/LoginPage'));
 const SignupPage = lazy(() => import('./auth/SignupPage'));
@@ -17,13 +18,24 @@ const ProjectPage = lazy(() => import('./pages/ProjectPage'));
 const BoardPage = lazy(() => import('./pages/BoardPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 
+/**
+ * Shown while a route chunk loads. It is a real landmark with a heading on purpose: the axe sweep
+ * can catch this frame between `goto` and hydration, and a bare `aria-label`ed `div` is both an
+ * `aria-prohibited-attr` violation and a page with no `main`/`h1` (e2e/a11y/axe-sweep.spec.ts).
+ */
 function RouteFallback() {
   return (
-    <div className="nx-stack" aria-busy="true" aria-label="Loading">
+    <main className="nx-stack" aria-busy="true">
+      <VisuallyHidden>
+        <h1>Loading</h1>
+      </VisuallyHidden>
+      <div role="status">
+        <VisuallyHidden>Loading</VisuallyHidden>
+      </div>
       <Skeleton height="lg" />
       <Skeleton height="lg" />
       <Skeleton height="lg" />
-    </div>
+    </main>
   );
 }
 
@@ -78,9 +90,9 @@ export function AppRoutes() {
             path="/"
             element={
               <RequireAuth>
-                <Shell>
+                <ShellContainer>
                   <BoardPage />
-                </Shell>
+                </ShellContainer>
               </RequireAuth>
             }
           />
@@ -88,9 +100,9 @@ export function AppRoutes() {
             path="/p/:projectId"
             element={
               <RequireAuth>
-                <Shell>
+                <ShellContainer>
                   <ProjectPage />
-                </Shell>
+                </ShellContainer>
               </RequireAuth>
             }
           />
@@ -98,9 +110,9 @@ export function AppRoutes() {
             path="/b/:boardId"
             element={
               <RequireAuth>
-                <Shell>
+                <ShellContainer>
                   <BoardPage />
-                </Shell>
+                </ShellContainer>
               </RequireAuth>
             }
           />
@@ -108,9 +120,9 @@ export function AppRoutes() {
             path="/settings"
             element={
               <RequireAuth>
-                <Shell>
+                <ShellContainer>
                   <SettingsPage />
-                </Shell>
+                </ShellContainer>
               </RequireAuth>
             }
           />
