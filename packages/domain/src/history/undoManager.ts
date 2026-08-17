@@ -33,6 +33,12 @@ export interface BoardHistory {
   redo(): boolean;
   /** Names the next captured step; the manager merges follow-ups within the capture timeout. */
   label(text: string): void;
+  /**
+   * Closes the current capture window: the next transaction starts a fresh undo step even when it
+   * lands within the capture timeout. Discrete commands call this so two quick clicks are two
+   * undo steps, while a drag keeps merging its interim commits (08 §2.5).
+   */
+  separate(): void;
   subscribe(listener: (state: HistoryState) => void): () => void;
   destroy(): void;
 }
@@ -121,6 +127,9 @@ export function createBoardHistory(doc: Y.Doc, options: CreateHistoryOptions = {
     },
     label(text: string) {
       pendingLabel = text;
+    },
+    separate() {
+      manager.stopCapturing();
     },
     subscribe(listener) {
       listeners.add(listener);

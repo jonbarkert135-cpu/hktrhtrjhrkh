@@ -121,6 +121,30 @@ describe('undo/redo', () => {
     h.destroy();
   });
 
+  it('merges edits inside the capture window but separates them on demand', () => {
+    const doc = createBoardDoc({ boardId: 'b_capture', now: T0 });
+    // The real capture timeout: two quick edits would otherwise become one undo step.
+    const h = createBoardHistory(doc);
+
+    addNodes(doc, [fixtureNode('n1', 0)], local);
+    addNodes(doc, [fixtureNode('n2', 1)], local);
+    expect(h.state.undoDepth).toBe(1);
+    h.undo();
+    expect(listNodes(doc)).toHaveLength(0);
+
+    h.redo();
+    h.separate();
+    addNodes(doc, [fixtureNode('n3', 2)], local);
+    expect(h.state.undoDepth).toBe(2);
+    h.undo();
+    expect(
+      listNodes(doc)
+        .map((node) => node.id)
+        .sort(),
+    ).toEqual(['n1', 'n2']);
+    h.destroy();
+  });
+
   it('caps the undo stack at 200 items', () => {
     const doc = createBoardDoc({ boardId: 'b_cap', now: T0 });
     const h = history(doc);

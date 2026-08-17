@@ -41,8 +41,27 @@ export interface IntentContext {
 const plural = (count: number, word: string): string =>
   `${String(count)} ${word}${count === 1 ? '' : 's'}`;
 
+/**
+ * Gestures whose interim commits must merge into a single undo step; every other intent is a
+ * discrete command and gets its own step (08 §2.5).
+ */
+const CONTINUOUS_INTENTS: ReadonlySet<Intent['t']> = new Set(['move-nodes', 'resize-node']);
+
+const isStillGesturing = (intent: Intent): boolean =>
+  CONTINUOUS_INTENTS.has(intent.t) &&
+  'phase' in intent &&
+  intent.phase !== 'end' &&
+  intent.phase !== 'cancel';
+
 /** Applies one engine intent. Returns true when the document changed. */
 export function applyIntent(intent: Intent, context: IntentContext): boolean {
+  const changed = applyIntentToDoc(intent, context);
+  // A finished command must not merge with the next one, or one undo would revert both.
+  if (changed && !isStillGesturing(intent)) context.history?.separate();
+  return changed;
+}
+
+function applyIntentToDoc(intent: Intent, context: IntentContext): boolean {
   const { doc } = context;
   const now = context.now();
   const makeId = context.makeId ?? ((): string => newId.board());
@@ -196,5 +215,6 @@ export function createNoteNode(
     ),
     { origin: 'local:create', now },
   );
+  context.history?.separate();
   return id;
 }

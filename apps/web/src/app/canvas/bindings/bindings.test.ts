@@ -296,6 +296,31 @@ describe('applyIntent', () => {
     expect(ctx.history?.state.undoLabel).toBe('create 1 node');
   });
 
+  it('keeps two quick commands as two undo steps but merges a drag', () => {
+    const doc = createBoardDoc({ boardId: 'b_steps', now: NOW });
+    // The production capture timeout: without an explicit separation these would merge.
+    const ctx: IntentContext = { doc, history: createBoardHistory(doc), now: () => NOW };
+
+    createNoteNode(ctx, { x: 0, y: 0 });
+    const moved = createNoteNode(ctx, { x: 100, y: 0 });
+    expect(ctx.history?.state.undoDepth).toBe(2);
+
+    const drag = (phase: 'update' | 'end'): void => {
+      applyIntent({ t: 'move-nodes', deltas: [{ id: moved, dx: 10, dy: 0 }], phase }, ctx);
+    };
+    drag('update');
+    drag('update');
+    drag('end');
+    // Three interim commits, one gesture, one extra undo step.
+    expect(ctx.history?.state.undoDepth).toBe(3);
+    expect(getNode(doc, moved)?.x).toBe(100 - 280 / 2 + 30);
+
+    ctx.history?.undo();
+    expect(getNode(doc, moved)?.x).toBe(100 - 280 / 2);
+    ctx.history?.undo();
+    expect(listNodes(doc)).toHaveLength(1);
+  });
+
   it('mints ids on its own when none are injected', () => {
     const doc = createBoardDoc({ boardId: 'b_auto', now: NOW });
     const id = createNoteNode({ doc, now: () => NOW }, { x: 0, y: 0 });
