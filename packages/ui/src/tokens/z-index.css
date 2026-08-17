@@ -1,0 +1,12 @@
+/* Tier 1 — stacking order. Nothing may invent a z-index outside this ladder. */
+:root {
+  --nx-z-canvas: 0;
+  --nx-z-canvas-overlay: 10;
+  --nx-z-panel: 100;
+  --nx-z-sticky: 200;
+  --nx-z-dropdown: 300;
+  --nx-z-dialog: 400;
+  --nx-z-toast: 500;
+  --nx-z-tooltip: 600;
+  --nx-z-devtools: 900;
+}

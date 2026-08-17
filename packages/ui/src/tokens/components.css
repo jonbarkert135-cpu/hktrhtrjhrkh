@@ -1,0 +1,104 @@
+/* Tier 3 — component tokens. Defined ONLY in terms of Tier 2. Loaded once for all themes.
+   Only the components P1 actually ships have tokens here. */
+:root {
+  /* Button */
+  --btn-height-sm: var(--nx-size-sm);
+  --btn-height-md: var(--nx-size-md);
+  --btn-height-lg: var(--nx-size-lg);
+  --btn-padding-x: var(--nx-space-4);
+  --btn-padding-x-sm: var(--nx-space-3);
+  --btn-gap: var(--nx-space-3);
+  --btn-radius: var(--nx-radius-2);
+  --btn-font: var(--text-body);
+  --btn-font-weight: var(--nx-weight-medium);
+  --btn-min-width: 64px;
+
+  --btn-primary-bg: var(--accent-solid);
+  --btn-primary-bg-hover: var(--accent-solid-hover);
+  --btn-primary-bg-active: var(--accent-solid-active);
+  --btn-primary-fg: var(--fg-on-accent);
+  --btn-primary-border: var(--border-subtle);
+
+  --btn-secondary-bg: var(--surface-2);
+  --btn-secondary-bg-hover: var(--surface-3);
+  --btn-secondary-bg-active: var(--surface-4);
+  --btn-secondary-fg: var(--fg-primary);
+  --btn-secondary-border: var(--border-default);
+  --btn-secondary-border-hover: var(--border-strong);
+
+  --btn-ghost-bg: transparent;
+  --btn-ghost-bg-hover: var(--surface-hover);
+  --btn-ghost-bg-active: var(--surface-active);
+  --btn-ghost-fg: var(--fg-secondary);
+
+  --btn-danger-bg: color-mix(in oklab, var(--border-danger) 82%, black);
+  --btn-danger-bg-hover: var(--border-danger);
+  --btn-danger-bg-active: color-mix(in oklab, var(--border-danger) 70%, black);
+  --btn-danger-fg: var(--fg-on-accent);
+
+  --btn-link-fg: var(--fg-accent);
+  --btn-link-underline: color-mix(in oklab, var(--fg-accent) 40%, transparent);
+
+  --btn-disabled-bg: var(--surface-2);
+  --btn-disabled-fg: var(--fg-disabled);
+
+  /* Input family */
+  --input-height: var(--nx-size-md);
+  --input-bg: var(--surface-inset);
+  --input-bg-hover: color-mix(in oklab, var(--surface-inset) 92%, var(--nx-neutral-1000));
+  --input-bg-disabled: var(--surface-1);
+  --input-border: var(--border-default);
+  --input-border-hover: var(--border-strong);
+  --input-border-focus: var(--border-focus);
+  --input-border-error: var(--border-danger);
+  --input-fg: var(--fg-primary);
+  --input-placeholder: var(--fg-muted);
+  --input-radius: var(--nx-radius-2);
+  --input-padding-x: var(--nx-space-4);
+
+  /* Field wrapper */
+  --field-gap: var(--nx-space-2);
+  --field-label-fg: var(--fg-secondary);
+  --field-description-fg: var(--fg-muted);
+  --field-error-fg: var(--status-danger-fg);
+
+  /* Banner */
+  --banner-radius: var(--nx-radius-3);
+  --banner-padding-block: var(--nx-space-4);
+  --banner-padding-inline: var(--nx-space-5);
+  --banner-gap: var(--nx-space-3);
+
+  /* Floating layers */
+  --menu-bg: var(--surface-3);
+  --menu-border: var(--border-default);
+  --menu-radius: var(--nx-radius-3);
+  --menu-shadow: var(--nx-shadow-3);
+  --menu-padding: var(--nx-space-2);
+  --menu-min-width: 180px;
+  --menu-item-height: 28px;
+  --menu-item-radius: var(--nx-radius-1);
+  --menu-item-padding-x: var(--nx-space-3);
+  --menu-item-bg-hover: var(--surface-hover);
+  --menu-item-fg: var(--fg-primary);
+
+  --tooltip-bg: var(--surface-4);
+  --tooltip-fg: var(--fg-primary);
+  --tooltip-radius: var(--nx-radius-2);
+  --tooltip-shadow: var(--nx-shadow-2);
+  --tooltip-padding-block: var(--nx-space-2);
+  --tooltip-padding-inline: var(--nx-space-3);
+  --tooltip-max-width: 280px;
+
+  /* Dialog */
+  --dialog-radius: var(--nx-radius-4);
+  --dialog-shadow: var(--nx-shadow-4);
+  --dialog-padding: var(--nx-space-7);
+  --dialog-width-sm: 400px;
+  --dialog-width-md: 520px;
+  --dialog-width-lg: 720px;
+
+  /* Skeleton */
+  --skeleton-bg: var(--surface-2);
+  --skeleton-radius: var(--nx-radius-2);
+  --skeleton-sheen: color-mix(in oklab, var(--nx-neutral-1000) 4%, transparent);
+}

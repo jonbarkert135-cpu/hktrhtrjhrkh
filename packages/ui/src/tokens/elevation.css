@@ -1,0 +1,31 @@
+/* Tier 1 — shadows (dark-tuned: tight, low alpha) + the elevation recipes. */
+:root {
+  --nx-shadow-0: none;
+  --nx-shadow-1: 0 1px 2px rgb(0 0 0 / 0.28);
+  --nx-shadow-2: 0 2px 6px rgb(0 0 0 / 0.32), 0 1px 1px rgb(0 0 0 / 0.24);
+  --nx-shadow-3: 0 8px 20px -6px rgb(0 0 0 / 0.45), 0 2px 6px rgb(0 0 0 / 0.3);
+  --nx-shadow-4: 0 20px 44px -12px rgb(0 0 0 / 0.6), 0 4px 12px rgb(0 0 0 / 0.36);
+}
+
+/* Elevation is a triple (bg + border + shadow) — components use these classes,
+   never a hand-written background/border/shadow trio. */
+.nx-elev-1 {
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--nx-shadow-0);
+}
+.nx-elev-2 {
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--nx-shadow-1);
+}
+.nx-elev-3 {
+  background: var(--surface-3);
+  border: 1px solid var(--border-default);
+  box-shadow: var(--nx-shadow-3);
+}
+.nx-elev-4 {
+  background: var(--surface-4);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--nx-shadow-4);
+}

@@ -1,0 +1,128 @@
+/* Tier 1 — color primitives. Theme-independent. Never referenced from components. */
+:root {
+  /* Neutral ramp (14 stops, dark-tuned) — hex is the sRGB truth used by the contrast test. */
+  --nx-neutral-000: #08090b;
+  --nx-neutral-050: #0b0d10;
+  --nx-neutral-100: #101216;
+  --nx-neutral-150: #15181d;
+  --nx-neutral-200: #1b1f25;
+  --nx-neutral-300: #242931;
+  --nx-neutral-400: #2f353f;
+  --nx-neutral-500: #3d444f;
+  --nx-neutral-600: #5a626f;
+  --nx-neutral-700: #7c8593;
+  --nx-neutral-800: #a2aab6;
+  --nx-neutral-900: #c7cdd6;
+  --nx-neutral-950: #e6e9ee;
+  --nx-neutral-1000: #f7f8fa;
+
+  /* Accent — "Signal Blue", one family only. */
+  --nx-accent-200: #bfd0f0;
+  --nx-accent-300: #93aee6;
+  --nx-accent-400: #6e8fd6;
+  --nx-accent-500: #5b7cc4;
+  --nx-accent-600: #4a66a8;
+  --nx-accent-700: #38507f;
+  --nx-accent-800: #27374f;
+  --nx-accent-900: #1a2437;
+
+  /* Semantic hues */
+  --nx-info-400: #6ea8d8;
+  --nx-success-400: #5fa97f;
+  --nx-warn-400: #c8a24a;
+  --nx-danger-300: #e08a80;
+  --nx-danger-400: #d4756b;
+
+  /* Entity taxonomy (10 node types, equal L*) */
+  --nx-entity-url: #7fa6d9;
+  --nx-entity-page: #6fb0a6;
+  --nx-entity-image: #b79adb;
+  --nx-entity-file: #8fa8c4;
+  --nx-entity-note: #c9b27a;
+  --nx-entity-person: #dfa07a;
+  --nx-entity-identity: #d98ba8;
+  --nx-entity-repo: #7fb985;
+  --nx-entity-toolrun: #a8aeb8;
+  --nx-entity-group: #9bb0c9;
+}
+
+/* Tier 2 — semantic. Components read these. Dark is the only theme in P1. */
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --surface-0: var(--nx-neutral-000);
+  --surface-1: var(--nx-neutral-100);
+  --surface-2: var(--nx-neutral-150);
+  --surface-3: var(--nx-neutral-200);
+  --surface-4: var(--nx-neutral-300);
+  --surface-inset: var(--nx-neutral-050);
+  --surface-hover: color-mix(in oklab, var(--nx-neutral-1000) 4%, transparent);
+  --surface-active: color-mix(in oklab, var(--nx-neutral-1000) 7%, transparent);
+  --surface-selected: color-mix(in oklab, var(--nx-accent-400) 14%, transparent);
+
+  --fg-primary: var(--nx-neutral-950);
+  --fg-secondary: var(--nx-neutral-800);
+  --fg-muted: var(--nx-neutral-700);
+  --fg-disabled: var(--nx-neutral-600);
+  --fg-inverse: var(--nx-neutral-000);
+  --fg-accent: var(--nx-accent-300);
+  --fg-on-accent: var(--nx-neutral-1000);
+
+  --border-subtle: color-mix(in oklab, var(--nx-neutral-1000) 8%, transparent);
+  --border-default: color-mix(in oklab, var(--nx-neutral-1000) 13%, transparent);
+  --border-strong: color-mix(in oklab, var(--nx-neutral-1000) 22%, transparent);
+  --border-accent: var(--nx-accent-500);
+  --border-focus: var(--nx-accent-400);
+  --border-danger: var(--nx-danger-400);
+
+  --accent-solid: var(--nx-accent-600);
+  --accent-solid-hover: color-mix(in oklab, var(--nx-accent-500) 88%, black);
+  --accent-solid-active: var(--nx-accent-700);
+  --accent-soft: color-mix(in oklab, var(--nx-accent-400) 16%, transparent);
+  --accent-soft-hover: color-mix(in oklab, var(--nx-accent-400) 24%, transparent);
+
+  --status-info-fg: var(--nx-info-400);
+  --status-info-bg: color-mix(in oklab, var(--nx-info-400) 14%, transparent);
+  --status-info-border: color-mix(in oklab, var(--nx-info-400) 34%, transparent);
+  --status-success-fg: var(--nx-success-400);
+  --status-success-bg: color-mix(in oklab, var(--nx-success-400) 14%, transparent);
+  --status-success-border: color-mix(in oklab, var(--nx-success-400) 34%, transparent);
+  --status-warn-fg: var(--nx-warn-400);
+  --status-warn-bg: color-mix(in oklab, var(--nx-warn-400) 14%, transparent);
+  --status-warn-border: color-mix(in oklab, var(--nx-warn-400) 34%, transparent);
+  --status-danger-fg: var(--nx-danger-300);
+  --status-danger-bg: color-mix(in oklab, var(--nx-danger-400) 14%, transparent);
+  --status-danger-border: color-mix(in oklab, var(--nx-danger-400) 36%, transparent);
+
+  --entity-url-fg: var(--nx-entity-url);
+  --entity-page-fg: var(--nx-entity-page);
+  --entity-image-fg: var(--nx-entity-image);
+  --entity-file-fg: var(--nx-entity-file);
+  --entity-note-fg: var(--nx-entity-note);
+  --entity-person-fg: var(--nx-entity-person);
+  --entity-identity-fg: var(--nx-entity-identity);
+  --entity-repo-fg: var(--nx-entity-repo);
+  --entity-toolrun-fg: var(--nx-entity-toolrun);
+  --entity-group-fg: var(--nx-entity-group);
+
+  --overlay-scrim: rgb(0 0 0 / 0.56);
+  --overlay-backdrop-blur: 6px;
+  --selection-ring: var(--nx-accent-400);
+  --selection-fill: color-mix(in oklab, var(--nx-accent-400) 12%, transparent);
+  --canvas-void: var(--nx-neutral-000);
+  --canvas-grid-dot: color-mix(in oklab, var(--nx-neutral-1000) 6%, transparent);
+  --canvas-grid-line: color-mix(in oklab, var(--nx-neutral-1000) 4%, transparent);
+  --canvas-edge: var(--nx-neutral-600);
+  --canvas-edge-strong: var(--nx-neutral-700);
+  --canvas-guide: var(--nx-accent-300);
+  --canvas-marquee-fill: color-mix(in oklab, var(--nx-accent-400) 10%, transparent);
+
+  /* Focus ring composition — used verbatim by every focusable component. */
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-color: var(--border-focus);
+  --focus-ring-shadow:
+    0 0 0 var(--focus-ring-offset) var(--surface-0),
+    0 0 0 calc(var(--focus-ring-offset) + var(--focus-ring-width)) var(--focus-ring-color);
+}

@@ -1,0 +1,63 @@
+/* The only stylesheet an app needs to import: `@nexus/ui/tokens.css`. */
+@import './color.css';
+@import './space.css';
+@import './radius.css';
+@import './typography.css';
+@import './elevation.css';
+@import './motion.css';
+@import './z-index.css';
+@import './components.css';
+@import '../primitives/primitives.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--surface-0);
+  color: var(--fg-primary);
+  font: var(--text-body);
+  letter-spacing: var(--tracking-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-synthesis: none;
+  font-variant-ligatures: none;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-shadow);
+  border-radius: var(--nx-radius-2);
+}
+
+::selection {
+  background: var(--accent-soft-hover);
+  color: var(--fg-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --nx-dur-1: 1ms;
+    --nx-dur-2: 1ms;
+    --nx-dur-3: 1ms;
+    --nx-dur-4: 1ms;
+    --nx-dur-5: 1ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}

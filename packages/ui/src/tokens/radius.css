@@ -1,0 +1,14 @@
+/* Tier 1 — radius and border widths. */
+:root {
+  --nx-radius-0: 0px;
+  --nx-radius-1: 3px;
+  --nx-radius-2: 5px;
+  --nx-radius-3: 8px;
+  --nx-radius-4: 12px;
+  --nx-radius-5: 16px;
+  --nx-radius-full: 999px;
+
+  --nx-border-hairline: 1px;
+  --nx-border-thick: 1.5px;
+  --nx-border-heavy: 2px;
+}

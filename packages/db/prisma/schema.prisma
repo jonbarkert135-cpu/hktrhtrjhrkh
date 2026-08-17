@@ -1,0 +1,190 @@
+// NEXUS — P1 schema. Only the tables P1 needs (20_ROADMAP.md P1 §5.5); the graph projection,
+// integrations and AI tables land in their own phases (08_DATA_MODEL.md §4).
+//
+// Conventions:
+//  - `id` is a cuid2 generated in application code (@nexus/domain `newId.*`), never by the DB.
+//  - every model carries createdAt/updatedAt; `updatedAt` is written by the app via @updatedAt.
+//  - columns are snake_case (@map), tables snake_case plural (@@map).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrgRole {
+  owner
+  admin
+  editor
+  viewer
+
+  @@map("org_role")
+}
+
+model Organization {
+  id        String    @id
+  slug      String    @unique @db.VarChar(60)
+  name      String    @db.VarChar(200)
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  members   Membership[]
+  projects  Project[]
+  auditLogs AuditLog[]
+
+  @@map("organizations")
+}
+
+/// Better-Auth owns email/emailVerified/name/image; the rest is NEXUS profile data.
+model User {
+  id            String    @id
+  email         String    @unique @db.VarChar(320)
+  emailVerified Boolean   @default(false) @map("email_verified")
+  name          String    @db.VarChar(200)
+  image         String?   @db.VarChar(2000)
+  locale        String    @default("en") @db.VarChar(16)
+  timezone      String    @default("UTC") @db.VarChar(64)
+  lastSeenAt    DateTime? @map("last_seen_at")
+  deletedAt     DateTime? @map("deleted_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  memberships Membership[]
+  sessions    Session[]
+  accounts    Account[]
+  auditLogs   AuditLog[]
+
+  @@index([lastSeenAt])
+  @@map("users")
+}
+
+model Membership {
+  id        String    @id
+  orgId     String    @map("org_id")
+  userId    String    @map("user_id")
+  role      OrgRole
+  invitedBy String?   @map("invited_by")
+  joinedAt  DateTime? @map("joined_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, userId])
+  @@index([userId])
+  @@map("memberships")
+}
+
+/// Better-Auth session table (field names per Better-Auth's Prisma adapter).
+model Session {
+  id        String   @id
+  userId    String   @map("user_id")
+  token     String   @unique @db.VarChar(255)
+  expiresAt DateTime @map("expires_at")
+  ipAddress String?  @map("ip_address") @db.VarChar(45)
+  userAgent String?  @map("user_agent") @db.VarChar(400)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+/// Better-Auth account table: one row per credential (providerId 'credential') or OAuth link.
+model Account {
+  id                    String    @id
+  userId                String    @map("user_id")
+  accountId             String    @map("account_id") @db.VarChar(255)
+  providerId            String    @map("provider_id") @db.VarChar(64)
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  idToken               String?   @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at")
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
+  scope                 String?   @db.VarChar(1000)
+  password              String?
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Project {
+  id          String    @id
+  orgId       String    @map("org_id")
+  key         String    @db.VarChar(24)
+  name        String    @db.VarChar(200)
+  description String?   @db.VarChar(2000)
+  color       String?   @db.VarChar(40)
+  archivedAt  DateTime? @map("archived_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdBy   String    @map("created_by")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  boards Board[]
+
+  @@unique([orgId, key])
+  @@index([orgId, archivedAt])
+  @@index([orgId, deletedAt, name])
+  @@map("projects")
+}
+
+model Board {
+  id            String    @id
+  orgId         String    @map("org_id")
+  projectId     String    @map("project_id")
+  title         String    @db.VarChar(300)
+  description   String?   @db.VarChar(2000)
+  schemaVersion Int       @default(1) @map("schema_version")
+  lastEditedAt  DateTime? @map("last_edited_at")
+  deletedAt     DateTime? @map("deleted_at")
+  createdBy     String    @map("created_by")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, deletedAt])
+  @@index([orgId, lastEditedAt(sort: Desc)])
+  @@map("boards")
+}
+
+/// Append-only. There is no update or delete path in application code (15_SECURITY.md C-42).
+model AuditLog {
+  id         String   @id
+  orgId      String   @map("org_id")
+  actorId    String?  @map("actor_id")
+  actorKind  String   @map("actor_kind") @db.VarChar(12)
+  action     String   @db.VarChar(64)
+  targetKind String   @map("target_kind") @db.VarChar(32)
+  targetId   String?  @map("target_id")
+  ip         String?  @db.VarChar(45)
+  userAgent  String?  @map("user_agent") @db.VarChar(400)
+  metadata   Json     @default("{}")
+  outcome    String   @db.VarChar(16)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  actor User?        @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([orgId, createdAt(sort: Desc)])
+  @@index([orgId, action, createdAt(sort: Desc)])
+  @@index([actorId])
+  @@index([targetId])
+  @@map("audit_log")
+}

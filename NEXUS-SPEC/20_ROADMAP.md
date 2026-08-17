@@ -60,6 +60,10 @@ introduced them. If a phase breaks a non-negotiable, the phase is not done.
 
 # P1 — Foundation
 
+**Status: DONE** — implemented in `phase/p01-foundation` (PR #2). Local gates green: typecheck, lint,
+test + coverage floors, build (144.1 KB gzip initial JS), check:gates, depcruise. Docker-compose, e2e,
+visual and bench thresholds are verified in CI only (no Docker in the authoring environment).
+
 ## 1 Objective
 Stand up the monorepo, the design-token pipeline, the authenticated app shell, the database, the CI
 pipeline and the benchmark harness, so that every later phase has a working, gated, testable

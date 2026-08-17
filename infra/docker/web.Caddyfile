@@ -1,0 +1,10 @@
+# Static file server inside the web image. Public headers/TLS are the edge caddy's job.
+:8080 {
+	root * /srv
+	encode zstd gzip
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+	header Cache-Control "no-store"
+	try_files {path} /index.html
+	file_server
+}
