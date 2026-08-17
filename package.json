@@ -1,0 +1,28 @@
+{
+  "name": "nexus",
+  "private": true,
+  "packageManager": "pnpm@9.15.9",
+  "engines": { "node": ">=22 <23" },
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "dev": "turbo run dev --parallel",
+    "db:migrate": "pnpm --filter @nexus/db exec prisma migrate deploy",
+    "db:push": "pnpm --filter @nexus/db exec prisma db push",
+    "db:seed": "pnpm --filter @nexus/db run seed",
+    "bench": "node --experimental-strip-types bench/harness.ts",
+    "e2e": "playwright test -c e2e/playwright.config.ts",
+    "check:gates": "node scripts/check-no-todo.mjs && node scripts/check-skips.mjs && node scripts/check-bundle-secrets.mjs && node scripts/check-migration-safety.mjs",
+    "depcruise": "depcruise apps packages --config .dependency-cruiser.cjs"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.6.0",
+    "@commitlint/config-conventional": "^19.6.0",
+    "dependency-cruiser": "^16.7.0",
+    "prettier": "^3.4.2",
+    "turbo": "^2.3.3",
+    "typescript": "5.7.2"
+  }
+}

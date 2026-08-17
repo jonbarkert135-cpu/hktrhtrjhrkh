@@ -1,0 +1,14 @@
+/* Tier 1 — motion. Exits are 0.75x the enter duration. */
+:root {
+  --nx-dur-1: 75ms;
+  --nx-dur-2: 120ms;
+  --nx-dur-3: 180ms;
+  --nx-dur-4: 240ms;
+  --nx-dur-5: 320ms;
+
+  --nx-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --nx-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --nx-ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --nx-ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+  --nx-ease-linear: linear;
+}

@@ -1,0 +1,40 @@
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { describe, expect, it } from 'vitest';
+import { Shell } from './Shell';
+
+function renderShell(props: Partial<Parameters<typeof Shell>[0]> = {}) {
+  return render(
+    <MemoryRouter>
+      <Shell {...props}>
+        <p>board</p>
+      </Shell>
+    </MemoryRouter>,
+  );
+}
+
+describe('Shell', () => {
+  it('renders skeletons instead of a blank page while loading', () => {
+    renderShell({ loading: true });
+    expect(screen.getByLabelText('Loading projects')).toBeInTheDocument();
+    expect(screen.getByLabelText('Loading board')).toBeInTheDocument();
+    expect(screen.queryByText('board')).not.toBeInTheDocument();
+  });
+
+  it('teaches the user what to do when there are no projects', () => {
+    renderShell({ projects: [] });
+    expect(screen.getByRole('button', { name: 'Create your first project' })).toBeInTheDocument();
+  });
+
+  it('shows the mapped error copy with a retry action', () => {
+    renderShell({ error: 'The server took too long to answer.', onRetry: () => {} });
+    expect(screen.getByText("Couldn't load your projects")).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
+
+  it('puts skip-to-content first in tab order', () => {
+    renderShell({ projects: [{ id: 'p1', name: 'Alpha' }] });
+    const focusable = screen.getByRole('link', { name: /skip to content/i });
+    expect(focusable).toBeInTheDocument();
+  });
+});

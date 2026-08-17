@@ -3,29 +3,49 @@
 > An infinite canvas over a typed knowledge graph, for authorized OSINT and research work.
 > Collect anything, link everything, enrich it with open-source tooling, export a defensible report.
 
-**Status: Phase 0 — architecture frozen, specification complete. Implementation starts at Phase 1.**
+**Status: Phase 1 — foundation (monorepo, tokens, app shell, auth, database, CI, bench harness).**
 
 ---
 
-## What is in this repository
+## Quickstart (clean machine → running app, ≤ 15 minutes)
 
-| Path | Contents |
-|---|---|
-| [`NEXUS-SPEC/`](NEXUS-SPEC/) | The complete product + engineering specification (21 documents) |
-| [`NEXUS-SPEC/00_MASTER.md`](NEXUS-SPEC/00_MASTER.md) | **Start here.** Frozen architecture decisions, principles, non-negotiables, phases, quality gate |
-| [`NEXUS-SPEC/20_ROADMAP.md`](NEXUS-SPEC/20_ROADMAP.md) | Phase-by-phase implementation prompts (P1…P16) — one PR per phase |
-| `Дорожная карта для ии разроботчика сайта.md` | The original client brief + the live progress tracker |
+Prerequisites: **Node 22** (`nvm use`), **pnpm 9** (`corepack enable`), **Docker** with Compose.
 
-## How development works here
+```bash
+git clone <repo-url> nexus && cd nexus
+cp .env.example .env                     # dummy values work for local development
+pnpm install
+docker compose -f infra/docker-compose.yml up -d postgres redis minio
+pnpm db:migrate                          # apply Prisma migrations
+pnpm db:seed                             # dev org, 4 users, 3 projects, 8 boards
+pnpm dev                                 # api on :3001, web on :5173
+```
 
-1. Pick the next unchecked phase in `NEXUS-SPEC/20_ROADMAP.md`.
-2. Read `00_MASTER.md` plus the spec documents that phase points to.
-3. Branch `feat/pNN-<slug>`, implement exactly that phase, open a PR.
-4. The PR body must show the seven quality-gate checks (`00_MASTER.md` §8) with evidence.
-5. Tick the phase in `20_ROADMAP.md` and in the root progress tracker in the same PR.
+Open <http://localhost:5173>, sign up, and you get an empty board surface.
+Seeded logins use the password `dev-only`.
 
-Nothing is implemented "later": if a capability is in the core vision, it has a full architectural
-solution in the spec before code is written.
+The full self-host path (Caddy TLS termination, built images, egress proxy) is
+`docker compose -f infra/docker-compose.yml up -d` with `PUBLIC_HOSTNAME` and the secrets in
+`.env` set to real values.
+
+## Scripts
+
+| Command                            | What it does                                            |
+| ---------------------------------- | ------------------------------------------------------- |
+| `pnpm dev`                         | Runs every app in watch mode (turbo, parallel)          |
+| `pnpm build`                       | Builds all packages and apps                            |
+| `pnpm test`                        | Vitest unit/component suites in every package           |
+| `pnpm lint`                        | ESLint, including the `no-hardcoded-design-values` rule |
+| `pnpm typecheck`                   | `tsc --noEmit` across the workspace                     |
+| `pnpm depcruise`                   | Layer-boundary rules from `00_MASTER.md` §5             |
+| `pnpm db:migrate` / `pnpm db:seed` | Apply migrations / load the dev data set                |
+| `pnpm e2e`                         | Playwright journeys (needs a running stack)             |
+| `pnpm bench`                       | Canvas benchmark → `bench-results.json`                 |
+| `pnpm check:gates`                 | The CI hygiene scripts (`scripts/*.mjs`) locally        |
+
+CI gate scripts, all runnable standalone with plain Node:
+`check-no-todo`, `check-skips`, `check-coverage`, `diff-coverage`, `check-bundle-secrets`,
+`check-bundle-budget`, `check-migration-safety`.
 
 ## Architecture in one paragraph
 
@@ -40,10 +60,52 @@ the graph without provenance, and no AI or tool output is applied without a revi
 proposal.
 
 Full reasoning, rejected alternatives and the measured constraints behind each choice:
-[`NEXUS-SPEC/00_MASTER.md`](NEXUS-SPEC/00_MASTER.md) §2 and [`NEXUS-SPEC/02_ARCHITECTURE.md`](NEXUS-SPEC/02_ARCHITECTURE.md).
+[`NEXUS-SPEC/00_MASTER.md`](NEXUS-SPEC/00_MASTER.md) §2 and
+[`NEXUS-SPEC/02_ARCHITECTURE.md`](NEXUS-SPEC/02_ARCHITECTURE.md).
+
+## Repository layout
+
+| Path                             | Contents                                                                            |
+| -------------------------------- | ----------------------------------------------------------------------------------- |
+| `apps/web`, `apps/api`           | React SPA; Fastify + tRPC API (`/healthz`, `/readyz`, metrics on 9464)              |
+| `packages/{config,ui,db,domain}` | Env schema + logging, design tokens, Prisma schema, entity types                    |
+| `infra/`                         | `docker-compose.yml`, `docker/*.Dockerfile`, `caddy/Caddyfile`, `egress/envoy.yaml` |
+| `scripts/`                       | CI gate scripts (no dependencies beyond Node builtins)                              |
+| `bench/`, `e2e/`                 | Canvas benchmark harness; Playwright journeys and the axe sweep                     |
+| [`NEXUS-SPEC/`](NEXUS-SPEC/)     | The complete product + engineering specification (21 documents)                     |
+
+Internal packages are **source-only**: they export `./src/*.ts` and are compiled by whoever
+consumes them (Vite, tsx, vitest). Only `@nexus/ui` (Tailwind preset) and `@nexus/db`
+(`prisma generate`) have a build step.
+
+## Where the spec lives, and how phases work
+
+1. [`NEXUS-SPEC/00_MASTER.md`](NEXUS-SPEC/00_MASTER.md) — **start here.** Frozen architecture
+   decisions, product principles, the ten non-negotiables (N1–N10), the seven-check quality gate.
+2. [`NEXUS-SPEC/20_ROADMAP.md`](NEXUS-SPEC/20_ROADMAP.md) — one self-contained implementation
+   prompt per phase, P1…P16.
+3. Pick the lowest un-ticked phase, branch `phase/p<nn>-<slug>`, implement exactly that phase,
+   open one PR titled `P<nn> — <name>`.
+4. The PR body states what existed before, what was reused, what was intentionally not touched,
+   plus evidence for every acceptance criterion and the test checklist from `18_TESTING.md` §16.
+5. `ci-ok` is the single required check; it aggregates lint, typecheck, unit, coverage-gate,
+   build, e2e, visual, bench, audit, docker and migrate-check.
+6. Tick the phase in `20_ROADMAP.md` and in the root progress tracker in the same PR.
+
+Nothing is implemented "later": if a capability is in the core vision, it has a full architectural
+solution in the spec before code is written. No `TODO` markers survive CI.
+
+## CI, in short
+
+Every PR runs the eleven jobs above. Two of them are deliberately **record-only in P1** and say so
+in the workflow: `visual` (no stable surface to diff until the canvas engine lands in P2) and
+`bench` (the baseline is empty and engine metrics are recorded as `null`, never fabricated). Both
+become enforcing gates in P2.
 
 ## Legal & ethical scope
 
 NEXUS is built for **authorized research**: your own assets, public information, and engagements you
-have permission to run. Every tool run records a consent scope and is written to the audit log.
-See `NEXUS-SPEC/15_SECURITY.md` §9.
+have permission to run. Every tool run records a consent scope and is written to the append-only
+audit log; all outbound traffic leaves through an allowlist-only egress proxy. Using it to profile
+people or systems you have no permission to investigate is outside the product's intended use and
+may be illegal in your jurisdiction. See [`NEXUS-SPEC/15_SECURITY.md`](NEXUS-SPEC/15_SECURITY.md) §9.

@@ -1,0 +1,7 @@
+{
+  "_comment": "Performance baseline for bench/compare.mjs. Empty in P1: the canvas engine (P2) records the first real numbers, and only then does the bench job run with --enforce. Do not hand-edit; it is regenerated on merge to main when a metric improves by more than 10% (18_TESTING.md §9.2).",
+  "schemaVersion": 1,
+  "recordedAt": null,
+  "commit": null,
+  "metrics": {}
+}

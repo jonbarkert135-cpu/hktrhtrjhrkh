@@ -1,0 +1,28 @@
+# Edge reverse proxy + security headers (19_DEPLOYMENT.md §3).
+# `/sync*` is added in P8 together with the Hocuspocus service.
+{$PUBLIC_HOSTNAME} {
+	encode zstd gzip
+
+	@api path /api/* /trpc/*
+	handle @api {
+		reverse_proxy api:3001
+	}
+
+	handle {
+		reverse_proxy web:8080
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Content-Security-Policy "default-src 'self'; img-src 'self' data: blob:; connect-src 'self' wss:; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; object-src 'none'; base-uri 'none'"
+		-Server
+	}
+
+	# index.html must never be cached; hashed assets are immutable.
+	@html path / /index.html
+	header @html Cache-Control "no-store"
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+}

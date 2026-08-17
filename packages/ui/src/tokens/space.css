@@ -1,0 +1,24 @@
+/* Tier 1 — space (4px base). Only these values may appear as spacing. */
+:root {
+  --nx-space-0: 0px;
+  --nx-space-1: 2px;
+  --nx-space-2: 4px;
+  --nx-space-3: 8px;
+  --nx-space-4: 12px;
+  --nx-space-5: 16px;
+  --nx-space-6: 20px;
+  --nx-space-7: 24px;
+  --nx-space-8: 32px;
+  --nx-space-9: 40px;
+  --nx-space-10: 56px;
+
+  /* Control heights and icon grid */
+  --nx-size-xs: 22px;
+  --nx-size-sm: 26px;
+  --nx-size-md: 32px;
+  --nx-size-lg: 38px;
+  --nx-size-xl: 44px;
+  --nx-icon-1: 16px;
+  --nx-icon-2: 20px;
+  --nx-icon-3: 24px;
+}

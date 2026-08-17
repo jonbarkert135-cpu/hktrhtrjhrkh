@@ -1,0 +1,124 @@
+import type { ReactNode } from 'react';
+import { NavLink } from 'react-router-dom';
+import { Banner, Button, Menu, MenuItem, Skeleton, SkipToContent } from '@nexus/ui';
+import { CommandPalette } from '../commands/palette';
+
+export type ShellProject = { id: string; name: string };
+
+export type ShellProps = {
+  children: ReactNode;
+  /** Session or project list still resolving — the shell renders skeletons, never a blank page. */
+  loading?: boolean | undefined;
+  /** User-facing copy already mapped through lib/trpc errorMessage(). */
+  error?: string | undefined;
+  onRetry?: (() => void) | undefined;
+  projects?: ShellProject[] | undefined;
+  boardTitle?: string | undefined;
+  orgName?: string | undefined;
+  userName?: string | undefined;
+};
+
+function ProjectRail({ loading, error, onRetry, projects }: Omit<ShellProps, 'children'>) {
+  if (loading) {
+    return (
+      <div aria-busy="true" aria-label="Loading projects" className="nx-stack">
+        <Skeleton height="var(--nx-space-6)" />
+        <Skeleton height="var(--nx-space-6)" />
+        <Skeleton height="var(--nx-space-6)" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Banner kind="danger" title="Couldn't load your projects">
+        {error}
+        {onRetry ? (
+          <Button variant="secondary" onClick={onRetry}>
+            Retry
+          </Button>
+        ) : null}
+      </Banner>
+    );
+  }
+
+  if (!projects || projects.length === 0) {
+    return (
+      <div className="nx-stack">
+        <p className="nx-muted">A project holds the boards, runs and files of one investigation.</p>
+        <Button>Create your first project</Button>
+      </div>
+    );
+  }
+
+  return (
+    <ul className="nx-stack">
+      {projects.map((project) => (
+        <li key={project.id}>
+          <NavLink className="nx-rail-row" to={`/p/${project.id}`}>
+            {project.name}
+          </NavLink>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export function Shell({
+  children,
+  loading = false,
+  error,
+  onRetry,
+  projects,
+  boardTitle = 'Untitled board',
+  orgName = 'Personal',
+  userName = 'Account',
+}: ShellProps) {
+  return (
+    <div className="nx-app">
+      <SkipToContent targetId="nx-main">Skip to content</SkipToContent>
+      <header className="nx-topbar">
+        <Menu trigger={<Button variant="ghost">{orgName}</Button>}>
+          <MenuItem>{orgName}</MenuItem>
+        </Menu>
+        <h1>{boardTitle}</h1>
+        <span className="nx-muted" aria-live="polite">
+          Saved locally
+        </span>
+        <Menu trigger={<Button variant="ghost">{userName}</Button>} align="end">
+          <MenuItem>Settings</MenuItem>
+          <MenuItem>Sign out</MenuItem>
+        </Menu>
+      </header>
+
+      <div className="nx-body">
+        <nav className="nx-rail" aria-label="Projects">
+          <ProjectRail {...{ loading, error, onRetry, projects }} />
+        </nav>
+
+        <main id="nx-main" className="nx-surface" tabIndex={-1}>
+          {loading ? (
+            <div className="nx-stack" aria-busy="true" aria-label="Loading board">
+              <Skeleton height="var(--nx-space-9)" />
+              <Skeleton height="var(--nx-space-9)" />
+            </div>
+          ) : (
+            children
+          )}
+        </main>
+
+        <aside className="nx-inspector" aria-label="Inspector">
+          <p className="nx-muted">Select a node to inspect it. Board properties appear here.</p>
+        </aside>
+      </div>
+
+      <footer className="nx-statusbar">
+        <span aria-live="polite">Saved locally</span>
+        <span>0 nodes</span>
+        <span>0 edges</span>
+      </footer>
+
+      <CommandPalette />
+    </div>
+  );
+}
