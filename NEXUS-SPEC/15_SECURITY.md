@@ -1208,8 +1208,8 @@ updated_at)` and updated in the same transaction as the insert (serialized per o
 ### 10.5 User-visible activity view
 
 Route `/projects/:id/activity`. Timeline grouped by day, filters (actor, action category, date range,
-result), search over target labels, CSV export (project_admin+). Rows use plain-language copy:
-"Anna revoked the share link for _Board: Targets_ — 12 Aug, 14:03 · 203.0.113.0/24".
+result), search over target labels, CSV export (`project_admin`+). Rows use plain-language copy:
+"Anna revoked the share link for **Board: Targets** — 12 Aug, 14:03 · 203.0.113.0/24".
 Viewers see only their own events (matrix §3.2). Every row links to the affected resource where it
 still exists; deleted resources render as a tombstone chip. Empty state: "No activity in this range."
 Security-relevant events (permission changes, share links, exports, integration runs) are visually
