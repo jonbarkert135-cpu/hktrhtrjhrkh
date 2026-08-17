@@ -122,7 +122,6 @@
   --focus-ring-width: 2px;
   --focus-ring-offset: 2px;
   --focus-ring-color: var(--border-focus);
-  --focus-ring-shadow:
-    0 0 0 var(--focus-ring-offset) var(--surface-0),
+  --focus-ring-shadow: 0 0 0 var(--focus-ring-offset) var(--surface-0),
     0 0 0 calc(var(--focus-ring-offset) + var(--focus-ring-width)) var(--focus-ring-color);
 }

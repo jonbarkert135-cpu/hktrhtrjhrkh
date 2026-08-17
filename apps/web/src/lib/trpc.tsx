@@ -14,7 +14,7 @@ export const trpc = createTRPCReact<AppRouter>();
 const ERROR_COPY: Record<string, string> = {
   UNAUTHORIZED: 'Your session ended. Sign in again to continue — your work is not lost.',
   FORBIDDEN: "You don't have access to this. Ask a project admin for the Analyst role.",
-  NOT_FOUND: "That item no longer exists. It may have been deleted or moved.",
+  NOT_FOUND: 'That item no longer exists. It may have been deleted or moved.',
   TIMEOUT: 'The server took too long to answer. Check your connection and try again.',
   CONFLICT: 'Someone else changed this first. Reload to see the current version.',
   TOO_MANY_REQUESTS: 'Too many attempts. Wait a minute, then try again.',

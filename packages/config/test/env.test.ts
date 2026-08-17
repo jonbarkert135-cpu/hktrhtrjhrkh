@@ -64,12 +64,19 @@ describe('loadServerEnv', () => {
   });
 
   it('rejects NEXUS_TEST_ENDPOINTS=true in production', () => {
-    const raw = { ...valid(), NODE_ENV: 'production', NEXUS_ENV: 'production', NEXUS_TEST_ENDPOINTS: 'true' };
+    const raw = {
+      ...valid(),
+      NODE_ENV: 'production',
+      NEXUS_ENV: 'production',
+      NEXUS_TEST_ENDPOINTS: 'true',
+    };
     expect(() => loadServerEnv(raw)).toThrow(/NEXUS_TEST_ENDPOINTS must be false in production/);
   });
 
   it('allows NEXUS_TEST_ENDPOINTS=true outside production', () => {
-    expect(loadServerEnv({ ...valid(), NEXUS_TEST_ENDPOINTS: 'true' }).NEXUS_TEST_ENDPOINTS).toBe(true);
+    expect(loadServerEnv({ ...valid(), NEXUS_TEST_ENDPOINTS: 'true' }).NEXUS_TEST_ENDPOINTS).toBe(
+      true,
+    );
   });
 
   it('requires AI_API_KEY for a non-mock provider', () => {

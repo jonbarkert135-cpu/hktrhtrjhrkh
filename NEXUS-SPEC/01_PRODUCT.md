@@ -2,7 +2,7 @@
 
 ## Scope
 
-This document defines *what* NEXUS is, *who* it is for, and *which* capabilities ship in which
+This document defines _what_ NEXUS is, _who_ it is for, and _which_ capabilities ship in which
 phase. It refines `00_MASTER.md` and never re-decides the stack, the layer map or the phase order
 frozen there. It contains: vision, three target users with jobs-to-be-done, anti-personas, the core
 loop, a full mapping of the client's 56 roadmap sections to the spec documents that implement them,
@@ -18,7 +18,7 @@ positioning. Interaction detail lives in `03_UX.md`; data shapes in `08_DATA_MOD
 NEXUS is a desktop-class web workspace where a researcher turns scattered evidence into a defensible
 answer. Evidence enters in one keystroke (`Ctrl+V`), becomes a typed entity with provenance, is
 linked into a graph, is enriched by sandboxed open-source tooling (GitHub, Sherlock, SpiderFoot) and
-by an AI layer that may only *propose*, and leaves as a report where every claim carries a numbered
+by an AI layer that may only _propose_, and leaves as a report where every claim carries a numbered
 citation back to a captured source. The canvas is not the product; the canvas is the fastest known
 interface for the product, which is a provenance-carrying knowledge graph.
 
@@ -28,12 +28,12 @@ An analyst working a target today runs a browser with 40 tabs, a folder of scree
 scratch file, one or two CLI tools whose JSON output nobody re-reads, and a spreadsheet of
 usernames. Four failures follow, and NEXUS is designed against exactly these four:
 
-| Failure | Observable symptom | NEXUS answer |
-|---|---|---|
-| Capture friction | evidence is not saved because saving costs 20 seconds and breaks flow | paste is the front door; capture ≤ 400 ms, structure later (`03_UX.md` §7) |
-| Lost provenance | three weeks later nobody can say where a claim came from | every node carries `source`, `tool`, `run_id`, `observed_at`, `confidence` (`08_DATA_MODEL.md` §3) |
-| Tool output rot | a 4 MB SpiderFoot JSON is never read past line 50 | manifest-driven extraction into typed entities + Import Proposal diff (`10_INTEGRATIONS.md` §6) |
-| Unreproducible conclusions | the report cannot be defended or re-run | citation numbering, chain-of-custody export, investigation replay (§6.4, §6.10) |
+| Failure                    | Observable symptom                                                    | NEXUS answer                                                                                       |
+| -------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Capture friction           | evidence is not saved because saving costs 20 seconds and breaks flow | paste is the front door; capture ≤ 400 ms, structure later (`03_UX.md` §7)                         |
+| Lost provenance            | three weeks later nobody can say where a claim came from              | every node carries `source`, `tool`, `run_id`, `observed_at`, `confidence` (`08_DATA_MODEL.md` §3) |
+| Tool output rot            | a 4 MB SpiderFoot JSON is never read past line 50                     | manifest-driven extraction into typed entities + Import Proposal diff (`10_INTEGRATIONS.md` §6)    |
+| Unreproducible conclusions | the report cannot be defended or re-run                               | citation numbering, chain-of-custody export, investigation replay (§6.4, §6.10)                    |
 
 ### 1.3 Product thesis
 
@@ -49,7 +49,7 @@ Three claims, each falsifiable, each with an owner document:
 
 ### 1.4 Positioning sentence
 
-> For analysts who must *show their work*: an infinite canvas over a provenance-first entity graph,
+> For analysts who must _show their work_: an infinite canvas over a provenance-first entity graph,
 > with sandboxed OSINT tooling and AI that can only suggest.
 
 Comparison is deliberately limited to capability classes, not marketing claims: whiteboards
@@ -74,14 +74,14 @@ browser and a terminal, comfortable with CLI tools, allergic to SaaS that hides 
 
 Jobs-to-be-done:
 
-| # | Job (when… I want… so that…) | Success signal | Where specified |
-|---|---|---|---|
-| J1.1 | When I find a lead mid-browse, I want it on the board in one keystroke so that I never lose it | paste → node ≤ 400 ms, no dialog | `03_UX.md` §7 |
-| J1.2 | When I have 8 handles, I want to test them across platforms so that I find the same person elsewhere | Sherlock run → username/account nodes with confidence | `13_SHERLOCK.md` |
-| J1.3 | When leads multiply, I want to see the shape of the case so that I can spot the hub | force/graph view + clustering | `14_AI_AGENT.md` §7, `03_UX.md` §16 |
-| J1.4 | When I deliver, I want a report where every claim cites captured evidence so that the client can verify | report export with numbered citations | §6.22, `15_SECURITY.md` §7 |
-| J1.5 | When I work on a plane or a bad hotel line, I want full function offline so that travel is not dead time | offline-first, queued capture | §6.12, `00_MASTER.md` §2 |
-| J1.6 | When a claim is challenged, I want to show exactly how I got there so that my work survives scrutiny | replay + chain-of-custody export | §6.4, §6.10 |
+| #    | Job (when… I want… so that…)                                                                             | Success signal                                        | Where specified                     |
+| ---- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ----------------------------------- |
+| J1.1 | When I find a lead mid-browse, I want it on the board in one keystroke so that I never lose it           | paste → node ≤ 400 ms, no dialog                      | `03_UX.md` §7                       |
+| J1.2 | When I have 8 handles, I want to test them across platforms so that I find the same person elsewhere     | Sherlock run → username/account nodes with confidence | `13_SHERLOCK.md`                    |
+| J1.3 | When leads multiply, I want to see the shape of the case so that I can spot the hub                      | force/graph view + clustering                         | `14_AI_AGENT.md` §7, `03_UX.md` §16 |
+| J1.4 | When I deliver, I want a report where every claim cites captured evidence so that the client can verify  | report export with numbered citations                 | §6.22, `15_SECURITY.md` §7          |
+| J1.5 | When I work on a plane or a bad hotel line, I want full function offline so that travel is not dead time | offline-first, queued capture                         | §6.12, `00_MASTER.md` §2            |
+| J1.6 | When a claim is challenged, I want to show exactly how I got there so that my work survives scrutiny     | replay + chain-of-custody export                      | §6.4, §6.10                         |
 
 Anti-requirements for Mara: no mandatory cloud account, no telemetry that leaves the host by
 default, no feature that requires inviting a teammate.
@@ -95,14 +95,14 @@ SSO, and never being the person who pasted a client identifier into a third-part
 
 Jobs-to-be-done:
 
-| # | Job | Success signal | Where specified |
-|---|---|---|---|
-| J2.1 | When a campaign reappears, I want to know if we have seen this indicator before so that I reuse prior work | cross-project reference index (§6.19) | `07_EDGE_SYSTEM.md` §9, §6.19 |
-| J2.2 | When I hand off at shift end, I want a colleague to continue without a call | realtime board + presence + comments | `00_MASTER.md` P8 |
-| J2.3 | When infrastructure changes, I want to be told so that I do not re-run scans manually | watchlists with change alerts (§6.9) | §6.9, `09_BACKEND.md` §8 |
-| J2.4 | When legal asks, I want an immutable record of who added what and when | audit log + node history diffing | `15_SECURITY.md` §8, §6.8 |
-| J2.5 | When I share externally, I want sensitive fields removed without maintaining a second board | redaction mode (§6.11) | §6.11 |
-| J2.6 | When we compare theories, I want to structure the disagreement | hypothesis nodes + ACH view (§6.20–§6.21) | §6.20, §6.21 |
+| #    | Job                                                                                                        | Success signal                            | Where specified               |
+| ---- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ----------------------------- |
+| J2.1 | When a campaign reappears, I want to know if we have seen this indicator before so that I reuse prior work | cross-project reference index (§6.19)     | `07_EDGE_SYSTEM.md` §9, §6.19 |
+| J2.2 | When I hand off at shift end, I want a colleague to continue without a call                                | realtime board + presence + comments      | `00_MASTER.md` P8             |
+| J2.3 | When infrastructure changes, I want to be told so that I do not re-run scans manually                      | watchlists with change alerts (§6.9)      | §6.9, `09_BACKEND.md` §8      |
+| J2.4 | When legal asks, I want an immutable record of who added what and when                                     | audit log + node history diffing          | `15_SECURITY.md` §8, §6.8     |
+| J2.5 | When I share externally, I want sensitive fields removed without maintaining a second board                | redaction mode (§6.11)                    | §6.11                         |
+| J2.6 | When we compare theories, I want to structure the disagreement                                             | hypothesis nodes + ACH view (§6.20–§6.21) | §6.20, §6.21                  |
 
 ### 2.3 P3 — Technical due-diligence / research generalist ("Ines")
 
@@ -112,36 +112,36 @@ comparison and a deck-ready output, not a graph aesthetic.
 
 Jobs-to-be-done:
 
-| # | Job | Success signal | Where specified |
-|---|---|---|---|
-| J3.1 | When I assess a repo, I want maintenance signals without cloning it | GitHub repo node + analysis agent | `11_GITHUB.md` |
-| J3.2 | When I compare 12 candidates, I want a table view over the same graph | table view with typed columns | `00_MASTER.md` P14 |
-| J3.3 | When I start a new engagement, I want a pre-built structure | canvas templates (§6.13) | §6.13 |
-| J3.4 | When I present findings, I want to walk stakeholders through the board | presentation mode | `03_UX.md` §17 |
-| J3.5 | When I collect 60 PDFs, I want them summarized and linked, with page-anchored quotes | file nodes + AI summarize proposal | `14_AI_AGENT.md` §5 |
-| J3.6 | When two sources conflict, I want the conflict visible instead of averaged away | contradicting edges (§6.20) | `07_EDGE_SYSTEM.md` §4 |
+| #    | Job                                                                                  | Success signal                     | Where specified        |
+| ---- | ------------------------------------------------------------------------------------ | ---------------------------------- | ---------------------- |
+| J3.1 | When I assess a repo, I want maintenance signals without cloning it                  | GitHub repo node + analysis agent  | `11_GITHUB.md`         |
+| J3.2 | When I compare 12 candidates, I want a table view over the same graph                | table view with typed columns      | `00_MASTER.md` P14     |
+| J3.3 | When I start a new engagement, I want a pre-built structure                          | canvas templates (§6.13)           | §6.13                  |
+| J3.4 | When I present findings, I want to walk stakeholders through the board               | presentation mode                  | `03_UX.md` §17         |
+| J3.5 | When I collect 60 PDFs, I want them summarized and linked, with page-anchored quotes | file nodes + AI summarize proposal | `14_AI_AGENT.md` §5    |
+| J3.6 | When two sources conflict, I want the conflict visible instead of averaged away      | contradicting edges (§6.20)        | `07_EDGE_SYSTEM.md` §4 |
 
 ### 2.4 Shared platform expectations
 
 All three: dark UI by default; keyboard-first; self-host possible; export owns your data;
 "nothing silently changes data" (`00_MASTER.md` §1). Divergences that the product must absorb
 without forking the UI: Mara needs single-player speed, Devon needs governance, Ines needs
-structured output. The resolution is that governance features are *off by default and additive*
-(project setting `governance_mode`, see `15_SECURITY.md` §3) and structured output is a *view*, not
+structured output. The resolution is that governance features are _off by default and additive_
+(project setting `governance_mode`, see `15_SECURITY.md` §3) and structured output is a _view_, not
 a separate data model.
 
 ### 2.5 Anti-personas
 
 Explicitly not designed for. Each line names the feature pressure we refuse.
 
-| Anti-persona | What they would ask for | Why refused |
-|---|---|---|
-| Stalker / harasser | untargeted people-search, "find home address", scraping private accounts | acceptable-use enforcement (§10); no unauthenticated mass-personal-data connectors |
-| Growth/lead-gen scraper | bulk email harvesting, CSV of 100k contacts, CAPTCHA solving | rate/volume design targets a single analyst; no anti-bot evasion |
-| Casual mood-boarder | fonts, stickers, freehand drawing, presentation aesthetics as the point | typed graph overhead is a cost they never repay; whiteboards serve them better |
-| Enterprise SIEM buyer | log ingestion at MB/s, alert correlation, detections | NEXUS is an investigation workspace, not a streaming pipeline (§8) |
-| Offensive operator | exploitation, credential stuffing, unauthorized active scanning | runner egress allowlist + acceptable use; tool manifests declare intrusiveness (`10_INTEGRATIONS.md` §4) |
-| "Autonomous agent" buyer | let the AI run the whole investigation unattended | N4 forbids unattended writes; proposals require a human accept |
+| Anti-persona             | What they would ask for                                                  | Why refused                                                                                              |
+| ------------------------ | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| Stalker / harasser       | untargeted people-search, "find home address", scraping private accounts | acceptable-use enforcement (§10); no unauthenticated mass-personal-data connectors                       |
+| Growth/lead-gen scraper  | bulk email harvesting, CSV of 100k contacts, CAPTCHA solving             | rate/volume design targets a single analyst; no anti-bot evasion                                         |
+| Casual mood-boarder      | fonts, stickers, freehand drawing, presentation aesthetics as the point  | typed graph overhead is a cost they never repay; whiteboards serve them better                           |
+| Enterprise SIEM buyer    | log ingestion at MB/s, alert correlation, detections                     | NEXUS is an investigation workspace, not a streaming pipeline (§8)                                       |
+| Offensive operator       | exploitation, credential stuffing, unauthorized active scanning          | runner egress allowlist + acceptable use; tool manifests declare intrusiveness (`10_INTEGRATIONS.md` §4) |
+| "Autonomous agent" buyer | let the AI run the whole investigation unattended                        | N4 forbids unattended writes; proposals require a human accept                                           |
 
 ---
 
@@ -163,7 +163,7 @@ failure mode we design against.
 Surface: canvas paste, drag&drop, quick-add (`Ctrl+Shift+A`), triage inbox lane (§6.14), browser
 extension hook (P6). Budget: intent → node visible ≤ 400 ms p95; unfurl completes asynchronously
 ≤ 3 s p95 and never blocks the node.
-Rules: capture never asks a question it can infer; ambiguity is resolved *after* creation via a
+Rules: capture never asks a question it can infer; ambiguity is resolved _after_ creation via a
 transient disambiguation chip (`03_UX.md` §7.4). Nothing is dropped: unresolvable clipboard content
 becomes a text node with the raw payload attached.
 Failure mode designed against: user hesitates because they must choose a type first. Therefore type
@@ -215,68 +215,68 @@ Every section is mapped below to the spec document + section that specifies it a
 `00_MASTER.md` §7 that ships it. Sections 1–2, 40–56 are process/meta requirements addressed by the
 spec set itself and its gates; they are still listed so nothing is unaccounted for.
 
-| # | Roadmap requirement (short English) | Specified in | Phase |
-|---|---|---|---|
-| 1 | Architecture-first: derive subsystems, entities, state, sync, undo, DnD, edges, plugins, perf, import/export before code | `00_MASTER.md` §2, §5; `02_ARCHITECTURE.md` | P0 |
-| 2 | Screenshot is reference only; do not copy its design | `04_DESIGN_SYSTEM.md` §1 (own visual system, no derivation) | P1 |
-| 3 | Dark Premium Intelligence visual direction with a real design system | `04_DESIGN_SYSTEM.md` §2–§9 | P1 |
-| 4 | Infinite canvas: pan, zoom, multi/box select, drag, snap, align, group, auto-layout, minimap, grid, lock, hide, layers, viewport persistence | `05_CANVAS_ENGINE.md` §3–§9; `03_UX.md` §5–§6 | P2, P14 (auto-layout), P15 (groups) |
-| 5 | Node system: website, text, image, file, link, note/evidence, person/username, repository | `06_NODE_SYSTEM.md` §3 | P4 |
-| 6 | `Ctrl+V` as a headline feature across all clipboard shapes | `03_UX.md` §7; `06_NODE_SYSTEM.md` §6 | P6 |
-| 7 | Connections: typed, smooth, readable, interactive, stable, auto-routing | `07_EDGE_SYSTEM.md` §2–§6 | P5 |
-| 8 | Smart auto-layout (hierarchical, force, radial, grid, cluster) | `05_CANVAS_ENGINE.md` §10; `14_AI_AGENT.md` §7 | P14 |
-| 9 | Full GitHub support: repo metadata, README, releases, contributors | `11_GITHUB.md` §2–§5 | P10 |
-| 10 | Open-source integrations framework | `10_INTEGRATIONS.md` §2–§7 | P9 |
-| 11 | SpiderFoot integration (scan orchestration, entity/correlation mapping) | `12_SPIDERFOOT.md` | P12 |
-| 12 | Sherlock integration (username enumeration) | `13_SHERLOCK.md` | P11 |
-| 13 | Required integration architecture: adapter → execution → parser → extractor → mappers → proposal | `10_INTEGRATIONS.md` §5–§6 | P9 |
-| 14 | Automatic GitHub code research agent | `11_GITHUB.md` §6–§8 | P10 |
-| 15 | Extensibility as a first-class property | `17_PLUGIN_SDK.md` §2–§6 | P9 (SDK types), P16 (public) |
-| 16 | AI research assistant | `14_AI_AGENT.md` | P13 |
-| 17 | Search (global, filtered, fuzzy, semantic) | `09_BACKEND.md` §6; `03_UX.md` §9 | P7 (FTS), P13 (semantic) |
-| 18 | Copy/paste of nodes and subgraphs, cross-board | `03_UX.md` §7.9; `06_NODE_SYSTEM.md` §7 | P6 |
-| 19 | Groups / clusters | `05_CANVAS_ENGINE.md` §9; `03_UX.md` §6.8 | P15 |
-| 20 | Multi-project system | `08_DATA_MODEL.md` §4; `03_UX.md` §3 | P7 |
-| 21 | Persistence / saving | `08_DATA_MODEL.md` §2; `00_MASTER.md` §2 | P3 |
-| 22 | Offline-first | `08_DATA_MODEL.md` §2.4 (`y-indexeddb`, OPFS) | P3 |
-| 23 | Performance at thousands of objects | `16_PERFORMANCE.md`; `05_CANVAS_ENGINE.md` §2 | P2, P16 |
-| 24 | Animations: purposeful, non-blocking | `04_DESIGN_SYSTEM.md` §8; `03_UX.md` §13 | P1 |
-| 25 | Responsive behavior | `03_UX.md` §18 (distinct tablet/mobile experience) | P16 |
-| 26 | Accessibility | `03_UX.md` §19; N6 | every phase |
-| 27 | Data model | `08_DATA_MODEL.md` §3 | P3–P5 |
-| 28 | Security | `15_SECURITY.md` | every phase |
-| 29 | Import / export | `08_DATA_MODEL.md` §7 (JSON v1, lossless, N9) | P15 |
-| 30 | Additional features invented by the designer | §6 of this document (24 features) | P4–P16 |
-| 31 | Presentation mode | `03_UX.md` §17 | P15 |
-| 32 | Visual graph modes | `00_MASTER.md` P14; `03_UX.md` §16 | P14 |
-| 33 | Plugin SDK | `17_PLUGIN_SDK.md` | P9/P16 |
-| 34 | Technology stack | `00_MASTER.md` §2 (frozen) | P0 |
-| 35 | Not a monolith: modular services/packages | `00_MASTER.md` §6; `02_ARCHITECTURE.md` §3 | P1 |
-| 36 | UX behavior rules (predictability, feedback, reversibility) | `03_UX.md` §2, §12–§14 | every phase |
-| 37 | Error handling | `03_UX.md` §12 (what/why/what-to-do copy) | every phase |
-| 38 | Design system depth | `04_DESIGN_SYSTEM.md` | P1 |
-| 39 | UX priority over feature count | this doc §3, §7 metrics; gate §8.2 | every phase |
-| 40 | Independent research of options before deciding | `00_MASTER.md` §2 "Why this architecture" + rejected alternatives in `05_CANVAS_ENGINE.md` | P0 |
-| 41 | Project file system / monorepo layout | `00_MASTER.md` §6 | P1 |
-| 42 | Master document as single source of truth | `00_MASTER.md` | P0 |
-| 43 | No real TODOs | N10; gate §8 | every phase |
-| 44 | Implementation roadmap | `20_ROADMAP.md` | P0 |
-| 45 | Each phase is a self-contained prompt | `20_ROADMAP.md` §per-phase prompts | P0 |
-| 46 | Coding AI must not destroy existing work | `00_MASTER.md` §10.3; gate §8 PR statement | every phase |
-| 47 | Quality gate | `00_MASTER.md` §8 | every phase |
-| 48 | "Do not invent bugs" checklist | `00_MASTER.md` §10.7; `18_TESTING.md` §9 | every phase |
-| 49 | Visual quality bar | `04_DESIGN_SYSTEM.md` §10; Playwright visual snapshots | every phase |
-| 50 | Final result definition (production-ready app) | `00_MASTER.md` §7 P16 + `19_DEPLOYMENT.md` | P16 |
-| 51 | Special instruction: act as full senior team | spec set authorship; `02_ARCHITECTURE.md` review notes | P0 |
-| 52 | "Perfect design" rule | `04_DESIGN_SYSTEM.md` §10 acceptance criteria | every phase |
-| 53 | "Production ready" rule | `19_DEPLOYMENT.md`; `18_TESTING.md` | P16 |
-| 54 | Mandatory self-check | `00_MASTER.md` §8 evidence-in-PR requirement | every phase |
-| 55 | Final output format (spec file set) | `00_MASTER.md` §9 index | P0 |
-| 56 | Main point: production-grade, no guessing | N10 + gate §8 | every phase |
+| #   | Roadmap requirement (short English)                                                                                                          | Specified in                                                                               | Phase                               |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------- |
+| 1   | Architecture-first: derive subsystems, entities, state, sync, undo, DnD, edges, plugins, perf, import/export before code                     | `00_MASTER.md` §2, §5; `02_ARCHITECTURE.md`                                                | P0                                  |
+| 2   | Screenshot is reference only; do not copy its design                                                                                         | `04_DESIGN_SYSTEM.md` §1 (own visual system, no derivation)                                | P1                                  |
+| 3   | Dark Premium Intelligence visual direction with a real design system                                                                         | `04_DESIGN_SYSTEM.md` §2–§9                                                                | P1                                  |
+| 4   | Infinite canvas: pan, zoom, multi/box select, drag, snap, align, group, auto-layout, minimap, grid, lock, hide, layers, viewport persistence | `05_CANVAS_ENGINE.md` §3–§9; `03_UX.md` §5–§6                                              | P2, P14 (auto-layout), P15 (groups) |
+| 5   | Node system: website, text, image, file, link, note/evidence, person/username, repository                                                    | `06_NODE_SYSTEM.md` §3                                                                     | P4                                  |
+| 6   | `Ctrl+V` as a headline feature across all clipboard shapes                                                                                   | `03_UX.md` §7; `06_NODE_SYSTEM.md` §6                                                      | P6                                  |
+| 7   | Connections: typed, smooth, readable, interactive, stable, auto-routing                                                                      | `07_EDGE_SYSTEM.md` §2–§6                                                                  | P5                                  |
+| 8   | Smart auto-layout (hierarchical, force, radial, grid, cluster)                                                                               | `05_CANVAS_ENGINE.md` §10; `14_AI_AGENT.md` §7                                             | P14                                 |
+| 9   | Full GitHub support: repo metadata, README, releases, contributors                                                                           | `11_GITHUB.md` §2–§5                                                                       | P10                                 |
+| 10  | Open-source integrations framework                                                                                                           | `10_INTEGRATIONS.md` §2–§7                                                                 | P9                                  |
+| 11  | SpiderFoot integration (scan orchestration, entity/correlation mapping)                                                                      | `12_SPIDERFOOT.md`                                                                         | P12                                 |
+| 12  | Sherlock integration (username enumeration)                                                                                                  | `13_SHERLOCK.md`                                                                           | P11                                 |
+| 13  | Required integration architecture: adapter → execution → parser → extractor → mappers → proposal                                             | `10_INTEGRATIONS.md` §5–§6                                                                 | P9                                  |
+| 14  | Automatic GitHub code research agent                                                                                                         | `11_GITHUB.md` §6–§8                                                                       | P10                                 |
+| 15  | Extensibility as a first-class property                                                                                                      | `17_PLUGIN_SDK.md` §2–§6                                                                   | P9 (SDK types), P16 (public)        |
+| 16  | AI research assistant                                                                                                                        | `14_AI_AGENT.md`                                                                           | P13                                 |
+| 17  | Search (global, filtered, fuzzy, semantic)                                                                                                   | `09_BACKEND.md` §6; `03_UX.md` §9                                                          | P7 (FTS), P13 (semantic)            |
+| 18  | Copy/paste of nodes and subgraphs, cross-board                                                                                               | `03_UX.md` §7.9; `06_NODE_SYSTEM.md` §7                                                    | P6                                  |
+| 19  | Groups / clusters                                                                                                                            | `05_CANVAS_ENGINE.md` §9; `03_UX.md` §6.8                                                  | P15                                 |
+| 20  | Multi-project system                                                                                                                         | `08_DATA_MODEL.md` §4; `03_UX.md` §3                                                       | P7                                  |
+| 21  | Persistence / saving                                                                                                                         | `08_DATA_MODEL.md` §2; `00_MASTER.md` §2                                                   | P3                                  |
+| 22  | Offline-first                                                                                                                                | `08_DATA_MODEL.md` §2.4 (`y-indexeddb`, OPFS)                                              | P3                                  |
+| 23  | Performance at thousands of objects                                                                                                          | `16_PERFORMANCE.md`; `05_CANVAS_ENGINE.md` §2                                              | P2, P16                             |
+| 24  | Animations: purposeful, non-blocking                                                                                                         | `04_DESIGN_SYSTEM.md` §8; `03_UX.md` §13                                                   | P1                                  |
+| 25  | Responsive behavior                                                                                                                          | `03_UX.md` §18 (distinct tablet/mobile experience)                                         | P16                                 |
+| 26  | Accessibility                                                                                                                                | `03_UX.md` §19; N6                                                                         | every phase                         |
+| 27  | Data model                                                                                                                                   | `08_DATA_MODEL.md` §3                                                                      | P3–P5                               |
+| 28  | Security                                                                                                                                     | `15_SECURITY.md`                                                                           | every phase                         |
+| 29  | Import / export                                                                                                                              | `08_DATA_MODEL.md` §7 (JSON v1, lossless, N9)                                              | P15                                 |
+| 30  | Additional features invented by the designer                                                                                                 | §6 of this document (24 features)                                                          | P4–P16                              |
+| 31  | Presentation mode                                                                                                                            | `03_UX.md` §17                                                                             | P15                                 |
+| 32  | Visual graph modes                                                                                                                           | `00_MASTER.md` P14; `03_UX.md` §16                                                         | P14                                 |
+| 33  | Plugin SDK                                                                                                                                   | `17_PLUGIN_SDK.md`                                                                         | P9/P16                              |
+| 34  | Technology stack                                                                                                                             | `00_MASTER.md` §2 (frozen)                                                                 | P0                                  |
+| 35  | Not a monolith: modular services/packages                                                                                                    | `00_MASTER.md` §6; `02_ARCHITECTURE.md` §3                                                 | P1                                  |
+| 36  | UX behavior rules (predictability, feedback, reversibility)                                                                                  | `03_UX.md` §2, §12–§14                                                                     | every phase                         |
+| 37  | Error handling                                                                                                                               | `03_UX.md` §12 (what/why/what-to-do copy)                                                  | every phase                         |
+| 38  | Design system depth                                                                                                                          | `04_DESIGN_SYSTEM.md`                                                                      | P1                                  |
+| 39  | UX priority over feature count                                                                                                               | this doc §3, §7 metrics; gate §8.2                                                         | every phase                         |
+| 40  | Independent research of options before deciding                                                                                              | `00_MASTER.md` §2 "Why this architecture" + rejected alternatives in `05_CANVAS_ENGINE.md` | P0                                  |
+| 41  | Project file system / monorepo layout                                                                                                        | `00_MASTER.md` §6                                                                          | P1                                  |
+| 42  | Master document as single source of truth                                                                                                    | `00_MASTER.md`                                                                             | P0                                  |
+| 43  | No real TODOs                                                                                                                                | N10; gate §8                                                                               | every phase                         |
+| 44  | Implementation roadmap                                                                                                                       | `20_ROADMAP.md`                                                                            | P0                                  |
+| 45  | Each phase is a self-contained prompt                                                                                                        | `20_ROADMAP.md` §per-phase prompts                                                         | P0                                  |
+| 46  | Coding AI must not destroy existing work                                                                                                     | `00_MASTER.md` §10.3; gate §8 PR statement                                                 | every phase                         |
+| 47  | Quality gate                                                                                                                                 | `00_MASTER.md` §8                                                                          | every phase                         |
+| 48  | "Do not invent bugs" checklist                                                                                                               | `00_MASTER.md` §10.7; `18_TESTING.md` §9                                                   | every phase                         |
+| 49  | Visual quality bar                                                                                                                           | `04_DESIGN_SYSTEM.md` §10; Playwright visual snapshots                                     | every phase                         |
+| 50  | Final result definition (production-ready app)                                                                                               | `00_MASTER.md` §7 P16 + `19_DEPLOYMENT.md`                                                 | P16                                 |
+| 51  | Special instruction: act as full senior team                                                                                                 | spec set authorship; `02_ARCHITECTURE.md` review notes                                     | P0                                  |
+| 52  | "Perfect design" rule                                                                                                                        | `04_DESIGN_SYSTEM.md` §10 acceptance criteria                                              | every phase                         |
+| 53  | "Production ready" rule                                                                                                                      | `19_DEPLOYMENT.md`; `18_TESTING.md`                                                        | P16                                 |
+| 54  | Mandatory self-check                                                                                                                         | `00_MASTER.md` §8 evidence-in-PR requirement                                               | every phase                         |
+| 55  | Final output format (spec file set)                                                                                                          | `00_MASTER.md` §9 index                                                                    | P0                                  |
+| 56  | Main point: production-grade, no guessing                                                                                                    | N10 + gate §8                                                                              | every phase                         |
 
 ### 4.1 Coverage assertion
 
-No roadmap section is unassigned. Two sections are intentionally *reinterpreted* rather than taken
+No roadmap section is unassigned. Two sections are intentionally _reinterpreted_ rather than taken
 literally, and the reinterpretation is stated here so it is not mistaken for an omission:
 
 - §25 "Responsive": literal responsiveness (a shrunken desktop canvas) is rejected. Mobile gets a
@@ -410,7 +410,7 @@ speed while making the cleanup one keystroke.
 
 ### 6.4 Investigation replay / time-travel
 
-**Problem.** Analysts cannot reconstruct *how* an investigation developed, which matters for review,
+**Problem.** Analysts cannot reconstruct _how_ an investigation developed, which matters for review,
 for training, and for spotting when a wrong assumption entered.
 **Solution.** Hocuspocus already stores periodic Yjs snapshots; add a monotonically increasing
 `board_version` with named checkpoints. A timeline scrubber (opened with `Ctrl+Shift+H`) replays the
@@ -467,7 +467,7 @@ Conflict chooser prevents silent data loss (`00_MASTER.md` §1.3).
 **Solution.** Per-node change list derived from the projection's `node_revisions` table (written by
 the projection hook), rendered as a field-level diff (old → new) with author, timestamp, and origin
 (`user | tool | ai | import`). Actions: restore a field, restore the whole revision, copy diff.
-**UX justification.** Field-level, not blob-level, so the reader sees the *claim* that changed. This
+**UX justification.** Field-level, not blob-level, so the reader sees the _claim_ that changed. This
 is also the audit evidence Devon's legal team asks for (J2.4).
 **Cost.** M (revision rows are a by-product of projection; UI is the work).
 **Phase.** P8.
@@ -505,7 +505,7 @@ it also makes NEXUS boards re-importable elsewhere, which is a trust argument fo
 **Problem.** Sharing a board externally today means building a sanitized copy by hand — error-prone
 and immediately stale.
 **Solution.** A per-share **redaction profile**: rules by node type, tag, field or explicit node
-list, applied as a *view transform* at export/share time (values replaced with `[redacted:reason]`,
+list, applied as a _view transform_ at export/share time (values replaced with `[redacted:reason]`,
 images blurred at 24 px radius server-side, blobs excluded). A preview shows exactly what the
 recipient sees, with a count of redacted items and a hard warning if any unredacted node carries the
 `sensitive` tag.
@@ -531,9 +531,9 @@ missing and why the card looks bare.
 
 **Problem.** A blank infinite canvas is the worst possible first screen; also every analyst
 re-invents the same skeleton.
-**Solution.** Board templates shipped as JSON v1 fragments: *Person investigation*, *Domain /
-infrastructure*, *Repository due diligence*, *Incident timeline*, *Competitive landscape*,
-*Literature review*. Each provides labeled placeholder groups, pre-typed nodes, a suggested edge
+**Solution.** Board templates shipped as JSON v1 fragments: _Person investigation_, _Domain /
+infrastructure_, _Repository due diligence_, _Incident timeline_, _Competitive landscape_,
+_Literature review_. Each provides labeled placeholder groups, pre-typed nodes, a suggested edge
 palette, and 2–3 inline coach cards that delete themselves once the user creates a real node of
 that kind. Users can save any board as a template (structure only, content stripped).
 **UX justification.** Teaches structure by example, which is far cheaper than documentation, and
@@ -550,7 +550,7 @@ canvas has no explicit paste target, when capture happens from the extension/mob
 user drops into it. Items are compact rows with type, title, source and age; actions: `Enter` place
 on canvas at viewport center, `E` open inspector, `X` archive, `D` delete, `Shift+↓` multi-select.
 Lane count is shown in the status bar; the lane is board-scoped and part of the document.
-**UX justification.** Separates *collecting* from *composing*, the single most requested behavior in
+**UX justification.** Separates _collecting_ from _composing_, the single most requested behavior in
 whiteboard-style tools, without adding a second app.
 **Cost.** M.
 **Phase.** P6.
@@ -598,7 +598,7 @@ spiral placement algorithm that avoids overlap within a 600 px radius of the vie
 scroll away.
 **Solution.** Pin up to 8 nodes to a left-edge rail of 56 px thumbnails. Hover expands a preview
 card; click pans to the node; `Alt+1..8` jumps directly. Pins are per-user per-board (ephemeral UI
-state in Zustand, persisted in local storage, *not* in the Y.Doc) so collaborators do not fight over
+state in Zustand, persisted in local storage, _not_ in the Y.Doc) so collaborators do not fight over
 them.
 **UX justification.** Deliberately per-user: shared pins create conflict; personal pins create
 speed. Also gives a stable "home" that reduces zoom-lost disorientation.
@@ -621,7 +621,7 @@ between clients — which is exactly the concern that would otherwise kill the f
 
 ### 6.20 Hypothesis nodes with supporting / contradicting edges
 
-**Problem.** Boards hold facts but not *theories*, so reasoning happens in the analyst's head and
+**Problem.** Boards hold facts but not _theories_, so reasoning happens in the analyst's head and
 cannot be reviewed.
 **Solution.** A `hypothesis` node type: statement, status (`open | supported | refuted |
 inconclusive`), owner, created/updated. Edges `supports` and `contradicts` (with confidence, §6.6)
@@ -635,7 +635,7 @@ the core of analytic tradecraft.
 ### 6.21 ACH (Analysis of Competing Hypotheses) view
 
 **Problem.** With 3+ hypotheses, pairwise support tallies do not reveal which evidence actually
-*discriminates* between theories.
+_discriminates_ between theories.
 **Solution.** A matrix view: rows = evidence nodes, columns = hypotheses, cells =
 `consistent (+) / inconsistent (−) / neutral (·) / n-a` set by click or keyboard. Columns show a
 weighted inconsistency score (Σ of inconsistent-cell confidences, lower = more likely, per standard
@@ -690,32 +690,32 @@ a two-minute task instead of an afternoon.
 
 ### 6.25 Feature/phase summary table
 
-| # | Feature | Cost | Phase |
-|---|---|---|---|
-| 6.1 | Evidence confidence scoring | M | P4 / P15 |
-| 6.2 | Source attribution chain | M | P9 / P13 |
-| 6.3 | Duplicate detection | M+S | P6 / P13 |
-| 6.4 | Investigation replay / time-travel | L | P8 / P15 |
-| 6.5 | Saved searches / smart collections | M | P7 |
-| 6.6 | Relationship confidence | S | P5 |
-| 6.7 | Entity merge / split | L | P4 / P14 |
-| 6.8 | Node history diffing | M | P8 |
-| 6.9 | Watchlists with change alerts | L | P12 |
-| 6.10 | Chain-of-custody export | M | P15 |
-| 6.11 | Redaction mode | L | P15 |
-| 6.12 | Offline capture queue | M | P6 |
-| 6.13 | Canvas templates | M | P7 |
-| 6.14 | Quick-triage inbox lane | M | P6 |
-| 6.15 | Focus mode | S | P2 / P5 |
-| 6.16 | Bulk operations | M | P4+ |
-| 6.17 | Keyboard-only capture | M | P6 |
-| 6.18 | Pinned reference rail | S | P4 |
-| 6.19 | Cross-project reference index | L | P7 / P14 |
-| 6.20 | Hypothesis nodes | M | P5 |
-| 6.21 | ACH view | L | P14 |
-| 6.22 | Report builder with citations | XL | P15 |
-| 6.23 | Presentation mode with scenes | L | P15 |
-| 6.24 | Board health panel | M | P14 |
+| #    | Feature                            | Cost | Phase    |
+| ---- | ---------------------------------- | ---- | -------- |
+| 6.1  | Evidence confidence scoring        | M    | P4 / P15 |
+| 6.2  | Source attribution chain           | M    | P9 / P13 |
+| 6.3  | Duplicate detection                | M+S  | P6 / P13 |
+| 6.4  | Investigation replay / time-travel | L    | P8 / P15 |
+| 6.5  | Saved searches / smart collections | M    | P7       |
+| 6.6  | Relationship confidence            | S    | P5       |
+| 6.7  | Entity merge / split               | L    | P4 / P14 |
+| 6.8  | Node history diffing               | M    | P8       |
+| 6.9  | Watchlists with change alerts      | L    | P12      |
+| 6.10 | Chain-of-custody export            | M    | P15      |
+| 6.11 | Redaction mode                     | L    | P15      |
+| 6.12 | Offline capture queue              | M    | P6       |
+| 6.13 | Canvas templates                   | M    | P7       |
+| 6.14 | Quick-triage inbox lane            | M    | P6       |
+| 6.15 | Focus mode                         | S    | P2 / P5  |
+| 6.16 | Bulk operations                    | M    | P4+      |
+| 6.17 | Keyboard-only capture              | M    | P6       |
+| 6.18 | Pinned reference rail              | S    | P4       |
+| 6.19 | Cross-project reference index      | L    | P7 / P14 |
+| 6.20 | Hypothesis nodes                   | M    | P5       |
+| 6.21 | ACH view                           | L    | P14      |
+| 6.22 | Report builder with citations      | XL   | P15      |
+| 6.23 | Presentation mode with scenes      | L    | P15      |
+| 6.24 | Board health panel                 | M    | P14      |
 
 Total added scope: 2 S, 10 M, 8 L, 1 XL (plus split items). Phase load is deliberately weighted to
 P4–P7 (cheap, high-leverage) and P14–P15 (analysis and output), keeping P2–P3 focused on the
@@ -730,25 +730,25 @@ transmission entirely; the definitions still apply to a deployment's own dashboa
 
 ### 7.1 Activation (first session)
 
-| Metric | Definition | Target |
-|---|---|---|
-| A1 Time to first node | app interactive → first node created | p50 ≤ 45 s, p90 ≤ 120 s |
-| A2 Time to first edge | first node → first edge | p50 ≤ 4 min |
-| A3 First-session structure | % of first sessions with ≥ 5 nodes and ≥ 3 edges | ≥ 60% |
-| A4 Paste discovery | % of first sessions using `Ctrl+V` capture | ≥ 70% |
-| A5 Palette discovery | % of first sessions opening `Ctrl+K` | ≥ 40% |
-| A6 Documentation need | % of first sessions where the primary flow completes without opening help | ≥ 90% |
+| Metric                     | Definition                                                                | Target                  |
+| -------------------------- | ------------------------------------------------------------------------- | ----------------------- |
+| A1 Time to first node      | app interactive → first node created                                      | p50 ≤ 45 s, p90 ≤ 120 s |
+| A2 Time to first edge      | first node → first edge                                                   | p50 ≤ 4 min             |
+| A3 First-session structure | % of first sessions with ≥ 5 nodes and ≥ 3 edges                          | ≥ 60%                   |
+| A4 Paste discovery         | % of first sessions using `Ctrl+V` capture                                | ≥ 70%                   |
+| A5 Palette discovery       | % of first sessions opening `Ctrl+K`                                      | ≥ 40%                   |
+| A6 Documentation need      | % of first sessions where the primary flow completes without opening help | ≥ 90%                   |
 
 ### 7.2 Retention & depth
 
-| Metric | Definition | Target |
-|---|---|---|
-| R1 Week-2 return | users active in days 8–14 after signup | ≥ 45% |
-| R2 Board revisit | % of boards opened on ≥ 3 distinct days | ≥ 50% |
-| R3 Enrichment adoption | % of active users running ≥ 1 integration in week 1 | ≥ 35% |
-| R4 Proposal acceptance | accepted / total proposals (AI + import) | 0.45–0.80 band |
-| R5 Report completion | % of boards with ≥ 40 nodes producing an export | ≥ 30% |
-| R6 Provenance coverage | % of nodes with a non-null source on exported boards | ≥ 95% |
+| Metric                 | Definition                                           | Target         |
+| ---------------------- | ---------------------------------------------------- | -------------- |
+| R1 Week-2 return       | users active in days 8–14 after signup               | ≥ 45%          |
+| R2 Board revisit       | % of boards opened on ≥ 3 distinct days              | ≥ 50%          |
+| R3 Enrichment adoption | % of active users running ≥ 1 integration in week 1  | ≥ 35%          |
+| R4 Proposal acceptance | accepted / total proposals (AI + import)             | 0.45–0.80 band |
+| R5 Report completion   | % of boards with ≥ 40 nodes producing an export      | ≥ 30%          |
+| R6 Provenance coverage | % of nodes with a non-null source on exported boards | ≥ 95%          |
 
 R4 is a two-sided guardrail: below 0.45 the suggestion quality is bad; above 0.80 users are likely
 rubber-stamping, which endangers N4's intent, and the AI layer must then reduce proposal volume and
@@ -756,20 +756,20 @@ raise its confidence threshold (`14_AI_AGENT.md` §6).
 
 ### 7.3 Performance SLOs (product-level; engineering budgets in `16_PERFORMANCE.md`)
 
-| ID | Surface | Budget |
-|---|---|---|
-| S1 | Cold load to interactive canvas, 1,000-node board, cached | ≤ 2.5 s p95 |
-| S2 | Pan/zoom frame time, 5,000 nodes / 10,000 edges | ≤ 16.6 ms p95 (N1) |
-| S3 | Paste → node visible | ≤ 400 ms p95 |
-| S4 | Unfurl complete | ≤ 3 s p95, ≤ 10 s hard timeout |
-| S5 | Local search first results | ≤ 150 ms p95 |
-| S6 | Command palette open → rendered | ≤ 80 ms p95 |
-| S7 | View switch (graph/table/timeline) | ≤ 250 ms p95 |
-| S8 | Local durability of a mutation | ≤ 100 ms (N2) |
-| S9 | Server ack of a mutation | ≤ 2 s p95 (N2) |
-| S10 | Integration run queued → visible progress | ≤ 1 s p95 |
-| S11 | Report draft, 300-node board | ≤ 10 s p95 |
-| S12 | Memory ceiling, 5,000-node board | ≤ 1.2 GB tab RSS |
+| ID  | Surface                                                   | Budget                         |
+| --- | --------------------------------------------------------- | ------------------------------ |
+| S1  | Cold load to interactive canvas, 1,000-node board, cached | ≤ 2.5 s p95                    |
+| S2  | Pan/zoom frame time, 5,000 nodes / 10,000 edges           | ≤ 16.6 ms p95 (N1)             |
+| S3  | Paste → node visible                                      | ≤ 400 ms p95                   |
+| S4  | Unfurl complete                                           | ≤ 3 s p95, ≤ 10 s hard timeout |
+| S5  | Local search first results                                | ≤ 150 ms p95                   |
+| S6  | Command palette open → rendered                           | ≤ 80 ms p95                    |
+| S7  | View switch (graph/table/timeline)                        | ≤ 250 ms p95                   |
+| S8  | Local durability of a mutation                            | ≤ 100 ms (N2)                  |
+| S9  | Server ack of a mutation                                  | ≤ 2 s p95 (N2)                 |
+| S10 | Integration run queued → visible progress                 | ≤ 1 s p95                      |
+| S11 | Report draft, 300-node board                              | ≤ 10 s p95                     |
+| S12 | Memory ceiling, 5,000-node board                          | ≤ 1.2 GB tab RSS               |
 
 ### 7.4 Quality metrics
 
@@ -829,21 +829,21 @@ enforceable by data, not by code forks**, so any future packaging decision is a 
 
 ### 9.2 Natural boundaries (observation, not commitment)
 
-| Layer | Contents | Rationale |
-|---|---|---|
-| Individual | full canvas, nodes, edges, capture, offline, export, templates, local search | the core loop must be complete alone, or P1 rejects the product |
-| Team | realtime sync, presence, comments, audit log, RBAC, cross-project index, watchlists | costs are server-side and value is team-side |
-| Governance | SSO/SAML, retention policy, redaction profiles, signed chain-of-custody, audit export | enterprise procurement items, no effect on the core loop |
-| Consumption | AI tokens, integration runs, storage | pass-through variable cost; must be visible in-app before spending (`14_AI_AGENT.md` §8) |
+| Layer       | Contents                                                                              | Rationale                                                                                |
+| ----------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Individual  | full canvas, nodes, edges, capture, offline, export, templates, local search          | the core loop must be complete alone, or P1 rejects the product                          |
+| Team        | realtime sync, presence, comments, audit log, RBAC, cross-project index, watchlists   | costs are server-side and value is team-side                                             |
+| Governance  | SSO/SAML, retention policy, redaction profiles, signed chain-of-custody, audit export | enterprise procurement items, no effect on the core loop                                 |
+| Consumption | AI tokens, integration runs, storage                                                  | pass-through variable cost; must be visible in-app before spending (`14_AI_AGENT.md` §8) |
 
 ### 9.3 Rules
 
-1. Never gate a *data* capability (export, import, offline). Locking a user's data in is a product
+1. Never gate a _data_ capability (export, import, offline). Locking a user's data in is a product
    failure regardless of business model.
 2. Never gate accessibility, security or provenance features.
 3. Quota exhaustion degrades gracefully with the §12 error pattern: what happened, why, what to do
    (`03_UX.md` §12), and never loses work in progress.
-4. Any gate must be visible *before* the user invests effort, not after.
+4. Any gate must be visible _before_ the user invests effort, not after.
 
 ---
 
@@ -858,22 +858,22 @@ access controls.
 
 ### 10.2 Product-level enforcement
 
-| Control | Behavior | Spec |
-|---|---|---|
-| Acceptable-use acknowledgement | on first project creation and on first use of any manifest marked `intrusiveness: active`, a one-screen acknowledgement naming the operator's responsibility; recorded in the audit log with timestamp and actor | `15_SECURITY.md` §9 |
-| Authorization field | every project has optional `authorization_note` (engagement ref, scope, dates); if empty, exported reports print "Authorization: not recorded" rather than nothing | `08_DATA_MODEL.md` §4 |
-| Manifest intrusiveness classes | `passive` (public metadata, no target contact), `semi-active` (contacts target-owned public endpoints, e.g. Sherlock profile probes), `active` (scanning/enumeration). Semi-active and active require explicit per-run confirmation naming the target | `10_INTEGRATIONS.md` §4 |
-| Egress allowlist | runner has no direct network; a proxy enforces per-manifest destination allowlists, so a tool cannot silently target anything else | `00_MASTER.md` §2, `15_SECURITY.md` §5 |
-| robots and rate limits | unfurl respects `robots.txt` for the fetched URL, sends an identifying user agent, one request per URL, no recursion | `09_BACKEND.md` §5 |
-| No built-in personal-data corpora | no breach dumps, no aggregated PII databases shipped or bundled | this document §8.5 |
-| Retention & deletion | project retention policy (default: keep until deleted); hard-delete removes blobs, projection rows and snapshots within 24 h and is recorded in the audit log | `15_SECURITY.md` §8 |
-| Minors and sensitive categories | UI copy in the acknowledgement explicitly names special-category data and minors as areas requiring legal basis; no feature targets them | `15_SECURITY.md` §9 |
+| Control                           | Behavior                                                                                                                                                                                                                                              | Spec                                   |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| Acceptable-use acknowledgement    | on first project creation and on first use of any manifest marked `intrusiveness: active`, a one-screen acknowledgement naming the operator's responsibility; recorded in the audit log with timestamp and actor                                      | `15_SECURITY.md` §9                    |
+| Authorization field               | every project has optional `authorization_note` (engagement ref, scope, dates); if empty, exported reports print "Authorization: not recorded" rather than nothing                                                                                    | `08_DATA_MODEL.md` §4                  |
+| Manifest intrusiveness classes    | `passive` (public metadata, no target contact), `semi-active` (contacts target-owned public endpoints, e.g. Sherlock profile probes), `active` (scanning/enumeration). Semi-active and active require explicit per-run confirmation naming the target | `10_INTEGRATIONS.md` §4                |
+| Egress allowlist                  | runner has no direct network; a proxy enforces per-manifest destination allowlists, so a tool cannot silently target anything else                                                                                                                    | `00_MASTER.md` §2, `15_SECURITY.md` §5 |
+| robots and rate limits            | unfurl respects `robots.txt` for the fetched URL, sends an identifying user agent, one request per URL, no recursion                                                                                                                                  | `09_BACKEND.md` §5                     |
+| No built-in personal-data corpora | no breach dumps, no aggregated PII databases shipped or bundled                                                                                                                                                                                       | this document §8.5                     |
+| Retention & deletion              | project retention policy (default: keep until deleted); hard-delete removes blobs, projection rows and snapshots within 24 h and is recorded in the audit log                                                                                         | `15_SECURITY.md` §8                    |
+| Minors and sensitive categories   | UI copy in the acknowledgement explicitly names special-category data and minors as areas requiring legal basis; no feature targets them                                                                                                              | `15_SECURITY.md` §9                    |
 
 ### 10.3 What we deliberately do not do
 
 We do not police content (no classifiers scanning user boards — that would violate the privacy of
-self-hosted analysts and is trivially bypassed). Instead we constrain *capabilities* (§10.2) and
-make *accountability* cheap: audit log, provenance, authorization note, chain-of-custody. This is
+self-hosted analysts and is trivially bypassed). Instead we constrain _capabilities_ (§10.2) and
+make _accountability_ cheap: audit log, provenance, authorization note, chain-of-custody. This is
 the honest trade: the operator remains legally responsible, and the product makes their compliance
 evidence a by-product of normal use rather than extra work.
 
@@ -888,16 +888,16 @@ destinations enumerable in the deployment's config and printable from the admin 
 
 ## 11. Open risks
 
-| # | Risk | Impact | Mitigation / trigger |
-|---|---|---|---|
-| R1 | SpiderFoot shows LOW maintenance activity (0 commits/issues in 90 days per deps.dev, June 2026); v4.0 API may drift or go unmaintained | P12 slips or ships a broken adapter | pin image digest, isolate behind the manifest adapter, contract tests against a recorded fixture; fallback = ship P12 with a reduced module set and document a "bring your own SpiderFoot endpoint" mode (`12_SPIDERFOOT.md` §2) |
-| R2 | Self-proposed scope (24 features, 8 L + 1 XL) inflates P14–P15 beyond delivery capacity | GA date slips | features are individually flag-gated; the P15 cut list, in order, is §6.21 ACH view, §6.11 redaction profiles beyond field-level, §6.4 branching |
-| R3 | Report builder (§6.22, XL) is the largest single item and depends on rich text + export + AI | late discovery of integration problems | prototype the citation model in P4 rich text (`06_NODE_SYSTEM.md` §5) so P15 is assembly, not invention |
-| R4 | Proposal acceptance may sit above 0.80 (rubber-stamping), defeating N4's intent | provenance quality degrades silently | R4 metric is a release-blocking guardrail; response is fewer, higher-confidence proposals, not more UI |
-| R5 | Confidence scoring (§6.1) can become theatre if users never adjust the default | reports carry false precision | default is the tool-declared value, never "confirmed"; board health panel (§6.24) surfaces low-confidence claims; report marks < 0.4 as unconfirmed |
-| R6 | Cross-project index (§6.19) risks leaking client A into client B if ACL filtering has a bug | severe trust and possibly legal breach | index queries always ACL-filtered server-side, never client-side; dedicated e2e suite with two isolated orgs; feature default OFF per project |
-| R7 | Watchlists (§6.9) can look like unauthorized continuous monitoring of a target | legal/ethical exposure | watch requires re-confirming authorization for semi-active/active manifests; per-project run budget; watch state and history visible in the audit log |
-| R8 | Three personas pull the UI in different directions (speed vs governance vs structured output) | interface bloat | governance features are additive and off by default; structured output is a view over the same graph; any new panel must serve ≥ 2 personas or replace something |
-| R9 | Mobile experience (§`03_UX.md` §18) is a second UI to maintain | maintenance cost, drift | mobile reuses the domain and data layers unchanged, ships only capture+read surfaces, and is explicitly excluded from canvas-authoring parity |
-| R10 | Duplicate detection false merges could destroy analyst work | data integrity | merge is always user-confirmed and undoable as one transaction; `merged_from` retains lineage so an undo is exact; false-merge rate is a tracked metric (§7.4) |
-| R11 | Metrics in §7 require event instrumentation that self-hosters may disable, leaving product decisions blind | slower iteration | targets are also verifiable in the lab (Playwright scripted first-run session + benchmark harness), so no metric depends solely on field telemetry |
+| #   | Risk                                                                                                                                   | Impact                                 | Mitigation / trigger                                                                                                                                                                                                             |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1  | SpiderFoot shows LOW maintenance activity (0 commits/issues in 90 days per deps.dev, June 2026); v4.0 API may drift or go unmaintained | P12 slips or ships a broken adapter    | pin image digest, isolate behind the manifest adapter, contract tests against a recorded fixture; fallback = ship P12 with a reduced module set and document a "bring your own SpiderFoot endpoint" mode (`12_SPIDERFOOT.md` §2) |
+| R2  | Self-proposed scope (24 features, 8 L + 1 XL) inflates P14–P15 beyond delivery capacity                                                | GA date slips                          | features are individually flag-gated; the P15 cut list, in order, is §6.21 ACH view, §6.11 redaction profiles beyond field-level, §6.4 branching                                                                                 |
+| R3  | Report builder (§6.22, XL) is the largest single item and depends on rich text + export + AI                                           | late discovery of integration problems | prototype the citation model in P4 rich text (`06_NODE_SYSTEM.md` §5) so P15 is assembly, not invention                                                                                                                          |
+| R4  | Proposal acceptance may sit above 0.80 (rubber-stamping), defeating N4's intent                                                        | provenance quality degrades silently   | R4 metric is a release-blocking guardrail; response is fewer, higher-confidence proposals, not more UI                                                                                                                           |
+| R5  | Confidence scoring (§6.1) can become theatre if users never adjust the default                                                         | reports carry false precision          | default is the tool-declared value, never "confirmed"; board health panel (§6.24) surfaces low-confidence claims; report marks < 0.4 as unconfirmed                                                                              |
+| R6  | Cross-project index (§6.19) risks leaking client A into client B if ACL filtering has a bug                                            | severe trust and possibly legal breach | index queries always ACL-filtered server-side, never client-side; dedicated e2e suite with two isolated orgs; feature default OFF per project                                                                                    |
+| R7  | Watchlists (§6.9) can look like unauthorized continuous monitoring of a target                                                         | legal/ethical exposure                 | watch requires re-confirming authorization for semi-active/active manifests; per-project run budget; watch state and history visible in the audit log                                                                            |
+| R8  | Three personas pull the UI in different directions (speed vs governance vs structured output)                                          | interface bloat                        | governance features are additive and off by default; structured output is a view over the same graph; any new panel must serve ≥ 2 personas or replace something                                                                 |
+| R9  | Mobile experience (§`03_UX.md` §18) is a second UI to maintain                                                                         | maintenance cost, drift                | mobile reuses the domain and data layers unchanged, ships only capture+read surfaces, and is explicitly excluded from canvas-authoring parity                                                                                    |
+| R10 | Duplicate detection false merges could destroy analyst work                                                                            | data integrity                         | merge is always user-confirmed and undoable as one transaction; `merged_from` retains lineage so an undo is exact; false-merge rate is a tracked metric (§7.4)                                                                   |
+| R11 | Metrics in §7 require event instrumentation that self-hosters may disable, leaving product decisions blind                             | slower iteration                       | targets are also verifiable in the lab (Playwright scripted first-run session + benchmark harness), so no metric depends solely on field telemetry                                                                               |

@@ -18,9 +18,7 @@ const isFlagName = (v: string): v is FlagName => (FLAG_NAMES as readonly string[
 
 export class UnknownFlagError extends Error {
   constructor(public readonly unknown: readonly string[]) {
-    super(
-      `Unknown feature flag(s): ${unknown.join(', ')}. Known flags: ${FLAG_NAMES.join(', ')}`,
-    );
+    super(`Unknown feature flag(s): ${unknown.join(', ')}. Known flags: ${FLAG_NAMES.join(', ')}`);
     this.name = 'UnknownFlagError';
   }
 }

@@ -16,29 +16,29 @@ protection, and acceptable-use enforcement. Binding on every phase; §4 (SSRF) s
 
 ### 1.1 Assets (ranked by impact of loss)
 
-| # | Asset | Where it lives | Impact if compromised |
-|---|---|---|---|
-| A1 | Investigation graphs (nodes, edges, notes) | Postgres `nodes`/`edges`, Yjs binary, S3 blobs | Exposure of an ongoing investigation; harm to subjects and to the analyst |
-| A2 | Integration credentials (GitHub PAT, provider API keys, SpiderFoot API keys) | `integration_credentials` (envelope-encrypted) | Lateral compromise of the user's third-party accounts |
-| A3 | Uploaded files and fetched page snapshots | S3/MinIO, separate origin | Leak of source material; malware redistribution |
-| A4 | Session material (cookies, device sessions) | browser + Postgres `session` | Account takeover |
-| A5 | Tool run outputs (Sherlock/SpiderFoot results) | `integration_runs`, S3 raw payloads | Reveals targets and methodology |
-| A6 | Audit log | Postgres `audit_events` (append-only) | Loss of accountability; covering tracks |
-| A7 | Infrastructure (runner host, DB, egress proxy) | k8s / compose | Full compromise, pivot into the operator's network |
-| A8 | Share links and exports | signed URLs, generated PDFs/archives | Uncontrolled disclosure |
+| #   | Asset                                                                        | Where it lives                                 | Impact if compromised                                                     |
+| --- | ---------------------------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------- |
+| A1  | Investigation graphs (nodes, edges, notes)                                   | Postgres `nodes`/`edges`, Yjs binary, S3 blobs | Exposure of an ongoing investigation; harm to subjects and to the analyst |
+| A2  | Integration credentials (GitHub PAT, provider API keys, SpiderFoot API keys) | `integration_credentials` (envelope-encrypted) | Lateral compromise of the user's third-party accounts                     |
+| A3  | Uploaded files and fetched page snapshots                                    | S3/MinIO, separate origin                      | Leak of source material; malware redistribution                           |
+| A4  | Session material (cookies, device sessions)                                  | browser + Postgres `session`                   | Account takeover                                                          |
+| A5  | Tool run outputs (Sherlock/SpiderFoot results)                               | `integration_runs`, S3 raw payloads            | Reveals targets and methodology                                           |
+| A6  | Audit log                                                                    | Postgres `audit_events` (append-only)          | Loss of accountability; covering tracks                                   |
+| A7  | Infrastructure (runner host, DB, egress proxy)                               | k8s / compose                                  | Full compromise, pivot into the operator's network                        |
+| A8  | Share links and exports                                                      | signed URLs, generated PDFs/archives           | Uncontrolled disclosure                                                   |
 
 ### 1.2 Actors and capabilities
 
-| Actor | Position | Capabilities assumed | Motivation |
-|---|---|---|---|
-| **T1 Curious user** | authenticated, low privilege | can call any API with own session, can guess ids, can read client bundle | see other projects, escalate role |
-| **T2 Malicious collaborator** | invited editor/viewer in one project | full API surface for that project, can upload files, can invite? (no), can export | exfiltrate, sabotage, plant misleading evidence |
-| **T3 Hostile fetched content** | data | crafted HTML/PDF/SVG/JSON that NEXUS parses, renders or sends to the model | XSS, SSRF, parser RCE, prompt injection, resource exhaustion |
-| **T4 Malicious plugin** | third-party code, user-installed | plugin manifest permissions, host API calls | steal graph data, exfiltrate credentials, abuse egress |
-| **T5 Compromised tool image** | container we execute | arbitrary code inside the sandbox | escape, exfiltrate, crypto-mine, pivot |
-| **T6 Network attacker** | on-path or same cluster | intercept, DNS spoof, connect to internal services | credential theft, SSRF pivot |
-| **T7 Malicious anonymous visitor** | holds a share link | read a shared board | mass scraping, link enumeration |
-| **T8 Insider operator** | infra access | read DB/S3, alter logs | undetected data access |
+| Actor                              | Position                             | Capabilities assumed                                                              | Motivation                                                   |
+| ---------------------------------- | ------------------------------------ | --------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| **T1 Curious user**                | authenticated, low privilege         | can call any API with own session, can guess ids, can read client bundle          | see other projects, escalate role                            |
+| **T2 Malicious collaborator**      | invited editor/viewer in one project | full API surface for that project, can upload files, can invite? (no), can export | exfiltrate, sabotage, plant misleading evidence              |
+| **T3 Hostile fetched content**     | data                                 | crafted HTML/PDF/SVG/JSON that NEXUS parses, renders or sends to the model        | XSS, SSRF, parser RCE, prompt injection, resource exhaustion |
+| **T4 Malicious plugin**            | third-party code, user-installed     | plugin manifest permissions, host API calls                                       | steal graph data, exfiltrate credentials, abuse egress       |
+| **T5 Compromised tool image**      | container we execute                 | arbitrary code inside the sandbox                                                 | escape, exfiltrate, crypto-mine, pivot                       |
+| **T6 Network attacker**            | on-path or same cluster              | intercept, DNS spoof, connect to internal services                                | credential theft, SSRF pivot                                 |
+| **T7 Malicious anonymous visitor** | holds a share link                   | read a shared board                                                               | mass scraping, link enumeration                              |
+| **T8 Insider operator**            | infra access                         | read DB/S3, alter logs                                                            | undetected data access                                       |
 
 ### 1.3 Trust boundaries
 
@@ -50,6 +50,7 @@ protection, and acceptable-use enforcement. Binding on every phase; §4 (SSRF) s
 ```
 
 Rules that define the boundaries:
+
 - The **runner** can reach only the egress proxy and its own result-upload endpoint (a dedicated,
   mTLS-authenticated ingest port on the worker). It **cannot** reach Postgres, Redis, S3 or the API.
 - The **worker** and **api** never make outbound requests directly; all egress goes through the proxy.
@@ -61,6 +62,7 @@ Rules that define the boundaries:
 Notation: `└─` = child step; `[C-n]` = control id from §1.5.
 
 **AT-1 — Cross-tenant read of another org's project (T1, T2)**
+
 ```
 Goal: read project P of org O2 while authenticated in O1
 ├─ Guess project id in a tRPC call                 → [C-1] authz middleware resolves org from resource, not from input
@@ -72,6 +74,7 @@ Goal: read project P of org O2 while authenticated in O1
 ```
 
 **AT-2 — Stored XSS via fetched or pasted content (T3)**
+
 ```
 Goal: run JS in a victim's session on the app origin
 ├─ Paste HTML into a rich-text node                → [C-6] editor stores a restricted ProseMirror schema, not raw HTML
@@ -83,6 +86,7 @@ Goal: run JS in a victim's session on the app origin
 ```
 
 **AT-3 — SSRF to cloud metadata / internal service (T2, T3)**
+
 ```
 Goal: make NEXUS fetch http://169.254.169.254/… or an internal admin panel
 ├─ Direct private IP URL                            → [C-12] parsed-host + resolved-IP denylist
@@ -96,6 +100,7 @@ Goal: make NEXUS fetch http://169.254.169.254/… or an internal admin panel
 ```
 
 **AT-4 — Container escape from a tool run (T5)**
+
 ```
 Goal: execute code on the runner host
 ├─ Kernel exploit via syscall                       → [C-18] gVisor runtimeClass in prod + seccomp default-deny profile
@@ -108,6 +113,7 @@ Goal: execute code on the runner host
 ```
 
 **AT-5 — Credential exfiltration (T2, T4, T5)**
+
 ```
 Goal: obtain a stored GitHub PAT
 ├─ Read it from the API response                    → [C-24] credentials are write-only over the API; never returned, ever
@@ -119,6 +125,7 @@ Goal: obtain a stored GitHub PAT
 ```
 
 **AT-6 — Session/account takeover (T1, T6)**
+
 ```
 Goal: act as another user
 ├─ Steal cookie via XSS                             → AT-2 controls + [C-30] HttpOnly, SameSite=Lax, Secure, __Host- prefix
@@ -130,6 +137,7 @@ Goal: act as another user
 ```
 
 **AT-7 — Malicious plugin (T4)**
+
 ```
 Goal: exfiltrate the whole graph
 ├─ Read all boards via host API                     → [C-36] host API is capability-scoped to the current board + declared perms
@@ -140,6 +148,7 @@ Goal: exfiltrate the whole graph
 ```
 
 **AT-8 — Evidence tampering / repudiation (T2, T8)**
+
 ```
 Goal: alter the investigation record undetectably
 ├─ Edit a node and deny it                          → [C-41] audit event per mutation with actor, before/after hash
@@ -151,22 +160,22 @@ Goal: alter the investigation record undetectably
 
 ### 1.5 Control catalogue (mapping)
 
-| Control | Implementation location | Verified by |
-|---|---|---|
-| C-1 authz middleware | `apps/api/src/trpc/middleware/authz.ts` | unit + e2e cross-tenant suite |
-| C-2 sync auth hook | `apps/sync/src/auth.ts` | e2e (join foreign room → 4401) |
-| C-3 presign ACL | `apps/api/src/files/presign.ts` | unit |
-| C-4 no raw SQL / RLS | `packages/db` + migrations | CI grep + RLS test |
-| C-5 share tokens | `apps/api/src/share/*` | e2e |
-| C-6 editor schema | `apps/web/src/features/richtext/schema.ts` | unit |
-| C-7/C-8 preview isolation | `apps/web/src/features/preview/SandboxFrame.tsx` | Playwright |
-| C-9/C-10/C-11 sanitizer | `packages/domain/src/sanitize.ts` | XSS corpus test |
-| C-12…C-17 SSRF guard | `packages/domain/src/net/safeFetch.ts` + proxy | hostile URL corpus (N7) |
-| C-18…C-23 sandbox | `apps/runner` + `infra/k8s/runner.yaml` | architecture test + escape suite |
-| C-24…C-29 secrets | `apps/api/src/secrets/*`, runner injector | unit + log grep test |
-| C-30…C-35 auth | Better-Auth config `apps/api/src/auth.ts` | e2e |
-| C-36…C-40 plugin sandbox | `packages/plugin-sdk` + host | see `17_PLUGIN_SDK.md` §6 |
-| C-41…C-45 audit/integrity | `apps/api/src/audit/*` | integrity verifier job |
+| Control                   | Implementation location                          | Verified by                      |
+| ------------------------- | ------------------------------------------------ | -------------------------------- |
+| C-1 authz middleware      | `apps/api/src/trpc/middleware/authz.ts`          | unit + e2e cross-tenant suite    |
+| C-2 sync auth hook        | `apps/sync/src/auth.ts`                          | e2e (join foreign room → 4401)   |
+| C-3 presign ACL           | `apps/api/src/files/presign.ts`                  | unit                             |
+| C-4 no raw SQL / RLS      | `packages/db` + migrations                       | CI grep + RLS test               |
+| C-5 share tokens          | `apps/api/src/share/*`                           | e2e                              |
+| C-6 editor schema         | `apps/web/src/features/richtext/schema.ts`       | unit                             |
+| C-7/C-8 preview isolation | `apps/web/src/features/preview/SandboxFrame.tsx` | Playwright                       |
+| C-9/C-10/C-11 sanitizer   | `packages/domain/src/sanitize.ts`                | XSS corpus test                  |
+| C-12…C-17 SSRF guard      | `packages/domain/src/net/safeFetch.ts` + proxy   | hostile URL corpus (N7)          |
+| C-18…C-23 sandbox         | `apps/runner` + `infra/k8s/runner.yaml`          | architecture test + escape suite |
+| C-24…C-29 secrets         | `apps/api/src/secrets/*`, runner injector        | unit + log grep test             |
+| C-30…C-35 auth            | Better-Auth config `apps/api/src/auth.ts`        | e2e                              |
+| C-36…C-40 plugin sandbox  | `packages/plugin-sdk` + host                     | see `17_PLUGIN_SDK.md` §6        |
+| C-41…C-45 audit/integrity | `apps/api/src/audit/*`                           | integrity verifier job           |
 
 ---
 
@@ -178,10 +187,10 @@ Goal: alter the investigation record undetectably
 
 ```ts
 export const auth = betterAuth({
-  database: prismaAdapter(prisma, { provider: "postgresql" }),
-  baseURL: env.PUBLIC_APP_URL,                     // exact origin, no wildcards
-  trustedOrigins: [env.PUBLIC_APP_URL],            // used for CSRF origin checks
-  secret: env.AUTH_SECRET,                         // 32+ bytes, from the secret store, rotated yearly
+  database: prismaAdapter(prisma, { provider: 'postgresql' }),
+  baseURL: env.PUBLIC_APP_URL, // exact origin, no wildcards
+  trustedOrigins: [env.PUBLIC_APP_URL], // used for CSRF origin checks
+  secret: env.AUTH_SECRET, // 32+ bytes, from the secret store, rotated yearly
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 12,
@@ -189,25 +198,33 @@ export const auth = betterAuth({
     password: { hash: argon2id({ memoryCost: 19456, timeCost: 2, parallelism: 1 }) },
   },
   socialProviders: {
-    github: { clientId: env.GITHUB_CLIENT_ID, clientSecret: env.GITHUB_CLIENT_SECRET, scope: ["read:user"] },
+    github: {
+      clientId: env.GITHUB_CLIENT_ID,
+      clientSecret: env.GITHUB_CLIENT_SECRET,
+      scope: ['read:user'],
+    },
     google: { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET },
   },
-  account: { accountLinking: { enabled: true, trustedProviders: ["github", "google"] } },
+  account: { accountLinking: { enabled: true, trustedProviders: ['github', 'google'] } },
   session: {
-    expiresIn: 60 * 60 * 24 * 30,                  // absolute 30 days
-    updateAge: 60 * 60 * 24,                       // sliding refresh at most daily
-    freshAge: 60 * 15,                             // re-auth required for sensitive ops older than 15 min
-    cookieCache: { enabled: false },               // sessions are DB-authoritative → instant revocation
+    expiresIn: 60 * 60 * 24 * 30, // absolute 30 days
+    updateAge: 60 * 60 * 24, // sliding refresh at most daily
+    freshAge: 60 * 15, // re-auth required for sensitive ops older than 15 min
+    cookieCache: { enabled: false }, // sessions are DB-authoritative → instant revocation
   },
   advanced: {
     useSecureCookies: true,
-    cookiePrefix: "__Host-nexus",
-    defaultCookieAttributes: { httpOnly: true, sameSite: "lax", secure: true, path: "/" },
-    ipAddress: { ipAddressHeaders: ["cf-connecting-ip", "x-forwarded-for"] }, // trusted proxy only
+    cookiePrefix: '__Host-nexus',
+    defaultCookieAttributes: { httpOnly: true, sameSite: 'lax', secure: true, path: '/' },
+    ipAddress: { ipAddressHeaders: ['cf-connecting-ip', 'x-forwarded-for'] }, // trusted proxy only
   },
-  rateLimit: { enabled: true, window: 60, max: 20, storage: "secondary-storage" }, // Redis
+  rateLimit: { enabled: true, window: 60, max: 20, storage: 'secondary-storage' }, // Redis
   plugins: [
-    twoFactor({ issuer: "NEXUS", skipVerificationOnEnable: false, backupCodes: { amount: 10, length: 10 } }),
+    twoFactor({
+      issuer: 'NEXUS',
+      skipVerificationOnEnable: false,
+      backupCodes: { amount: 10, length: 10 },
+    }),
     organization({ allowUserToCreateOrganization: true, membershipLimit: 500 }),
     // device sessions: multi-session plugin gives one row per device, each revocable
     multiSession({ maximumSessions: 10 }),
@@ -216,7 +233,7 @@ export const auth = betterAuth({
 ```
 
 **Adapter assumption:** plugin names/options above reflect the Better-Auth API surface we target; if a
-plugin option differs at implementation time, the *behavior* specified in §2.2–§2.6 is the contract
+plugin option differs at implementation time, the _behavior_ specified in §2.2–§2.6 is the contract
 and the config must be adjusted to satisfy it, not the other way round.
 
 ### 2.2 Session handling
@@ -236,11 +253,11 @@ and the config must be adjusted to satisfy it, not the other way round.
 
 ### 2.3 Cookie flags
 
-| Cookie | Flags | Purpose |
-|---|---|---|
-| `__Host-nexus.session_token` | HttpOnly, Secure, SameSite=Lax, Path=/, no Domain | session |
-| `__Host-nexus.csrf` | Secure, SameSite=Lax, Path=/, **not** HttpOnly | double-submit token for non-tRPC POST routes |
-| `nexus.theme` | not HttpOnly, SameSite=Lax | UI preference only, never security-relevant |
+| Cookie                       | Flags                                             | Purpose                                      |
+| ---------------------------- | ------------------------------------------------- | -------------------------------------------- |
+| `__Host-nexus.session_token` | HttpOnly, Secure, SameSite=Lax, Path=/, no Domain | session                                      |
+| `__Host-nexus.csrf`          | Secure, SameSite=Lax, Path=/, **not** HttpOnly    | double-submit token for non-tRPC POST routes |
+| `nexus.theme`                | not HttpOnly, SameSite=Lax                        | UI preference only, never security-relevant  |
 
 `__Host-` prefix forbids a `Domain` attribute and requires `Secure` + `Path=/`, which removes
 subdomain-injection cookie shadowing. Storage/preview origins never receive the session cookie
@@ -249,6 +266,7 @@ because they are different registrable hosts (§5.6).
 ### 2.4 CSRF strategy
 
 Layered:
+
 1. `SameSite=Lax` blocks cross-site POSTs from a plain form/link.
 2. **Origin/Referer check** on every state-changing request (`POST/PUT/PATCH/DELETE` and all tRPC
    mutations): `Origin` must equal `PUBLIC_APP_URL`; missing `Origin` on a mutation → reject.
@@ -314,36 +332,36 @@ project access (explicit grant required); `guest` can only be granted per-projec
 org member list. This makes the default deny-by-default rather than org-wide-open.
 
 Board-level: boards inherit the project role. An optional per-board restriction
-(`board_restrictions(board_id, user_id, role)`) can *narrow* a user's access to `viewer` or `none` for
-sensitive boards; it can never *widen* it.
+(`board_restrictions(board_id, user_id, role)`) can _narrow_ a user's access to `viewer` or `none` for
+sensitive boards; it can never _widen_ it.
 
 ### 3.2 RBAC matrix
 
 Actions: C=create, R=read, U=update, D=delete, X=execute, S=share, E=export.
 
-| Resource | org owner | org admin | project_admin | editor | commenter | viewer | share-link (anon) |
-|---|---|---|---|---|---|---|---|
-| Organization settings | CRUD | RU | – | – | – | – | – |
-| Org members / roles | CRUD | CRU (not owner) | – | – | – | – | – |
-| Billing / AI budgets | CRUD | R | R (project budget U) | – | – | – | – |
-| Project | CRUD | CRUD | RU, D own | R | R | R | – |
-| Project members | CRUD | CRUD | CRUD (≤ own role) | – | – | – | – |
-| Project scope/consent records | CRUD | CRUD | CRUD | R | R | R | – |
-| Board | CRUD | CRUD | CRUD | CRU | R | R | R (if link grants) |
-| Node / Edge | CRUD | CRUD | CRUD | CRUD | R | R | R |
-| Comment | CRUD | CRUD | CRUD | CRUD | CRU own | R | – |
-| File upload | C | C | C | C | – | – | – |
-| File download | R | R | R | R | R | R | R (if link grants files) |
-| Integration credential | CRUD (write-only read) | CRUD | CRUD | – | – | – | – |
-| Integration run | X, R | X, R | X, R | X, R | R | R | – |
-| AI run (read-only caps) | X | X | X | X | X | X | – |
-| AI run (write caps) | X | X | X | X | – | – | – |
-| Apply proposal | X | X | X | X | – | – | – |
-| Export board/report | E | E | E | E | E | E (if allowExport) | E (if link grants) |
-| Share link create/revoke | S | S | S | – | – | – | – |
-| Audit log (project) | R | R | R | R own | R own | R own | – |
-| Plugin install (org) | CRUD | CRUD | – | – | – | – | – |
-| Delete org / project | D | D (project) | D own project | – | – | – | – |
+| Resource                      | org owner              | org admin       | project_admin        | editor | commenter | viewer             | share-link (anon)        |
+| ----------------------------- | ---------------------- | --------------- | -------------------- | ------ | --------- | ------------------ | ------------------------ |
+| Organization settings         | CRUD                   | RU              | –                    | –      | –         | –                  | –                        |
+| Org members / roles           | CRUD                   | CRU (not owner) | –                    | –      | –         | –                  | –                        |
+| Billing / AI budgets          | CRUD                   | R               | R (project budget U) | –      | –         | –                  | –                        |
+| Project                       | CRUD                   | CRUD            | RU, D own            | R      | R         | R                  | –                        |
+| Project members               | CRUD                   | CRUD            | CRUD (≤ own role)    | –      | –         | –                  | –                        |
+| Project scope/consent records | CRUD                   | CRUD            | CRUD                 | R      | R         | R                  | –                        |
+| Board                         | CRUD                   | CRUD            | CRUD                 | CRU    | R         | R                  | R (if link grants)       |
+| Node / Edge                   | CRUD                   | CRUD            | CRUD                 | CRUD   | R         | R                  | R                        |
+| Comment                       | CRUD                   | CRUD            | CRUD                 | CRUD   | CRU own   | R                  | –                        |
+| File upload                   | C                      | C               | C                    | C      | –         | –                  | –                        |
+| File download                 | R                      | R               | R                    | R      | R         | R                  | R (if link grants files) |
+| Integration credential        | CRUD (write-only read) | CRUD            | CRUD                 | –      | –         | –                  | –                        |
+| Integration run               | X, R                   | X, R            | X, R                 | X, R   | R         | R                  | –                        |
+| AI run (read-only caps)       | X                      | X               | X                    | X      | X         | X                  | –                        |
+| AI run (write caps)           | X                      | X               | X                    | X      | –         | –                  | –                        |
+| Apply proposal                | X                      | X               | X                    | X      | –         | –                  | –                        |
+| Export board/report           | E                      | E               | E                    | E      | E         | E (if allowExport) | E (if link grants)       |
+| Share link create/revoke      | S                      | S               | S                    | –      | –         | –                  | –                        |
+| Audit log (project)           | R                      | R               | R                    | R own  | R own     | R own              | –                        |
+| Plugin install (org)          | CRUD                   | CRUD            | –                    | –      | –         | –                  | –                        |
+| Delete org / project          | D                      | D (project)     | D own project        | –      | –         | –                  | –                        |
 
 Rules encoded once in `packages/domain/src/authz/policy.ts` as a pure function
 `can(actor: Actor, action: Action, resource: ResourceRef): Result` with an exhaustive switch, so the
@@ -399,6 +417,7 @@ wrapper is blocked by an ESLint rule. Cross-project reads (global search, admin)
 by the caller's membership list explicitly.
 
 Additional invariants:
+
 - Every tenant table has a `project_id` column, NOT NULL, indexed, with an FK cascade.
 - Composite unique keys always include `project_id` so ids cannot collide across tenants.
 - Backups and exports are per-org; the export job runs under the tenant role, not the admin role.
@@ -409,18 +428,18 @@ Additional invariants:
 
 ### 4.1 Boundary table
 
-| Boundary | Validator | Failure behavior |
-|---|---|---|
-| tRPC input | zod schema per procedure, `strict()` objects | 400 with field-level errors; never echo the raw value back |
-| REST v1 | zod via OpenAPI schema, body ≤ 1 MB | 400 problem+json |
-| WebSocket (Yjs) | structural: only Yjs protocol messages; document-level invariants re-validated at projection | invalid update → reject + disconnect + audit |
-| Projection (sync → Postgres) | `zNode`/`zEdge` from `packages/domain`; unknown node type → quarantine row, not a crash | quarantined + logged |
-| File upload | §5 | 415 / 413 |
-| URL input (unfurl, integrations) | §4.2 + §6 | typed `UrlRejected` reason shown to the user |
-| Tool output parsing | zod per parser + size caps before parse | run marked `parse_failed`, raw payload retained |
-| AI output | zod + citation validation (`14_AI_AGENT.md` §7.2) | items dropped |
-| Import (board JSON) | schema version check + zod + id remapping + cycle/size limits | import refused with a diff of what failed |
-| Env config | zod at boot (`packages/config/env.ts`) | process exits non-zero |
+| Boundary                         | Validator                                                                                    | Failure behavior                                           |
+| -------------------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| tRPC input                       | zod schema per procedure, `strict()` objects                                                 | 400 with field-level errors; never echo the raw value back |
+| REST v1                          | zod via OpenAPI schema, body ≤ 1 MB                                                          | 400 problem+json                                           |
+| WebSocket (Yjs)                  | structural: only Yjs protocol messages; document-level invariants re-validated at projection | invalid update → reject + disconnect + audit               |
+| Projection (sync → Postgres)     | `zNode`/`zEdge` from `packages/domain`; unknown node type → quarantine row, not a crash      | quarantined + logged                                       |
+| File upload                      | §5                                                                                           | 415 / 413                                                  |
+| URL input (unfurl, integrations) | §4.2 + §6                                                                                    | typed `UrlRejected` reason shown to the user               |
+| Tool output parsing              | zod per parser + size caps before parse                                                      | run marked `parse_failed`, raw payload retained            |
+| AI output                        | zod + citation validation (`14_AI_AGENT.md` §7.2)                                            | items dropped                                              |
+| Import (board JSON)              | schema version check + zod + id remapping + cycle/size limits                                | import refused with a diff of what failed                  |
+| Env config                       | zod at boot (`packages/config/env.ts`)                                                       | process exits non-zero                                     |
 
 Global limits: JSON body 1 MB (imports use a separate multipart endpoint, 100 MB), array lengths
 capped in every schema (no unbounded `z.array`), string lengths capped (titles 512, text 2 MB),
@@ -430,14 +449,15 @@ capped in every schema (no unbounded `z.array`), string lengths capped (titles 5
 
 ```ts
 export function parseUserUrl(raw: string): Result<URL, UrlRejection> {
-  if (raw.length > 2048) return err("too_long");
-  const u = tryParse(raw.trim());                       // WHATWG URL
-  if (!u) return err("unparseable");
-  if (!["http:", "https:"].includes(u.protocol)) return err("scheme_not_allowed");
-  if (u.username || u.password) return err("credentials_in_url");
-  if (u.hostname.endsWith(".onion") && !env.ALLOW_ONION) return err("onion_disabled");
-  if (isIpLiteral(u.hostname) && isPrivateIp(normalizeIp(u.hostname))) return err("private_address");
-  if (u.port && !["", "80", "443", "8080", "8443"].includes(u.port)) return err("port_not_allowed");
+  if (raw.length > 2048) return err('too_long');
+  const u = tryParse(raw.trim()); // WHATWG URL
+  if (!u) return err('unparseable');
+  if (!['http:', 'https:'].includes(u.protocol)) return err('scheme_not_allowed');
+  if (u.username || u.password) return err('credentials_in_url');
+  if (u.hostname.endsWith('.onion') && !env.ALLOW_ONION) return err('onion_disabled');
+  if (isIpLiteral(u.hostname) && isPrivateIp(normalizeIp(u.hostname)))
+    return err('private_address');
+  if (u.port && !['', '80', '443', '8080', '8443'].includes(u.port)) return err('port_not_allowed');
   return ok(u);
 }
 ```
@@ -455,25 +475,65 @@ Untrusted HTML appears in three places: pasted rich text, unfurl descriptions, a
 
 ```ts
 export const SANITIZE_PROFILE = {
-  ALLOWED_TAGS: ["p","br","strong","em","u","s","code","pre","blockquote",
-                 "ul","ol","li","h1","h2","h3","h4","a","img","hr","table","thead","tbody","tr","th","td"],
-  ALLOWED_ATTR: ["href","title","alt","src","colspan","rowspan","start","lang","dir"],
+  ALLOWED_TAGS: [
+    'p',
+    'br',
+    'strong',
+    'em',
+    'u',
+    's',
+    'code',
+    'pre',
+    'blockquote',
+    'ul',
+    'ol',
+    'li',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'a',
+    'img',
+    'hr',
+    'table',
+    'thead',
+    'tbody',
+    'tr',
+    'th',
+    'td',
+  ],
+  ALLOWED_ATTR: ['href', 'title', 'alt', 'src', 'colspan', 'rowspan', 'start', 'lang', 'dir'],
   ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|data:image\/(?:png|jpeg|gif|webp);base64,)/i,
-  FORBID_TAGS: ["script","style","iframe","object","embed","form","input","button","svg","math","link","meta","base"],
-  FORBID_ATTR: ["style","srcset","formaction","form","ping","integrity","nonce"],
+  FORBID_TAGS: [
+    'script',
+    'style',
+    'iframe',
+    'object',
+    'embed',
+    'form',
+    'input',
+    'button',
+    'svg',
+    'math',
+    'link',
+    'meta',
+    'base',
+  ],
+  FORBID_ATTR: ['style', 'srcset', 'formaction', 'form', 'ping', 'integrity', 'nonce'],
   ALLOW_DATA_ATTR: false,
   ALLOW_ARIA_ATTR: true,
   KEEP_CONTENT: false,
   RETURN_DOM: false,
-  USE_PROFILES: { html: true },   // no SVG, no MathML profiles → mXSS surface removed
+  USE_PROFILES: { html: true }, // no SVG, no MathML profiles → mXSS surface removed
 };
 ```
 
 Hardening beyond the config:
+
 - A DOMPurify hook (`afterSanitizeAttributes`) forces `target="_blank"` + `rel` on anchors, strips any
   `href` that is not http/https/mailto after normalization, and rewrites `img[src]` to the image proxy
   (§5.7) so remote loads cannot leak the reader's IP.
-- Sanitization happens **server-side on ingest** (stored clean) *and* client-side on render
+- Sanitization happens **server-side on ingest** (stored clean) _and_ client-side on render
   (defense in depth against a compromised stored value or an older record).
 - The rich-text editor does not store HTML at all: it stores a ProseMirror JSON document restricted to
   the schema above; HTML is only an import/export format. This removes most mXSS classes structurally.
@@ -496,12 +556,13 @@ Hardening beyond the config:
   csp="default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'"></iframe>
 ```
 
-  `allow-scripts` without `allow-same-origin` gives the frame an opaque origin: it cannot read cookies,
-  localStorage, or the parent DOM. The preview origin is a **separate registrable domain** (or at least
-  a separate host that never receives the session cookie) and serves its own strict CSP header
-  (`default-src 'none'; img-src data: blob: https://preview-assets…; style-src 'unsafe-inline'`).
-  postMessage from the frame is accepted only for a `{type:"resize",height:number}` message, validated
-  and clamped to 200–4000 px.
+`allow-scripts` without `allow-same-origin` gives the frame an opaque origin: it cannot read cookies,
+localStorage, or the parent DOM. The preview origin is a **separate registrable domain** (or at least
+a separate host that never receives the session cookie) and serves its own strict CSP header
+(`default-src 'none'; img-src data: blob: https://preview-assets…; style-src 'unsafe-inline'`).
+postMessage from the frame is accepted only for a `{type:"resize",height:number}` message, validated
+and clamped to 200–4000 px.
+
 - **PDF previews** use a pre-rendered page image (rasterized in the worker, §5.5), never a PDF viewer
   on the app origin.
 
@@ -547,20 +608,40 @@ against code paths that forget the library.
 
 ```ts
 const DENY_V4 = [
-  "0.0.0.0/8","10.0.0.0/8","100.64.0.0/10","127.0.0.0/8","169.254.0.0/16",
-  "172.16.0.0/12","192.0.0.0/24","192.0.2.0/24","192.168.0.0/16","198.18.0.0/15",
-  "198.51.100.0/24","203.0.113.0/24","224.0.0.0/4","240.0.0.0/4","255.255.255.255/32",
+  '0.0.0.0/8',
+  '10.0.0.0/8',
+  '100.64.0.0/10',
+  '127.0.0.0/8',
+  '169.254.0.0/16',
+  '172.16.0.0/12',
+  '192.0.0.0/24',
+  '192.0.2.0/24',
+  '192.168.0.0/16',
+  '198.18.0.0/15',
+  '198.51.100.0/24',
+  '203.0.113.0/24',
+  '224.0.0.0/4',
+  '240.0.0.0/4',
+  '255.255.255.255/32',
 ];
-const DENY_V6 = ["::/128","::1/128","fc00::/7","fe80::/10","ff00::/8","2001:db8::/32","64:ff9b::/96"];
+const DENY_V6 = [
+  '::/128',
+  '::1/128',
+  'fc00::/7',
+  'fe80::/10',
+  'ff00::/8',
+  '2001:db8::/32',
+  '64:ff9b::/96',
+];
 
 export interface SafeFetchOpts {
-  maxRedirects?: number;   // default 3
-  maxBytes?: number;       // default 10 * 1024 * 1024
+  maxRedirects?: number; // default 3
+  maxBytes?: number; // default 10 * 1024 * 1024
   connectTimeoutMs?: number; // default 5_000
-  totalTimeoutMs?: number;   // default 20_000
-  acceptTypes?: string[];    // e.g. ["text/html","application/json"]
-  purpose: "unfurl" | "image" | "integration" | "plugin";
-  actor: ActorRef;           // for audit + rate limiting
+  totalTimeoutMs?: number; // default 20_000
+  acceptTypes?: string[]; // e.g. ["text/html","application/json"]
+  purpose: 'unfurl' | 'image' | 'integration' | 'plugin';
+  actor: ActorRef; // for audit + rate limiting
 }
 
 export async function safeFetch(rawUrl: string, o: SafeFetchOpts): Promise<SafeResponse> {
@@ -569,43 +650,48 @@ export async function safeFetch(rawUrl: string, o: SafeFetchOpts): Promise<SafeR
   let hops = 0;
 
   while (true) {
-    if (Date.now() > deadline) throw new FetchRejected("timeout");
+    if (Date.now() > deadline) throw new FetchRejected('timeout');
     // 1. resolve ALL addresses ourselves (no OS-cached surprise), both families
-    const addrs = await dnsResolveAll(url.hostname, { timeoutMs: 2_000 });   // A + AAAA
-    if (addrs.length === 0) throw new FetchRejected("dns_empty");
+    const addrs = await dnsResolveAll(url.hostname, { timeoutMs: 2_000 }); // A + AAAA
+    if (addrs.length === 0) throw new FetchRejected('dns_empty');
     // 2. EVERY resolved address must pass; one bad address rejects the host
-    for (const a of addrs) if (isDenied(a, DENY_V4, DENY_V6)) throw new FetchRejected("private_address");
+    for (const a of addrs)
+      if (isDenied(a, DENY_V4, DENY_V6)) throw new FetchRejected('private_address');
     // 3. pin: connect to a chosen validated IP, send Host + SNI = hostname (defeats rebinding,
     //    because the address we connect to is the one we validated, not a re-resolution)
     const pinned = pickFirst(addrs);
     const res = await httpRequestPinned({
-      ip: pinned, host: url.hostname, port: url.port || (url.protocol === "https:" ? 443 : 80),
-      tls: url.protocol === "https:", servername: url.hostname,
-      path: url.pathname + url.search, method: "GET",
+      ip: pinned,
+      host: url.hostname,
+      port: url.port || (url.protocol === 'https:' ? 443 : 80),
+      tls: url.protocol === 'https:',
+      servername: url.hostname,
+      path: url.pathname + url.search,
+      method: 'GET',
       headers: {
-        "user-agent": UA,                       // identifies NEXUS + a contact URL
-        "accept": o.acceptTypes?.join(", ") ?? "*/*",
-        "accept-encoding": "gzip, br",
+        'user-agent': UA, // identifies NEXUS + a contact URL
+        accept: o.acceptTypes?.join(', ') ?? '*/*',
+        'accept-encoding': 'gzip, br',
         // never forward cookies, auth, or internal headers
       },
       connectTimeoutMs: o.connectTimeoutMs ?? 5_000,
       deadline,
-      redirect: "manual",
+      redirect: 'manual',
     });
 
     if (isRedirect(res.status)) {
-      if (++hops > (o.maxRedirects ?? 3)) throw new FetchRejected("too_many_redirects");
-      const next = parseUserUrl(new URL(res.headers.location ?? "", url).toString());
-      if (next.isErr()) throw new FetchRejected("redirect_rejected:" + next.error);
-      url = next.value;                          // loop → full re-validation of the new host
+      if (++hops > (o.maxRedirects ?? 3)) throw new FetchRejected('too_many_redirects');
+      const next = parseUserUrl(new URL(res.headers.location ?? '', url).toString());
+      if (next.isErr()) throw new FetchRejected('redirect_rejected:' + next.error);
+      url = next.value; // loop → full re-validation of the new host
       continue;
     }
 
     // 4. content controls
-    const declared = Number(res.headers["content-length"] ?? 0);
-    if (declared > (o.maxBytes ?? 10_485_760)) throw new FetchRejected("too_large");
-    if (o.acceptTypes && !typeAllowed(res.headers["content-type"], o.acceptTypes))
-      throw new FetchRejected("content_type");
+    const declared = Number(res.headers['content-length'] ?? 0);
+    if (declared > (o.maxBytes ?? 10_485_760)) throw new FetchRejected('too_large');
+    if (o.acceptTypes && !typeAllowed(res.headers['content-type'], o.acceptTypes))
+      throw new FetchRejected('content_type');
     // 5. stream with a hard byte counter; abort the socket the moment the cap is exceeded
     const body = await readCapped(res.stream, o.maxBytes ?? 10_485_760, deadline);
     return { status: res.status, headers: res.headers, body, finalUrl: url.toString(), ip: pinned };
@@ -614,6 +700,7 @@ export async function safeFetch(rawUrl: string, o: SafeFetchOpts): Promise<SafeR
 ```
 
 Notes on the specific defenses:
+
 - **Rebinding.** Because the socket connects to `pinned` (the validated IP) and only sets the `Host`
   header and TLS SNI to the hostname, a second DNS answer can never be used. Node's `lookup` option or
   a custom `Agent` implements this; `fetch()` with a plain hostname is **forbidden** in this codebase
@@ -621,7 +708,7 @@ Notes on the specific defenses:
   `packages/integrations`).
 - **Redirects.** Manual, re-validated from scratch, capped at 3 hops, and the cumulative deadline
   carries across hops so a redirect chain cannot extend the timeout.
-- **DNS pinning cache.** Resolutions are cached 30 s keyed by hostname *with the validated addresses*;
+- **DNS pinning cache.** Resolutions are cached 30 s keyed by hostname _with the validated addresses_;
   the cache stores addresses, never a "safe" verdict for a hostname alone.
 - **Timeouts.** connect 5 s, TLS handshake 5 s, first byte 10 s, total 20 s (unfurl) / 60 s
   (integration fetches, explicit opt-in).
@@ -641,6 +728,7 @@ Go so the CIDR policy is shared code with `safeFetch`) is the only route to the 
 (`19_DEPLOYMENT.md` §5).
 
 Proxy behavior:
+
 1. Requires proxy auth: each caller presents an identity token that maps to a policy
    (`worker-unfurl`, `runner:<integrationId>`, `plugin:<pluginId>`).
 2. Re-resolves the target and applies the same CIDR denylist independently; a mismatch between what
@@ -691,14 +779,14 @@ rule and is never publicly presignable for download.
 
 The declared MIME from the browser is **advisory only**. Decision table:
 
-| Sniffed | Extension | Action |
-|---|---|---|
-| in allowlist, class matches extension | ok | accept, store canonical MIME from sniff |
-| in allowlist, class differs (e.g. `.png` that is really PDF) | mismatch | accept **but** rename to the sniffed type's extension and flag `mimeMismatch` on the node; show a badge "file type corrected" |
-| not in allowlist | any | reject 415 with the sniffed type named in the error |
-| cannot be sniffed (unknown) and size < 1 MB and valid UTF-8 | `.txt`/`.md`/`.csv` | accept as `text/plain` |
-| cannot be sniffed otherwise | any | reject 415 "unrecognized file type" |
-| executable/script signatures (`MZ`, `ELF`, `#!`, Mach-O, `.class`, `.wasm`) | any | reject, audit `file.rejected.executable` |
+| Sniffed                                                                     | Extension           | Action                                                                                                                        |
+| --------------------------------------------------------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| in allowlist, class matches extension                                       | ok                  | accept, store canonical MIME from sniff                                                                                       |
+| in allowlist, class differs (e.g. `.png` that is really PDF)                | mismatch            | accept **but** rename to the sniffed type's extension and flag `mimeMismatch` on the node; show a badge "file type corrected" |
+| not in allowlist                                                            | any                 | reject 415 with the sniffed type named in the error                                                                           |
+| cannot be sniffed (unknown) and size < 1 MB and valid UTF-8                 | `.txt`/`.md`/`.csv` | accept as `text/plain`                                                                                                        |
+| cannot be sniffed otherwise                                                 | any                 | reject 415 "unrecognized file type"                                                                                           |
+| executable/script signatures (`MZ`, `ELF`, `#!`, Mach-O, `.class`, `.wasm`) | any                 | reject, audit `file.rejected.executable`                                                                                      |
 
 Allowlist (v1): images `png jpeg webp gif avif`, documents `pdf docx xlsx pptx odt csv txt md json
 html`, archives `zip` (only for board import), `eml`, `har`. SVG is **not** in the upload allowlist
@@ -706,14 +794,14 @@ html`, archives `zip` (only for board import), `eml`, `har`. SVG is **not** in t
 
 ### 6.3 Size and quota caps
 
-| Class | Per-file cap | Notes |
-|---|---|---|
-| image | 25 MB | plus 50 MP pixel-count cap (decompression bomb) |
-| document | 100 MB | PDF page cap 2,000 |
-| archive (import) | 200 MB compressed | see §6.4 |
-| text/json | 20 MB | |
-| Project total | org-plan quota, default 25 GB | soft warning at 80%, hard block at 100% with a clear message |
-| Per-user upload rate | 200 files / hour, 2 GB / hour | |
+| Class                | Per-file cap                  | Notes                                                        |
+| -------------------- | ----------------------------- | ------------------------------------------------------------ |
+| image                | 25 MB                         | plus 50 MP pixel-count cap (decompression bomb)              |
+| document             | 100 MB                        | PDF page cap 2,000                                           |
+| archive (import)     | 200 MB compressed             | see §6.4                                                     |
+| text/json            | 20 MB                         |                                                              |
+| Project total        | org-plan quota, default 25 GB | soft warning at 80%, hard block at 100% with a clear message |
+| Per-user upload rate | 200 files / hour, 2 GB / hour |                                                              |
 
 ### 6.4 Archive bomb protection
 
@@ -749,7 +837,7 @@ uses a shell tool, only a streaming library, and never preserves permissions.
 
 ### 6.6 EXIF and metadata
 
-Two paths, because OSINT users need metadata *as evidence* but must not leak it accidentally:
+Two paths, because OSINT users need metadata _as evidence_ but must not leak it accidentally:
 
 1. **Extraction (before stripping).** The intake job parses EXIF/XMP/IPTC and stores it as structured
    `file_metadata` (GPS, camera, timestamps, software) and offers it as an "Extract metadata" proposal
@@ -860,7 +948,7 @@ services and asserts failure.
   `kexec_load`, `bpf`, `ptrace`, `userfaultfd`), then subtract further: `clone` with new namespace
   flags, `unshare`, `setns`, `pivot_root`, `perf_event_open`, `add_key`, `keyctl`, `io_uring_*`.
 - AppArmor profile `nexus-tool`: deny `/proc/*/mem`, `/sys/**` write, `/dev` except `null zero random
-  urandom tty`, deny `mount`, deny ptrace of other pids, allow read of the image rootfs and rw of
+urandom tty`, deny `mount`, deny ptrace of other pids, allow read of the image rootfs and rw of
   `/work` + `/tmp` only.
 - gVisor is the production requirement; the compose reference documents that without gVisor the
   isolation is "container-grade only" and self-hosters running untrusted third-party tool images
@@ -883,6 +971,7 @@ sandbox: {
 ```
 
 Enforcement details:
+
 - **Digest pinning.** `image` must match `^[\w./-]+@sha256:[a-f0-9]{64}$`. This is what makes the
   SpiderFoot maintenance risk (`12_SPIDERFOOT.md`) survivable: the exact bits we run are frozen and
   upgraded deliberately, with a changelog review, never by a moving tag.
@@ -926,11 +1015,11 @@ Enforcement details:
 
 ### 8.1 Classes
 
-| Class | Examples | Storage |
-|---|---|---|
-| Platform secrets | `AUTH_SECRET`, DB URL, S3 keys, KMS key id | environment from the orchestrator's secret store (k8s Secret + sealed-secrets, or Docker secrets); never in the repo, never in an image |
-| User/org integration credentials | GitHub PAT, SpiderFoot API key, AI provider key | Postgres `integration_credentials`, envelope-encrypted (§8.2) |
-| Ephemeral | sync tickets, presign URLs, run tokens | Redis with TTL, never persisted |
+| Class                            | Examples                                        | Storage                                                                                                                                 |
+| -------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Platform secrets                 | `AUTH_SECRET`, DB URL, S3 keys, KMS key id      | environment from the orchestrator's secret store (k8s Secret + sealed-secrets, or Docker secrets); never in the repo, never in an image |
+| User/org integration credentials | GitHub PAT, SpiderFoot API key, AI provider key | Postgres `integration_credentials`, envelope-encrypted (§8.2)                                                                           |
+| Ephemeral                        | sync tickets, presign URLs, run tokens          | Redis with TTL, never persisted                                                                                                         |
 
 ### 8.2 Envelope encryption
 
@@ -961,6 +1050,7 @@ CREATE TABLE integration_credentials (
 ```
 
 Rules:
+
 - **Write-only API.** `credentials.create/update/delete` exist; there is no read endpoint returning
   plaintext. The UI shows label + `last_four` + fingerprint only.
 - Decryption happens in exactly two code paths (`runner scheduling`, `worker direct API calls`), both
@@ -1009,17 +1099,17 @@ The API sets `Vary: Origin, Cookie` where relevant.
 
 ### 9.3 Dependency and supply-chain policy
 
-| Control | Rule |
-|---|---|
-| Lockfile | committed; CI installs with `--frozen-lockfile`; a PR changing the lockfile without a package.json change fails |
-| Audit | `npm audit --omit=dev` must be clean of **high/critical** (gate item 5 of `00_MASTER.md` §8); moderate issues require a dated exception entry in `SECURITY-EXCEPTIONS.md` with an owner |
-| New dependency | requires: purpose, alternatives considered, maintenance signal (last release, open issues), transitive count, license check (allowlist: MIT, Apache-2.0, BSD-2/3, ISC, MPL-2.0; copyleft server-side deps require approval) |
-| Provenance | prefer packages publishing npm provenance; `npm ci --ignore-scripts` in CI, with an explicit allowlist of packages permitted to run install scripts |
-| Container images | referenced **by digest** everywhere (base images, tool images); Renovate opens digest-bump PRs; `docker scout`/`trivy` scan in CI blocks HIGH+ in our own images |
-| SBOM | CycloneDX SBOM generated per release for every image and the web bundle (`syft`), attached to the GitHub release, and diffed against the previous release in the PR |
-| Signing | release images signed with cosign (keyless OIDC); the deploy step verifies the signature before rollout |
-| Secrets scanning | gitleaks in pre-commit and CI on the full history of the PR branch |
-| CI hardening | least-privilege `GITHUB_TOKEN` permissions per job, no `pull_request_target` with checkout of untrusted code, actions pinned by commit SHA |
+| Control          | Rule                                                                                                                                                                                                                        |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lockfile         | committed; CI installs with `--frozen-lockfile`; a PR changing the lockfile without a package.json change fails                                                                                                             |
+| Audit            | `npm audit --omit=dev` must be clean of **high/critical** (gate item 5 of `00_MASTER.md` §8); moderate issues require a dated exception entry in `SECURITY-EXCEPTIONS.md` with an owner                                     |
+| New dependency   | requires: purpose, alternatives considered, maintenance signal (last release, open issues), transitive count, license check (allowlist: MIT, Apache-2.0, BSD-2/3, ISC, MPL-2.0; copyleft server-side deps require approval) |
+| Provenance       | prefer packages publishing npm provenance; `npm ci --ignore-scripts` in CI, with an explicit allowlist of packages permitted to run install scripts                                                                         |
+| Container images | referenced **by digest** everywhere (base images, tool images); Renovate opens digest-bump PRs; `docker scout`/`trivy` scan in CI blocks HIGH+ in our own images                                                            |
+| SBOM             | CycloneDX SBOM generated per release for every image and the web bundle (`syft`), attached to the GitHub release, and diffed against the previous release in the PR                                                         |
+| Signing          | release images signed with cosign (keyless OIDC); the deploy step verifies the signature before rollout                                                                                                                     |
+| Secrets scanning | gitleaks in pre-commit and CI on the full history of the PR branch                                                                                                                                                          |
+| CI hardening     | least-privilege `GITHUB_TOKEN` permissions per job, no `pull_request_target` with checkout of untrusted code, actions pinned by commit SHA                                                                                  |
 
 ---
 
@@ -1029,27 +1119,27 @@ The API sets `Vary: Origin, Cookie` where relevant.
 
 ```ts
 export interface AuditEvent {
-  id: string;              // uuidv7 (time-ordered)
-  ts: string;              // server time, ISO, authoritative
+  id: string; // uuidv7 (time-ordered)
+  ts: string; // server time, ISO, authoritative
   orgId: string;
   projectId: string | null;
   boardId: string | null;
   actor: {
-    kind: "user" | "api_key" | "system" | "share_link";
+    kind: 'user' | 'api_key' | 'system' | 'share_link';
     id: string;
-    label: string;         // denormalized display name at event time
-    ip: string | null;     // /24 or /64 truncated
+    label: string; // denormalized display name at event time
+    ip: string | null; // /24 or /64 truncated
     userAgent: string | null;
     sessionId: string | null;
   };
-  action: string;          // dotted verb, closed enum, e.g. "node.delete"
+  action: string; // dotted verb, closed enum, e.g. "node.delete"
   target: { type: string; id: string; label?: string } | null;
-  result: "success" | "denied" | "error";
-  reason?: string;         // for denied/error, from the typed error taxonomy
-  metadata: Record<string, unknown>;  // redacted, ≤ 4 KB
-  beforeHash?: string;     // sha256 of the previous value (mutations)
+  result: 'success' | 'denied' | 'error';
+  reason?: string; // for denied/error, from the typed error taxonomy
+  metadata: Record<string, unknown>; // redacted, ≤ 4 KB
+  beforeHash?: string; // sha256 of the previous value (mutations)
   afterHash?: string;
-  prevChainHash: string;   // tamper-evidence chain, §10.4
+  prevChainHash: string; // tamper-evidence chain, §10.4
   chainHash: string;
 }
 ```
@@ -1106,7 +1196,7 @@ chainHash_n = sha256( chainHash_(n-1) || canonicalJson(event_n without chainHash
 ```
 
 - One chain per `org_id`; the head is stored in `audit_chain_heads (org_id, last_id, chain_hash,
-  updated_at)` and updated in the same transaction as the insert (serialized per org by an advisory
+updated_at)` and updated in the same transaction as the insert (serialized per org by an advisory
   lock, which is affordable given audit volume).
 - A daily job re-verifies the last 24 h of chain links and, once per day, publishes the head hash to
   an append-only external sink (S3 object-lock bucket, or a log-only file with restricted ACL) so an
@@ -1119,7 +1209,7 @@ chainHash_n = sha256( chainHash_(n-1) || canonicalJson(event_n without chainHash
 
 Route `/projects/:id/activity`. Timeline grouped by day, filters (actor, action category, date range,
 result), search over target labels, CSV export (project_admin+). Rows use plain-language copy:
-"Anna revoked the share link for *Board: Targets* — 12 Aug, 14:03 · 203.0.113.0/24".
+"Anna revoked the share link for _Board: Targets_ — 12 Aug, 14:03 · 203.0.113.0/24".
 Viewers see only their own events (matrix §3.2). Every row links to the affected resource where it
 still exists; deleted resources render as a tombstone chip. Empty state: "No activity in this range."
 Security-relevant events (permission changes, share links, exports, integration runs) are visually
@@ -1138,13 +1228,13 @@ WebSocket is `wss://` only; plain `ws://` is refused by the client.
 
 ### 11.2 At rest
 
-| Store | Mechanism |
-|---|---|
-| Postgres | volume-level encryption (cloud KMS or LUKS self-host) + column-level envelope encryption for credentials and 2FA secrets |
-| S3/MinIO | SSE-KMS (cloud) or SSE-S3/at-rest disk encryption (self-host); bucket public access blocked; versioning on; object-lock on the audit archive bucket |
-| Redis | no durable secrets; AOF disabled for the queue instance or the volume encrypted; TLS in transit |
-| Backups | §11.3 |
-| Client | IndexedDB/OPFS are **not** encrypted (browser-level protection only); the app states this in Settings → Security and offers "Clear local data on sign-out" (default on for shared-device mode) |
+| Store    | Mechanism                                                                                                                                                                                      |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Postgres | volume-level encryption (cloud KMS or LUKS self-host) + column-level envelope encryption for credentials and 2FA secrets                                                                       |
+| S3/MinIO | SSE-KMS (cloud) or SSE-S3/at-rest disk encryption (self-host); bucket public access blocked; versioning on; object-lock on the audit archive bucket                                            |
+| Redis    | no durable secrets; AOF disabled for the queue instance or the volume encrypted; TLS in transit                                                                                                |
+| Backups  | §11.3                                                                                                                                                                                          |
+| Client   | IndexedDB/OPFS are **not** encrypted (browser-level protection only); the app states this in Settings → Security and offers "Clear local data on sign-out" (default on for shared-device mode) |
 
 ### 11.3 Backups
 
@@ -1174,13 +1264,13 @@ WebSocket is `wss://` only; plain `ws://` is refused by the client.
 
 ```ts
 interface ShareLink {
-  id: string;                 // public, 12 chars base58 (≈70 bits with the secret below)
-  secret: string;             // 32 random bytes, carried in the URL fragment, stored only as sha256
+  id: string; // public, 12 chars base58 (≈70 bits with the secret below)
+  secret: string; // 32 random bytes, carried in the URL fragment, stored only as sha256
   boardId: string;
-  scope: "board" | "board_with_files";
+  scope: 'board' | 'board_with_files';
   permissions: { comment: boolean; export: boolean; showActivity: false };
-  password?: { hash: string };          // argon2id, optional
-  expiresAt: string | null;             // default 30 days, max 365, "never" requires project_admin
+  password?: { hash: string }; // argon2id, optional
+  expiresAt: string | null; // default 30 days, max 365, "never" requires project_admin
   maxViews?: number;
   revokedAt: string | null;
   createdBy: string;
@@ -1238,8 +1328,8 @@ CREATE UNIQUE INDEX project_scope_uniq ON project_scopes (project_id, kind, lowe
   "public-data research (no active tooling)", which disables every active-probing integration.
 - Running an **active** integration (SpiderFoot scans, anything that touches the target's
   infrastructure) requires the target to match a scope entry that is currently valid; otherwise the
-  run is refused with: *"Target `x` is not in this project's authorized scope. Add it with an
-  authorization basis, or choose a passive tool."* Passive tools (Sherlock's public-profile checks,
+  run is refused with: _"Target `x` is not in this project's authorized scope. Add it with an
+  authorization basis, or choose a passive tool."_ Passive tools (Sherlock's public-profile checks,
   GitHub public API, unfurl) run against any public target but still record the target in the run log.
 - Scope evaluation is a pure function `inScope(target, scopes)` with explicit matchers per kind
   (domain: eTLD+1 or subdomain-of; ip: CIDR containment; username: exact, case-insensitive), tested
@@ -1249,16 +1339,16 @@ CREATE UNIQUE INDEX project_scope_uniq ON project_scopes (project_id, kind, lowe
 
 ### 12.2 Abuse rate limits
 
-| Limit | Value | Scope |
-|---|---|---|
-| Active tool runs | 20/h, 100/day | project |
-| Active tool runs | 200/day | org |
-| Distinct targets per active run | 1 (batch runs enumerate sequentially with the same caps) | run |
-| Unfurl | 60/min user, 10/min per remote host | global |
-| Exports | 3/day | org |
-| Share link creation | 20/day | project |
-| Auth attempts | 10/15 min per account, 100/15 min per IP | global |
-| API v1 | 600 req/min per key, burst 60 | key |
+| Limit                           | Value                                                    | Scope   |
+| ------------------------------- | -------------------------------------------------------- | ------- |
+| Active tool runs                | 20/h, 100/day                                            | project |
+| Active tool runs                | 200/day                                                  | org     |
+| Distinct targets per active run | 1 (batch runs enumerate sequentially with the same caps) | run     |
+| Unfurl                          | 60/min user, 10/min per remote host                      | global  |
+| Exports                         | 3/day                                                    | org     |
+| Share link creation             | 20/day                                                   | project |
+| Auth attempts                   | 10/15 min per account, 100/15 min per IP                 | global  |
+| API v1                          | 600 req/min per key, burst 60                            | key     |
 
 Exceeding a limit returns a typed error with the retry time and is audited. Sustained abuse
 (3 limit breaches in 24 h on active tooling) flags the org for review in the admin console and
@@ -1298,18 +1388,18 @@ documented in `19_DEPLOYMENT.md`.
 
 ## 13. Security verification per phase
 
-| Phase | Mandatory security evidence |
-|---|---|
-| P1 | Better-Auth config review, cookie flags asserted in e2e, headers snapshot test, env schema |
-| P2–P5 | no new external inputs; sanitizer tests for rich text (P4) |
-| P6 | full SSRF corpus green (N7), file intake tests, archive bomb tests, preview iframe test |
-| P7 | RLS tests, cross-tenant e2e suite, search injection tests |
-| P8 | sync ticket tests, readOnly enforcement, awareness payload filtering |
-| P9 | sandbox escape suite, NetworkPolicy test, secret-not-in-argv test, output cap test |
-| P10–P12 | per-integration egress allowlist test, digest pinning check, parser fuzzing |
-| P13 | AI guardrail suite (`14_AI_AGENT.md` §10 items 3, 4, 6) |
-| P15 | export manifest hashes, share-link e2e (expiry, revoke, password, redaction) |
-| P16 | full audit: dependency review, SBOM diff, chain verification, pen-test checklist, threat model re-read |
+| Phase   | Mandatory security evidence                                                                            |
+| ------- | ------------------------------------------------------------------------------------------------------ |
+| P1      | Better-Auth config review, cookie flags asserted in e2e, headers snapshot test, env schema             |
+| P2–P5   | no new external inputs; sanitizer tests for rich text (P4)                                             |
+| P6      | full SSRF corpus green (N7), file intake tests, archive bomb tests, preview iframe test                |
+| P7      | RLS tests, cross-tenant e2e suite, search injection tests                                              |
+| P8      | sync ticket tests, readOnly enforcement, awareness payload filtering                                   |
+| P9      | sandbox escape suite, NetworkPolicy test, secret-not-in-argv test, output cap test                     |
+| P10–P12 | per-integration egress allowlist test, digest pinning check, parser fuzzing                            |
+| P13     | AI guardrail suite (`14_AI_AGENT.md` §10 items 3, 4, 6)                                                |
+| P15     | export manifest hashes, share-link e2e (expiry, revoke, password, redaction)                           |
+| P16     | full audit: dependency review, SBOM diff, chain verification, pen-test checklist, threat model re-read |
 
 A phase cannot pass the gate (`00_MASTER.md` §8 item 5) without its row above.
 

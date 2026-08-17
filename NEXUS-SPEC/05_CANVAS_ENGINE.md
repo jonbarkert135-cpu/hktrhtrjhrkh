@@ -17,23 +17,23 @@ Frozen constraints come from `00_MASTER.md` §2 and §4 (N1, N3, N6) and must no
 
 The requirement set that any candidate must satisfy simultaneously:
 
-* **R-A** 5,000 nodes / 10,000 edges, p95 pan-zoom frame ≤ 16.6 ms (N1).
-* **R-B** Rich cards: HTML rich text, favicons, image previews, badges, inline editing, selectable
+- **R-A** 5,000 nodes / 10,000 edges, p95 pan-zoom frame ≤ 16.6 ms (N1).
+- **R-B** Rich cards: HTML rich text, favicons, image previews, badges, inline editing, selectable
   text, native focus rings, screen-reader semantics (N6).
-* **R-C** Our own document model (Yjs `Y.Doc`, typed entity graph) is authoritative; the renderer
+- **R-C** Our own document model (Yjs `Y.Doc`, typed entity graph) is authoritative; the renderer
   owns no document.
-* **R-D** No React dependency inside the engine (`00_MASTER.md` §5 layer rule).
-* **R-E** Deterministic, testable frame behaviour (headless snapshots, synthetic input).
+- **R-D** No React dependency inside the engine (`00_MASTER.md` §5 layer rule).
+- **R-E** Deterministic, testable frame behaviour (headless snapshots, synthetic input).
 
-| # | Option | Pros | Cons | Practical ceiling | Verdict |
-|---|---|---|---|---|---|
-| 1 | **Pure DOM + SVG** (absolutely positioned divs, `<svg>` edges) | Maximum fidelity for R-B; native a11y, text selection, focus; simplest mental model; CSS transitions free | Layout/paint cost scales with node count; SVG path count dominates; browser style recalc on camera change; no LOD story | ~300–600 rich nodes before pan drops below 60 fps | Rejected as the only renderer; **kept as the overlay layer** |
-| 2 | **React Flow / xyflow** | Batteries included: handles, connection UX, minimap, controls; large ecosystem | Renders every node as React DOM + SVG edges; documented perf degradation around several hundred rich DOM nodes; owns node/edge state shape, which fights Yjs as the document (R-C) and forces React inside the engine (R-D) | Several hundred rich nodes | Rejected |
-| 3 | **tldraw SDK** | Proven techniques we need: spatial index, viewport culling via `display:none` for offscreen shapes, a stable "efficient zoom level" held during camera movement above ~500 shapes; excellent input handling | Owns its own document/shape/store model and its own persistence and undo; our entities are a typed knowledge graph with provenance, not shapes; two document models would have to be reconciled bidirectionally (R-C) | High, but at the cost of a second source of truth | Rejected as a dependency; **its techniques are adopted explicitly** |
-| 4 | **Pure Canvas2D** (everything painted) | One draw loop, trivially cullable, cheap to batch, easy to reason about frame cost; excellent for edges and far-zoom glyphs | Rich text layout, inline editing, image `object-fit`, focus rings, screen readers all have to be re-implemented; fails R-B and N6 | 10k+ simple shapes | Rejected as the only renderer; **kept as the base layer** |
-| 5 | **WebGL (pixi / regl)** | Highest raw throughput; instanced quads; tens of thousands of primitives | Text is the problem: SDF atlases or texture-per-card; card content changes constantly (unfurl, edit) so atlas churn is high; context-loss handling; no a11y; bigger bundle; debugging cost | 50k+ primitives, but R-B unattainable | Rejected for v1; kept as a documented escape hatch (§3.6) |
-| 6 | **OffscreenCanvas + rendering worker** | Removes paint from the main thread; jank isolation | Input still arrives on the main thread, so hit-testing state must be mirrored or round-tripped; DOM overlay must stay on the main thread anyway, so the two layers can desynchronise by a frame; Safari support historically lags | Good, with sync complexity | Rejected for the *render* loop; workers are used for routing/layout/index/search (§9) |
-| 7 | **Hybrid: Canvas2D base + DOM overlay for the visible near-zoom set** | Canvas cost is O(visible primitives) and independent of total node count; DOM cost is O(visible near-zoom nodes) which we cap; full R-B fidelity exactly where the user is looking; no third-party document model (R-C); no React inside the engine (R-D) | Two rendering paths to keep visually identical; overlay/canvas alignment must be sub-pixel exact; more engine code to own | 5k nodes / 10k edges at 60 fps with the caps in §6 | **Chosen — frozen in `00_MASTER.md` §2** |
+| #   | Option                                                                | Pros                                                                                                                                                                                                                                                      | Cons                                                                                                                                                                                                                              | Practical ceiling                                  | Verdict                                                                               |
+| --- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| 1   | **Pure DOM + SVG** (absolutely positioned divs, `<svg>` edges)        | Maximum fidelity for R-B; native a11y, text selection, focus; simplest mental model; CSS transitions free                                                                                                                                                 | Layout/paint cost scales with node count; SVG path count dominates; browser style recalc on camera change; no LOD story                                                                                                           | ~300–600 rich nodes before pan drops below 60 fps  | Rejected as the only renderer; **kept as the overlay layer**                          |
+| 2   | **React Flow / xyflow**                                               | Batteries included: handles, connection UX, minimap, controls; large ecosystem                                                                                                                                                                            | Renders every node as React DOM + SVG edges; documented perf degradation around several hundred rich DOM nodes; owns node/edge state shape, which fights Yjs as the document (R-C) and forces React inside the engine (R-D)       | Several hundred rich nodes                         | Rejected                                                                              |
+| 3   | **tldraw SDK**                                                        | Proven techniques we need: spatial index, viewport culling via `display:none` for offscreen shapes, a stable "efficient zoom level" held during camera movement above ~500 shapes; excellent input handling                                               | Owns its own document/shape/store model and its own persistence and undo; our entities are a typed knowledge graph with provenance, not shapes; two document models would have to be reconciled bidirectionally (R-C)             | High, but at the cost of a second source of truth  | Rejected as a dependency; **its techniques are adopted explicitly**                   |
+| 4   | **Pure Canvas2D** (everything painted)                                | One draw loop, trivially cullable, cheap to batch, easy to reason about frame cost; excellent for edges and far-zoom glyphs                                                                                                                               | Rich text layout, inline editing, image `object-fit`, focus rings, screen readers all have to be re-implemented; fails R-B and N6                                                                                                 | 10k+ simple shapes                                 | Rejected as the only renderer; **kept as the base layer**                             |
+| 5   | **WebGL (pixi / regl)**                                               | Highest raw throughput; instanced quads; tens of thousands of primitives                                                                                                                                                                                  | Text is the problem: SDF atlases or texture-per-card; card content changes constantly (unfurl, edit) so atlas churn is high; context-loss handling; no a11y; bigger bundle; debugging cost                                        | 50k+ primitives, but R-B unattainable              | Rejected for v1; kept as a documented escape hatch (§3.6)                             |
+| 6   | **OffscreenCanvas + rendering worker**                                | Removes paint from the main thread; jank isolation                                                                                                                                                                                                        | Input still arrives on the main thread, so hit-testing state must be mirrored or round-tripped; DOM overlay must stay on the main thread anyway, so the two layers can desynchronise by a frame; Safari support historically lags | Good, with sync complexity                         | Rejected for the _render_ loop; workers are used for routing/layout/index/search (§9) |
+| 7   | **Hybrid: Canvas2D base + DOM overlay for the visible near-zoom set** | Canvas cost is O(visible primitives) and independent of total node count; DOM cost is O(visible near-zoom nodes) which we cap; full R-B fidelity exactly where the user is looking; no third-party document model (R-C); no React inside the engine (R-D) | Two rendering paths to keep visually identical; overlay/canvas alignment must be sub-pixel exact; more engine code to own                                                                                                         | 5k nodes / 10k edges at 60 fps with the caps in §6 | **Chosen — frozen in `00_MASTER.md` §2**                                              |
 
 ### 1.1 The frozen decision
 
@@ -42,7 +42,7 @@ graph. Justification, in the order the constraints bite:
 
 1. R-A eliminates options 1 and 2 outright. Node count in a real OSINT board routinely passes
    1,000 after two SpiderFoot imports (`12_SPIDERFOOT.md` §6).
-2. R-B eliminates options 4 and 5 as *sole* renderers: an analyst edits note text, selects it,
+2. R-B eliminates options 4 and 5 as _sole_ renderers: an analyst edits note text, selects it,
    copies it, and a screen reader must read it. Re-implementing a text engine is a multi-quarter
    project with worse results than the browser's.
 3. R-C eliminates option 3. tldraw's store is a legitimately better whiteboard document than
@@ -52,33 +52,33 @@ graph. Justification, in the order the constraints bite:
 4. What remains is 7. The insight that makes it cheap: **fidelity is only needed where the user
    can perceive it.** Below `zoom = 0.55` a 320 px card is ≤ 176 px wide and its body text is
    unreadable; a canvas glyph is indistinguishable from the DOM card at that size. So the DOM set
-   is bounded by *screen area*, not by board size.
+   is bounded by _screen area_, not by board size.
 
 ### 1.2 Exact renderer-path selection rules
 
 The renderer chooses a path per node, every frame, from three inputs: current LOD level (§6.4),
 node kind, node interaction state.
 
-| Condition | Path |
-|---|---|
-| Node outside the culling rect (viewport + margin ring, §6.6) | **Not rendered at all.** No canvas draw, no DOM node. |
-| LOD `L0` (`zoom < 0.18`) | Canvas: 1 filled rect per node in cluster colour, no text, no border, no icon. Edges drawn as straight hairlines. |
-| LOD `L1` (`0.18 ≤ zoom < 0.40`) | Canvas: rounded rect + 2 px type stripe + type-colour dot. No text. |
-| LOD `L2` (`0.40 ≤ zoom < 0.55`) | Canvas: rounded rect + stripe + icon glyph + title rendered as a **single clipped line** of canvas text. No body, no preview image. |
-| LOD `L3` (`zoom ≥ 0.55`) and node is inside the DOM budget (§6.7) | **DOM overlay**: the full React card. Canvas draws nothing for that node except its selection ring if selected (rings are always canvas, §6.3). |
-| LOD `L3` but node is outside the DOM budget (overflow beyond `MAX_DOM_NODES`) | Canvas `L2` rendering; the node is queued for promotion next frame in distance-from-viewport-centre order. |
-| Node is being dragged, resized, or is a connection endpoint, at any LOD ≥ L1 | Canvas **ghost** representation on the interaction layer; its DOM element (if any) keeps its last committed transform and is hidden (`visibility: hidden`) for the drag duration, so no DOM writes happen per frame. |
-| Node is in `edit-text` state | Always DOM, always promoted regardless of budget, and the camera is clamped so `zoom ≥ 0.55` while editing (§7.6). |
-| Node kind `image` / `screenshot` at L2 | Canvas draws the cached thumbnail (`16_PERFORMANCE.md` §5.13) instead of an icon glyph. |
-| Node kind `group` (container) | Always canvas at every LOD (fill + border + label); groups never become DOM. Their children follow the normal rules. |
-| Edges, grid, marquee, snap guides, alignment guides, selection rings, resize handles, connection preview | **Always canvas**, at every LOD. |
+| Condition                                                                                                | Path                                                                                                                                                                                                                 |
+| -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Node outside the culling rect (viewport + margin ring, §6.6)                                             | **Not rendered at all.** No canvas draw, no DOM node.                                                                                                                                                                |
+| LOD `L0` (`zoom < 0.18`)                                                                                 | Canvas: 1 filled rect per node in cluster colour, no text, no border, no icon. Edges drawn as straight hairlines.                                                                                                    |
+| LOD `L1` (`0.18 ≤ zoom < 0.40`)                                                                          | Canvas: rounded rect + 2 px type stripe + type-colour dot. No text.                                                                                                                                                  |
+| LOD `L2` (`0.40 ≤ zoom < 0.55`)                                                                          | Canvas: rounded rect + stripe + icon glyph + title rendered as a **single clipped line** of canvas text. No body, no preview image.                                                                                  |
+| LOD `L3` (`zoom ≥ 0.55`) and node is inside the DOM budget (§6.7)                                        | **DOM overlay**: the full React card. Canvas draws nothing for that node except its selection ring if selected (rings are always canvas, §6.3).                                                                      |
+| LOD `L3` but node is outside the DOM budget (overflow beyond `MAX_DOM_NODES`)                            | Canvas `L2` rendering; the node is queued for promotion next frame in distance-from-viewport-centre order.                                                                                                           |
+| Node is being dragged, resized, or is a connection endpoint, at any LOD ≥ L1                             | Canvas **ghost** representation on the interaction layer; its DOM element (if any) keeps its last committed transform and is hidden (`visibility: hidden`) for the drag duration, so no DOM writes happen per frame. |
+| Node is in `edit-text` state                                                                             | Always DOM, always promoted regardless of budget, and the camera is clamped so `zoom ≥ 0.55` while editing (§7.6).                                                                                                   |
+| Node kind `image` / `screenshot` at L2                                                                   | Canvas draws the cached thumbnail (`16_PERFORMANCE.md` §5.13) instead of an icon glyph.                                                                                                                              |
+| Node kind `group` (container)                                                                            | Always canvas at every LOD (fill + border + label); groups never become DOM. Their children follow the normal rules.                                                                                                 |
+| Edges, grid, marquee, snap guides, alignment guides, selection rings, resize handles, connection preview | **Always canvas**, at every LOD.                                                                                                                                                                                     |
 
 Two hard invariants follow, and every implementation change must preserve them:
 
-* **I1 — Never both.** A node is drawn on canvas *or* mounted in the DOM overlay, never both
+- **I1 — Never both.** A node is drawn on canvas _or_ mounted in the DOM overlay, never both
   (except its canvas selection ring). Violating this produces the double-rendered "ghost text"
   artefact and is caught by the headless snapshot test `dom-canvas-exclusivity.test.ts`.
-* **I2 — Never per-frame DOM writes during a camera or drag gesture.** The overlay container is
+- **I2 — Never per-frame DOM writes during a camera or drag gesture.** The overlay container is
   moved with a single `transform` on one parent element; individual cards are not re-positioned
   while the camera moves (§6.7).
 
@@ -188,9 +188,9 @@ export declare class CanvasEngine {
   /** Apply an incremental patch (the Yjs observer path). O(changed). */
   applyPatch(patch: ScenePatch): void;
 
-  readonly camera: CameraController;      // §5
+  readonly camera: CameraController; // §5
   readonly selection: SelectionController; // §7.11
-  readonly query: SceneQuery;             // §4.5
+  readonly query: SceneQuery; // §4.5
 
   /** Host subscribes to intents; the engine NEVER writes to Y.Doc itself. */
   on<E extends keyof EngineEvents>(e: E, fn: EngineEvents[E]): Unsubscribe;
@@ -221,14 +221,16 @@ export interface SceneSnapshot {
 }
 
 export interface NodeView {
-  id: NodeId;                     // string, ULID
-  kind: NodeKind;                 // '06_NODE_SYSTEM.md' §2 registry key
-  x: number; y: number;           // world px, top-left
-  w: number; h: number;           // world px, ≥ MIN_NODE_SIZE
-  z: number;                      // fractional index within layer (§7.12)
+  id: NodeId; // string, ULID
+  kind: NodeKind; // '06_NODE_SYSTEM.md' §2 registry key
+  x: number;
+  y: number; // world px, top-left
+  w: number;
+  h: number; // world px, ≥ MIN_NODE_SIZE
+  z: number; // fractional index within layer (§7.12)
   layerId: LayerId;
   groupId: GroupId | null;
-  rotation: 0;                    // reserved; nodes never rotate in v1 (see §12 risk R7)
+  rotation: 0; // reserved; nodes never rotate in v1 (see §12 risk R7)
   locked: boolean;
   hidden: boolean;
   /** Everything needed to paint L0–L2 WITHOUT reading the domain payload. */
@@ -240,21 +242,23 @@ export interface NodeView {
 }
 
 export interface NodeGlyph {
-  accent: RGBA;                   // resolved from tokens by the host
+  accent: RGBA; // resolved from tokens by the host
   fill: RGBA;
-  icon: IconGlyphId;              // pre-rasterized in the icon atlas
-  title: string;                  // already truncated to ≤ 96 chars by the host
-  badgeCount: number;             // 0 = none
-  thumbnailKey: string | null;    // key into the thumbnail bitmap cache
+  icon: IconGlyphId; // pre-rasterized in the icon atlas
+  title: string; // already truncated to ≤ 96 chars by the host
+  badgeCount: number; // 0 = none
+  thumbnailKey: string | null; // key into the thumbnail bitmap cache
   status: 'none' | 'running' | 'error' | 'stale';
 }
 
 export interface EdgeView {
   id: EdgeId;
-  from: NodeId; to: NodeId;
-  fromAnchor: AnchorSpec; toAnchor: AnchorSpec;   // '07_EDGE_SYSTEM.md' §3
+  from: NodeId;
+  to: NodeId;
+  fromAnchor: AnchorSpec;
+  toAnchor: AnchorSpec; // '07_EDGE_SYSTEM.md' §3
   routing: 'straight' | 'curved' | 'orthogonal' | 'smart';
-  style: EdgeStyle;               // colour, width, dash, arrow ends, opacity
+  style: EdgeStyle; // colour, width, dash, arrow ends, opacity
   label: string | null;
   z: number;
   hidden: boolean;
@@ -262,16 +266,16 @@ export interface EdgeView {
 }
 
 export type ScenePatch =
-  | { op: 'upsert-node';  node: NodeView }
-  | { op: 'remove-node';  id: NodeId }
-  | { op: 'move-nodes';   moves: Array<{ id: NodeId; x: number; y: number }> }
-  | { op: 'resize-node';  id: NodeId; w: number; h: number }
-  | { op: 'upsert-edge';  edge: EdgeView }
-  | { op: 'remove-edge';  id: EdgeId }
+  | { op: 'upsert-node'; node: NodeView }
+  | { op: 'remove-node'; id: NodeId }
+  | { op: 'move-nodes'; moves: Array<{ id: NodeId; x: number; y: number }> }
+  | { op: 'resize-node'; id: NodeId; w: number; h: number }
+  | { op: 'upsert-edge'; edge: EdgeView }
+  | { op: 'remove-edge'; id: EdgeId }
   | { op: 'upsert-group'; group: GroupView }
   | { op: 'remove-group'; id: GroupId }
-  | { op: 'set-layers';   layers: LayerView[] }
-  | { op: 'bulk';         patches: ScenePatch[] };   // applied atomically, one index pass
+  | { op: 'set-layers'; layers: LayerView[] }
+  | { op: 'bulk'; patches: ScenePatch[] }; // applied atomically, one index pass
 ```
 
 `applyPatch` is the hot path during collaboration and drag; it must be O(changed) and must not
@@ -288,7 +292,15 @@ back as a `ScenePatch`. This one-way loop is what makes undo/redo and multiplaye
 export type Intent =
   | { t: 'select'; ids: EntityId[]; mode: 'replace' | 'add' | 'toggle' | 'subtract' }
   | { t: 'move-nodes'; deltas: Array<{ id: NodeId; dx: number; dy: number }>; phase: GesturePhase }
-  | { t: 'resize-node'; id: NodeId; w: number; h: number; x: number; y: number; phase: GesturePhase }
+  | {
+      t: 'resize-node';
+      id: NodeId;
+      w: number;
+      h: number;
+      x: number;
+      y: number;
+      phase: GesturePhase;
+    }
   | { t: 'create-edge'; from: NodeId; fromAnchor: AnchorSpec; to: NodeId; toAnchor: AnchorSpec }
   | { t: 'create-node-from-drop'; at: Vec2; payload: DropPayload }
   | { t: 'reconnect-edge'; edgeId: EdgeId; end: 'from' | 'to'; to: NodeId; anchor: AnchorSpec }
@@ -296,7 +308,8 @@ export type Intent =
   | { t: 'context-menu'; at: Vec2; target: HitTarget }
   | { t: 'delete'; ids: EntityId[] }
   | { t: 'z-order'; ids: EntityId[]; op: 'front' | 'back' | 'forward' | 'backward' }
-  | { t: 'group'; ids: NodeId[] } | { t: 'ungroup'; groupId: GroupId }
+  | { t: 'group'; ids: NodeId[] }
+  | { t: 'ungroup'; groupId: GroupId }
   | { t: 'lock'; ids: EntityId[]; locked: boolean }
   | { t: 'align'; ids: NodeId[]; axis: AlignAxis }
   | { t: 'distribute'; ids: NodeId[]; axis: 'h' | 'v' }
@@ -320,14 +333,14 @@ export interface OverlayRenderer {
 }
 
 export interface OverlayDiff {
-  mount:   Array<{ id: NodeId; domKey: string; slot: HTMLElement; rect: Rect }>;
-  update:  Array<{ id: NodeId; slot: HTMLElement; rect: Rect }>;
-  unmount: Array<{ id: NodeId; slot: HTMLElement }>;   // slot returns to the pool
+  mount: Array<{ id: NodeId; domKey: string; slot: HTMLElement; rect: Rect }>;
+  update: Array<{ id: NodeId; slot: HTMLElement; rect: Rect }>;
+  unmount: Array<{ id: NodeId; slot: HTMLElement }>; // slot returns to the pool
 }
 ```
 
 The React binding (`apps/web/src/canvas/OverlayHost.tsx`) renders each mounted node through
-`createPortal(<NodeCard id/>, slot)`. React is thus *outside* the engine and the engine's own
+`createPortal(<NodeCard id/>, slot)`. React is thus _outside_ the engine and the engine's own
 frame loop never renders React.
 
 ---
@@ -336,19 +349,19 @@ frame loop never renders React.
 
 Three spaces, three conversion functions, no ad-hoc arithmetic anywhere else in the codebase.
 
-| Space | Unit | Origin | Used by |
-|---|---|---|---|
-| **World** | world px (1 world px = 1 CSS px at `zoom = 1`) | board origin `(0,0)`, `+x` right, `+y` down | all persisted geometry, spatial index, routing, layout |
-| **Screen** | CSS px relative to the container's top-left | container top-left | pointer events, DOM overlay, tooltips, menus |
-| **Device** | physical px | canvas top-left | canvas backing store only, via `ctx.setTransform(dpr,0,0,dpr,0,0)` |
+| Space      | Unit                                           | Origin                                      | Used by                                                            |
+| ---------- | ---------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------ |
+| **World**  | world px (1 world px = 1 CSS px at `zoom = 1`) | board origin `(0,0)`, `+x` right, `+y` down | all persisted geometry, spatial index, routing, layout             |
+| **Screen** | CSS px relative to the container's top-left    | container top-left                          | pointer events, DOM overlay, tooltips, menus                       |
+| **Device** | physical px                                    | canvas top-left                             | canvas backing store only, via `ctx.setTransform(dpr,0,0,dpr,0,0)` |
 
 ```ts
 // world → screen
-sx = (wx - camera.x) * camera.zoom
-sy = (wy - camera.y) * camera.zoom
+sx = (wx - camera.x) * camera.zoom;
+sy = (wy - camera.y) * camera.zoom;
 // screen → world
-wx = sx / camera.zoom + camera.x
-wy = sy / camera.zoom + camera.y
+wx = sx / camera.zoom + camera.x;
+wy = sy / camera.zoom + camera.y;
 ```
 
 `camera.x/y` is the **world coordinate of the container's top-left corner**. This choice (rather
@@ -357,14 +370,14 @@ removes an entire class of off-by-half bugs.
 
 Rules:
 
-* Persisted geometry is **always** world px. Nothing in `Y.Doc` is ever screen px.
-* DPR is applied once, in `render/dpr.ts`, when sizing the canvas backing store:
+- Persisted geometry is **always** world px. Nothing in `Y.Doc` is ever screen px.
+- DPR is applied once, in `render/dpr.ts`, when sizing the canvas backing store:
   `canvas.width = Math.round(cssW * dpr)`, `style.width = cssW + 'px'`, then
   `ctx.setTransform(dpr, 0, 0, dpr, 0, 0)`. Every layer then draws in CSS px.
-* `dpr` is clamped to `min(devicePixelRatio, 2)`. Above 2 the memory and fill cost triples for no
+- `dpr` is clamped to `min(devicePixelRatio, 2)`. Above 2 the memory and fill cost triples for no
   perceptible gain on a canvas of flat shapes (measured budget: `16_PERFORMANCE.md` §3.1).
-* **Sub-pixel alignment between canvas and DOM:** the overlay container uses
-  `transform: translate3d(Xpx, Ypx, 0) scale(S)` with the *identical unrounded* camera values the
+- **Sub-pixel alignment between canvas and DOM:** the overlay container uses
+  `transform: translate3d(Xpx, Ypx, 0) scale(S)` with the _identical unrounded_ camera values the
   canvas uses. Never round one and not the other; a 0.5 px mismatch is visible as a shimmering
   selection ring during pan. Test: `overlay-alignment.spec.ts` compares the DOM rect of a card to
   the canvas-projected rect at 12 zoom levels, tolerance 0.25 px.
@@ -376,17 +389,21 @@ Rules:
 ### 5.1 Model
 
 ```ts
-export interface CameraState { x: number; y: number; zoom: number }
+export interface CameraState {
+  x: number;
+  y: number;
+  zoom: number;
+}
 
 export interface CameraController {
   readonly state: Readonly<CameraState>;
   panBy(dxScreen: number, dyScreen: number): void;
   zoomTo(zoom: number, anchorScreen: Vec2, opts?: { animate?: boolean }): void;
-  zoomBy(steps: number, anchorScreen: Vec2): void;        // steps in curve units (§5.3)
+  zoomBy(steps: number, anchorScreen: Vec2): void; // steps in curve units (§5.3)
   fit(rect: Rect, opts?: { padding?: number; maxZoom?: number; animate?: boolean }): void;
-  fitAll(opts?): void;                                     // fit(sceneBounds)
+  fitAll(opts?): void; // fit(sceneBounds)
   focus(id: EntityId, opts?: { zoom?: number; animate?: boolean }): void;
-  reset(): void;                                           // {x:0,y:0,zoom:1}
+  reset(): void; // {x:0,y:0,zoom:1}
   screenToWorld(p: Vec2): Vec2;
   worldToScreen(p: Vec2): Vec2;
   get viewportWorld(): Rect;
@@ -395,13 +412,13 @@ export interface CameraController {
 
 ### 5.2 Limits
 
-| Constant | Value | Reason |
-|---|---|---|
-| `MIN_ZOOM` | `0.05` | 20× overview; a 5,000-node board of 320×180 cards spanning ~40k world px fits a 1440 px viewport at ~0.036 → `fitAll` may go below `MIN_ZOOM`, so `fitAll` uses `MIN_ZOOM_FIT = 0.02` and clamps thereafter |
-| `MAX_ZOOM` | `4.0` | beyond 4× a 14 px card font is 56 px; no research value, and canvas text cache blows up |
-| `MIN_ZOOM_FIT` | `0.02` | only reachable via `fit`/`fitAll`, never via wheel |
-| `ZOOM_SNAP_STOPS` | `[0.1, 0.25, 0.5, 1, 2, 4]` | wheel zoom sticks within `±0.015` of a stop for one gesture tick |
-| `DOUBLE_CLICK_ZOOM` | `1.0` | double-click empty canvas → animate to zoom 1 at pointer |
+| Constant            | Value                       | Reason                                                                                                                                                                                                      |
+| ------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MIN_ZOOM`          | `0.05`                      | 20× overview; a 5,000-node board of 320×180 cards spanning ~40k world px fits a 1440 px viewport at ~0.036 → `fitAll` may go below `MIN_ZOOM`, so `fitAll` uses `MIN_ZOOM_FIT = 0.02` and clamps thereafter |
+| `MAX_ZOOM`          | `4.0`                       | beyond 4× a 14 px card font is 56 px; no research value, and canvas text cache blows up                                                                                                                     |
+| `MIN_ZOOM_FIT`      | `0.02`                      | only reachable via `fit`/`fitAll`, never via wheel                                                                                                                                                          |
+| `ZOOM_SNAP_STOPS`   | `[0.1, 0.25, 0.5, 1, 2, 4]` | wheel zoom sticks within `±0.015` of a stop for one gesture tick                                                                                                                                            |
+| `DOUBLE_CLICK_ZOOM` | `1.0`                       | double-click empty canvas → animate to zoom 1 at pointer                                                                                                                                                    |
 
 ### 5.3 Non-linear zoom curve
 
@@ -410,7 +427,7 @@ Zoom is therefore **exponential in a normalized "zoom unit"**:
 
 ```ts
 // zoom-curve.ts
-const K = 320;                                  // screen px per e-fold, tuned on trackpad
+const K = 320; // screen px per e-fold, tuned on trackpad
 export const zoomToUnit = (z: number) => Math.log(z) * K;
 export const unitToZoom = (u: number) => Math.exp(u / K);
 
@@ -425,7 +442,7 @@ Anchored zoom keeps the world point under the cursor fixed:
 
 ```ts
 function zoomTo(zNext: number, anchorScreen: Vec2) {
-  const w = screenToWorld(anchorScreen);          // BEFORE changing zoom
+  const w = screenToWorld(anchorScreen); // BEFORE changing zoom
   camera.zoom = clamp(zNext, MIN_ZOOM, MAX_ZOOM);
   camera.x = w.x - anchorScreen.x / camera.zoom;
   camera.y = w.y - anchorScreen.y / camera.zoom;
@@ -448,28 +465,39 @@ Browsers disagree on wheel units. Normalization lives in `camera/input-normalize
 ```ts
 export function normalizeWheel(e: WheelEvent): { dx: number; dy: number; zoomIntent: boolean } {
   let { deltaX: dx, deltaY: dy } = e;
-  if (e.deltaMode === 1) { dx *= 16; dy *= 16; }        // DOM_DELTA_LINE  → px (16px line)
-  if (e.deltaMode === 2) { dx *= 400; dy *= 400; }      // DOM_DELTA_PAGE  → px
+  if (e.deltaMode === 1) {
+    dx *= 16;
+    dy *= 16;
+  } // DOM_DELTA_LINE  → px (16px line)
+  if (e.deltaMode === 2) {
+    dx *= 400;
+    dy *= 400;
+  } // DOM_DELTA_PAGE  → px
   // Pinch on macOS/Windows trackpads arrives as ctrlKey+wheel with small deltas.
   const zoomIntent = e.ctrlKey || e.metaKey;
-  if (zoomIntent) { dy = clamp(dy, -48, 48); }          // guard against 100+ px spikes
-  else { dy = clamp(dy, -240, 240); dx = clamp(dx, -240, 240); }
+  if (zoomIntent) {
+    dy = clamp(dy, -48, 48);
+  } // guard against 100+ px spikes
+  else {
+    dy = clamp(dy, -240, 240);
+    dx = clamp(dx, -240, 240);
+  }
   return { dx, dy, zoomIntent };
 }
 ```
 
 Behaviour table:
 
-| Input | Effect |
-|---|---|
-| Wheel (mouse), no modifier | zoom at pointer (mouse-wheel users expect zoom on a canvas) |
-| Wheel + `Shift` | horizontal pan |
-| Two-finger trackpad scroll (no `ctrlKey`) | pan by `(dx, dy)` |
-| Trackpad pinch (`ctrlKey` synthesised) | zoom at pointer |
-| `Ctrl/Cmd` + wheel | zoom at pointer |
-| Touch two-finger | pan + pinch-zoom from the pointer-event pair (§7.2) |
+| Input                                     | Effect                                                      |
+| ----------------------------------------- | ----------------------------------------------------------- |
+| Wheel (mouse), no modifier                | zoom at pointer (mouse-wheel users expect zoom on a canvas) |
+| Wheel + `Shift`                           | horizontal pan                                              |
+| Two-finger trackpad scroll (no `ctrlKey`) | pan by `(dx, dy)`                                           |
+| Trackpad pinch (`ctrlKey` synthesised)    | zoom at pointer                                             |
+| `Ctrl/Cmd` + wheel                        | zoom at pointer                                             |
+| Touch two-finger                          | pan + pinch-zoom from the pointer-event pair (§7.2)         |
 
-Mouse vs trackpad detection: a wheel event is classified as *trackpad* when `deltaY` is
+Mouse vs trackpad detection: a wheel event is classified as _trackpad_ when `deltaY` is
 non-integral or `|deltaY| < 12`, latched for 700 ms. This heuristic only changes the no-modifier
 default (zoom for mouse, pan for trackpad) and is user-overridable in Settings →
 `canvas.wheelDefault = 'auto' | 'zoom' | 'pan'`.
@@ -500,7 +528,13 @@ never be persisted" applies to shared state; personal viewport is exempted and s
 document).
 
 ```ts
-interface PersistedViewport { x: number; y: number; zoom: number; savedAt: number; v: 1 }
+interface PersistedViewport {
+  x: number;
+  y: number;
+  zoom: number;
+  savedAt: number;
+  v: 1;
+}
 ```
 
 Written throttled at 400 ms trailing and once on `pagehide`. On board open: restore if `savedAt` is
@@ -516,12 +550,12 @@ not intersect the scene bounds (`03_UX.md` §5).
 
 `SceneGraph` holds three `Map`s (`nodes`, `edges`, `groups`) plus derived structures:
 
-* `byLayer: Map<LayerId, SortedIds>` — render order per layer, maintained with fractional z (§7.12).
-* `edgesByNode: Map<NodeId, Set<EdgeId>>` — for O(deg) invalidation on node move (§8.2).
-* `groupChildren: Map<GroupId, Set<NodeId>>` and `groupBounds: Map<GroupId, Rect>`.
-* `sceneBounds: Rect` — maintained incrementally; recomputed fully only when a node that touched
+- `byLayer: Map<LayerId, SortedIds>` — render order per layer, maintained with fractional z (§7.12).
+- `edgesByNode: Map<NodeId, Set<EdgeId>>` — for O(deg) invalidation on node move (§8.2).
+- `groupChildren: Map<GroupId, Set<NodeId>>` and `groupBounds: Map<GroupId, Rect>`.
+- `sceneBounds: Rect` — maintained incrementally; recomputed fully only when a node that touched
   the bound is removed (amortised O(1), worst case O(n) on that removal).
-* `dirty: { nodes: Set<NodeId>; edges: Set<EdgeId>; rects: Rect[]; full: boolean }`.
+- `dirty: { nodes: Set<NodeId>; edges: Set<EdgeId>; rects: Rect[]; full: boolean }`.
 
 The scene graph is **flat**: groups are membership metadata, not a parent-child transform tree.
 Justification: nested transforms would force a matrix stack in hit-testing and routing for a
@@ -535,16 +569,16 @@ implemented as a multi-node move intent instead (§7.9).
 > `20_ROADMAP.md` §4's `spatial/rbush-index.ts` / "R-tree" wording is superseded by this section: no
 > rbush dependency exists.
 
-| Candidate | Build | Query (viewport) | Update (drag, 1 node) | Notes |
-|---|---|---|---|---|
-| Linear scan | — | O(n) | O(1) | 5,000 AABB tests ≈ 0.35 ms/frame on the reference machine — survivable alone, but hit-test + marquee + routing all need queries, so it multiplies |
-| **Uniform grid buckets** | O(n) | O(cells + hits) | O(1) amortised (remove+insert into ≤4 cells) | Assumes bounded object size and roughly uniform density — true here: nodes are 160–640 world px, cards cluster but do not degenerate |
-| Quadtree | O(n log n) | O(log n + hits) | O(log n), rebalancing on dense clusters | Degenerates with clustered layouts (exactly our workload: imports create tight clusters); node removal requires parent merging |
-| R-tree (bulk-loaded) | O(n log n) | O(log n + hits) | poor: insert/split is expensive; dynamic updates degrade quality; usually needs periodic rebuild | Best for static data + range queries |
+| Candidate                | Build      | Query (viewport) | Update (drag, 1 node)                                                                            | Notes                                                                                                                                             |
+| ------------------------ | ---------- | ---------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Linear scan              | —          | O(n)             | O(1)                                                                                             | 5,000 AABB tests ≈ 0.35 ms/frame on the reference machine — survivable alone, but hit-test + marquee + routing all need queries, so it multiplies |
+| **Uniform grid buckets** | O(n)       | O(cells + hits)  | O(1) amortised (remove+insert into ≤4 cells)                                                     | Assumes bounded object size and roughly uniform density — true here: nodes are 160–640 world px, cards cluster but do not degenerate              |
+| Quadtree                 | O(n log n) | O(log n + hits)  | O(log n), rebalancing on dense clusters                                                          | Degenerates with clustered layouts (exactly our workload: imports create tight clusters); node removal requires parent merging                    |
+| R-tree (bulk-loaded)     | O(n log n) | O(log n + hits)  | poor: insert/split is expensive; dynamic updates degrade quality; usually needs periodic rebuild | Best for static data + range queries                                                                                                              |
 
 **Decision: uniform grid buckets**, cell size `GRID_CELL = 512` world px, with an overflow list for
-oversized objects. Justification in one line: our dominant operation is *per-frame incremental
-update during drag of up to 500 selected nodes*, where the grid is O(1) per node with no
+oversized objects. Justification in one line: our dominant operation is _per-frame incremental
+update during drag of up to 500 selected nodes_, where the grid is O(1) per node with no
 rebalancing, while quadtree/R-tree pay logarithmic updates and structural churn for a query
 advantage we cannot measure at n = 5,000. The R-tree implementation is retained in
 `spatial/rtree-index.ts` **only** so `bench/spatial.bench.ts` can prove this claim per release; if
@@ -558,7 +592,7 @@ export interface SpatialIndex {
   insert(id: EntityId, r: Rect): void;
   remove(id: EntityId): void;
   update(id: EntityId, r: Rect): void;
-  queryRect(r: Rect, out: EntityId[]): EntityId[];      // fills `out`, returns it (no alloc)
+  queryRect(r: Rect, out: EntityId[]): EntityId[]; // fills `out`, returns it (no alloc)
   queryPoint(p: Vec2, out: EntityId[]): EntityId[];
   clear(): void;
   readonly size: number;
@@ -642,11 +676,11 @@ export interface SceneQuery {
 
 1. `nodeIndex.queryPoint(p)` → candidates; sort by (layer, z) descending; return the first whose
    **hit shape** contains `p`. Hit shapes: rounded-rect for cards (corner radius from tokens),
-   the full AABB for images, and the *border band only* (12 world px inward) for group containers,
+   the full AABB for images, and the _border band only_ (12 world px inward) for group containers,
    so clicking inside a group selects its children, not the group.
 2. If no node hit: `edgeIndex.queryPoint(p expanded by tol)` → for each candidate, distance from
    `p` to the cached flattened polyline (§8.3); the closest within `tol` wins.
-   `tol = max(6, 10 / zoom)` world px — a constant *screen* tolerance of ~10 px.
+   `tol = max(6, 10 / zoom)` world px — a constant _screen_ tolerance of ~10 px.
 3. Else: `{ kind: 'canvas' }`.
 
 Locked nodes are hit-testable (so they can be selected and unlocked) but are not draggable (§7.7).
@@ -656,13 +690,13 @@ Hidden nodes are excluded from every query and from the index entirely.
 
 Physical layers, bottom to top:
 
-| # | Element | Type | Repaint policy |
-|---|---|---|---|
-| 0 | `canvas#grid` | Canvas2D | repainted only on camera change; grid drawn as two `strokeRect` passes over a cell loop, or as a `createPattern` tile when `zoom ≥ 0.5` |
-| 1 | `canvas#scene` | Canvas2D | edges + L0–L2 node glyphs + group containers; repainted on dirty (§6.7) |
-| 2 | `div#overlay` | DOM | the promoted L3 cards; one transformed container |
-| 3 | `canvas#interaction` | Canvas2D | selection rings, resize handles, snap/alignment guides, marquee rect, connection preview, drag ghosts, hover highlight; repainted every frame during a gesture, otherwise on demand |
-| 4 | `div#chrome` | DOM | minimap, zoom controls, context menu, inline toolbars (owned by `apps/web`, not the engine) |
+| #   | Element              | Type     | Repaint policy                                                                                                                                                                      |
+| --- | -------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0   | `canvas#grid`        | Canvas2D | repainted only on camera change; grid drawn as two `strokeRect` passes over a cell loop, or as a `createPattern` tile when `zoom ≥ 0.5`                                             |
+| 1   | `canvas#scene`       | Canvas2D | edges + L0–L2 node glyphs + group containers; repainted on dirty (§6.7)                                                                                                             |
+| 2   | `div#overlay`        | DOM      | the promoted L3 cards; one transformed container                                                                                                                                    |
+| 3   | `canvas#interaction` | Canvas2D | selection rings, resize handles, snap/alignment guides, marquee rect, connection preview, drag ghosts, hover highlight; repainted every frame during a gesture, otherwise on demand |
+| 4   | `div#chrome`         | DOM      | minimap, zoom controls, context menu, inline toolbars (owned by `apps/web`, not the engine)                                                                                         |
 
 Splitting grid and interaction off the scene canvas means the common cases — hovering, marquee,
 dragging handles — repaint only a cheap layer while the expensive scene canvas stays untouched.
@@ -686,40 +720,40 @@ scheduler.tick(now):
 
 Rules that keep this within budget:
 
-* **One rAF for the whole engine.** No component schedules its own rAF. Registered in
+- **One rAF for the whole engine.** No component schedules its own rAF. Registered in
   `scheduler.ts` and cancelled in `dispose()`.
-* **Dirty rectangles** are merged with a cheap greedy union: if merging two rects grows the total
+- **Dirty rectangles** are merged with a cheap greedy union: if merging two rects grows the total
   area by < 30%, merge. Cap 8 rects; beyond that, promote to a full repaint. Dirty-rect repaint is
   used for hover, selection change, single-node edits, and incoming collaborator patches; camera
   movement always forces a full repaint (everything moved).
-* **No double buffering.** Canvas2D presentation is already double-buffered by the compositor;
+- **No double buffering.** Canvas2D presentation is already double-buffered by the compositor;
   drawing to an offscreen and blitting measured 0.4–0.9 ms slower per frame in
   `bench/render.bench.ts`. Decision: draw directly, use dirty rects instead.
-* **Per-node glyph bitmap cache.** L1/L2 glyphs are rasterized once per
+- **Per-node glyph bitmap cache.** L1/L2 glyphs are rasterized once per
   `(kind, accent, status, w, h, lodLevel, dpr)` tuple into an `OffscreenCanvas` and `drawImage`d.
-  Cache is an LRU of 256 bitmaps (~6 MB at DPR 2). Title text is drawn *outside* the cached bitmap
+  Cache is an LRU of 256 bitmaps (~6 MB at DPR 2). Title text is drawn _outside_ the cached bitmap
   (it is per-node) using the measurement cache (§6.9).
-* **Coalesced pointer events.** `pointermove` handlers use `event.getCoalescedEvents()` only for
+- **Coalesced pointer events.** `pointermove` handlers use `event.getCoalescedEvents()` only for
   freehand-style precision needs (none in v1); otherwise the last event of the frame wins. Pointer
   handling never paints synchronously — it sets state and marks dirty.
-* **Frame-time metrics** are always collected (ring buffer of 240 frames) and exposed through
+- **Frame-time metrics** are always collected (ring buffer of 240 frames) and exposed through
   `engine.metrics()`; `bench/` and the in-app debug overlay (`Ctrl+Alt+P`) read the same buffer.
 
 ### 6.8 LOD levels
 
-> **Implementation note (P2).** Two rules cooperate. During a camera gesture the *tier* is frozen at
+> **Implementation note (P2).** Two rules cooperate. During a camera gesture the _tier_ is frozen at
 > the value it had when the gesture started (this section) **and** the zoom used for glyph detail is
 > quantized to `LOD_ZOOM_QUANTUM` (`20_ROADMAP.md` req 7); both are released `LOD_SETTLE_MS` after
 > the last camera event. Outside a gesture the ladder applies with a ±`LOD_HYSTERESIS` dead-band.
 > The dot threshold is `LOD_THRESHOLDS.glyph = 0.18` (the roadmap's "0.2" is prose, not the
 > constant), and the text LRU is `TEXT_CACHE_LIMIT = 2000` entries, not 4,000.
 
-| Level | Zoom range | Canvas draws per node | DOM | Approx. cost / node |
-|---|---|---|---|---|
-| **L0** | `zoom < 0.18` | one `fillRect`, no radius, no stroke; nodes < 2 device px are skipped entirely and their cluster is drawn as a single density blob per grid cell | none | ~0.6 µs |
-| **L1** | `0.18 ≤ zoom < 0.40` | cached glyph bitmap: rounded rect, 2 px accent stripe, status dot | none | ~1.5 µs |
-| **L2** | `0.40 ≤ zoom < 0.55` | cached glyph bitmap + icon + one clipped line of title text (+ thumbnail for image kinds) | none | ~4 µs (text-bound) |
-| **L3** | `zoom ≥ 0.55` | selection ring only | full React card | DOM-bound; capped (§6.10) |
+| Level  | Zoom range           | Canvas draws per node                                                                                                                            | DOM             | Approx. cost / node       |
+| ------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | --------------- | ------------------------- |
+| **L0** | `zoom < 0.18`        | one `fillRect`, no radius, no stroke; nodes < 2 device px are skipped entirely and their cluster is drawn as a single density blob per grid cell | none            | ~0.6 µs                   |
+| **L1** | `0.18 ≤ zoom < 0.40` | cached glyph bitmap: rounded rect, 2 px accent stripe, status dot                                                                                | none            | ~1.5 µs                   |
+| **L2** | `0.40 ≤ zoom < 0.55` | cached glyph bitmap + icon + one clipped line of title text (+ thumbnail for image kinds)                                                        | none            | ~4 µs (text-bound)        |
+| **L3** | `zoom ≥ 0.55`        | selection ring only                                                                                                                              | full React card | DOM-bound; capped (§6.10) |
 
 Thresholds are chosen from legibility, not taste: at `zoom = 0.55` the 13 px card title token
 renders at 7.2 px — the smallest size at which the title is still recognisable, and the point at
@@ -738,19 +772,19 @@ while the user is pinch-zooming.
 
 ### 6.9 Text rendering
 
-* Canvas text is used **only** at L2, for one line per node. Font is set once per frame
+- Canvas text is used **only** at L2, for one line per node. Font is set once per frame
   (`ctx.font` assignment is expensive — it triggers font matching; setting it per node cost 2.1 ms
   per 500 nodes in the benchmark). All L2 titles are drawn in a single pass with one `ctx.font`.
-* **Measurement cache:** `Map<string /* text|font|maxWidth */, { w: number; clipped: string }>`,
+- **Measurement cache:** `Map<string /* text|font|maxWidth */, { w: number; clipped: string }>`,
   LRU 4,000 entries. `ctx.measureText` is called at most once per distinct tuple. Ellipsis is
   computed with a binary search over the string (≤ ⌈log2 96⌉ = 7 measurements, then cached).
-* Fonts must be loaded before first canvas text: the engine awaits `document.fonts.ready` and
+- Fonts must be loaded before first canvas text: the engine awaits `document.fonts.ready` and
   calls `invalidate('font-load')` on the `loadingdone` event. Without this, the first paint uses a
   fallback metric and text visibly reflows (`16_PERFORMANCE.md` §5.14).
-* All rich text, editing, selection and screen-reader output happen in the DOM at L3. The canvas
+- All rich text, editing, selection and screen-reader output happen in the DOM at L3. The canvas
   never attempts editable text.
-* Accessibility: because L0–L2 content is invisible to assistive tech, the engine maintains an
-  off-screen `<ul role="listbox">` mirror of the *viewport* node set (id, kind, title, selection
+- Accessibility: because L0–L2 content is invisible to assistive tech, the engine maintains an
+  off-screen `<ul role="listbox">` mirror of the _viewport_ node set (id, kind, title, selection
   state) updated at most every 250 ms, so keyboard/screen-reader navigation works at all zoom
   levels (N6). See `03_UX.md` §9.
 
@@ -779,11 +813,14 @@ Mounting/unmounting cards is the single most expensive overlay operation. The po
 ```ts
 class SlotPool {
   private free: HTMLElement[] = [];
-  acquire(): HTMLElement { return this.free.pop() ?? this.createSlot(); }
+  acquire(): HTMLElement {
+    return this.free.pop() ?? this.createSlot();
+  }
   release(el: HTMLElement) {
     el.style.transform = 'translate3d(-99999px,-99999px,0)';
     el.removeAttribute('data-node-id');
-    if (this.free.length < 64) this.free.push(el); else el.remove();
+    if (this.free.length < 64) this.free.push(el);
+    else el.remove();
   }
 }
 ```
@@ -792,11 +829,11 @@ Each slot is a `position:absolute; top:0; left:0; will-change:transform; contain
 div positioned by `transform: translate3d(x, y, 0)` in **world** coordinates inside the scaled
 overlay container. Consequences:
 
-* During camera movement only the container's transform changes — **one** style write per frame
+- During camera movement only the container's transform changes — **one** style write per frame
   regardless of how many cards are mounted (I2).
-* Card size changes are `width`/`height` writes, which are rare (resize gesture end, content load).
-* `contain: layout style paint` prevents a card's internal layout from invalidating siblings.
-* React reconciliation happens in `OverlayHost` against the mount/unmount diff, never on camera
+- Card size changes are `width`/`height` writes, which are rare (resize gesture end, content load).
+- `contain: layout style paint` prevents a card's internal layout from invalidating siblings.
+- React reconciliation happens in `OverlayHost` against the mount/unmount diff, never on camera
   change; the portal target identity is stable per slot, so React does not remount on reposition.
 
 Pool warm-up: 48 slots created on engine init during the first idle callback.
@@ -815,21 +852,21 @@ state variable and all input goes through one reducer. Every transition is a pur
 
 ### 7.2 States
 
-| State | Meaning | Entry effects | Exit effects |
-|---|---|---|---|
-| `idle` | nothing in progress | cursor `default` | — |
-| `hover` | pointer over a hittable target | cursor per target; hover highlight on interaction layer | clear highlight |
-| `pan` | camera drag (middle-drag, space-drag, trackpad-drag, hand tool) | cursor `grabbing`, pointer capture, freeze LOD | unfreeze LOD after 120 ms |
-| `marquee` | rubber-band selection | capture, draw rect each frame | clear rect, emit `select` |
-| `press-pending` | pointer down on a node, below the drag threshold | remember origin + candidate selection | — |
-| `drag-node` | moving ≥ 1 node | capture, snapshot geometry, hide DOM for dragged nodes, emit `move-nodes:start` | emit `move-nodes:end`, restore DOM |
-| `resize` | dragging a resize handle | capture, snapshot, show dimension readout | emit `resize-node:end` |
-| `connect` | dragging from an anchor to a target | capture, show anchor field on candidates, draw preview edge | emit `create-edge` or discard |
-| `reconnect` | dragging an existing edge endpoint | as `connect` + dim the original edge | emit `reconnect-edge` or revert |
-| `edit-text` | inline editing inside a DOM card | force-promote node, clamp `zoom ≥ 0.55`, disable canvas shortcuts | commit or revert, restore shortcuts |
-| `context-menu` | menu is open | suppress hover, keep selection | close menu |
-| `space-pan-armed` | Space held, no drag yet | cursor `grab` | cursor restore |
-| `disabled` | engine paused (board loading, error, presentation transition) | ignore all input | — |
+| State             | Meaning                                                         | Entry effects                                                                   | Exit effects                        |
+| ----------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------- | ----------------------------------- |
+| `idle`            | nothing in progress                                             | cursor `default`                                                                | —                                   |
+| `hover`           | pointer over a hittable target                                  | cursor per target; hover highlight on interaction layer                         | clear highlight                     |
+| `pan`             | camera drag (middle-drag, space-drag, trackpad-drag, hand tool) | cursor `grabbing`, pointer capture, freeze LOD                                  | unfreeze LOD after 120 ms           |
+| `marquee`         | rubber-band selection                                           | capture, draw rect each frame                                                   | clear rect, emit `select`           |
+| `press-pending`   | pointer down on a node, below the drag threshold                | remember origin + candidate selection                                           | —                                   |
+| `drag-node`       | moving ≥ 1 node                                                 | capture, snapshot geometry, hide DOM for dragged nodes, emit `move-nodes:start` | emit `move-nodes:end`, restore DOM  |
+| `resize`          | dragging a resize handle                                        | capture, snapshot, show dimension readout                                       | emit `resize-node:end`              |
+| `connect`         | dragging from an anchor to a target                             | capture, show anchor field on candidates, draw preview edge                     | emit `create-edge` or discard       |
+| `reconnect`       | dragging an existing edge endpoint                              | as `connect` + dim the original edge                                            | emit `reconnect-edge` or revert     |
+| `edit-text`       | inline editing inside a DOM card                                | force-promote node, clamp `zoom ≥ 0.55`, disable canvas shortcuts               | commit or revert, restore shortcuts |
+| `context-menu`    | menu is open                                                    | suppress hover, keep selection                                                  | close menu                          |
+| `space-pan-armed` | Space held, no drag yet                                         | cursor `grab`                                                                   | cursor restore                      |
+| `disabled`        | engine paused (board loading, error, presentation transition)   | ignore all input                                                                | —                                   |
 
 Exactly one state is active. `press-pending` exists so a click and a drag share one code path and
 the drag threshold is enforced in one place.
@@ -843,49 +880,49 @@ the drag threshold is enforced in one place.
 ### 7.4 Threshold and timing constants
 
 ```ts
-export const DRAG_THRESHOLD_PX      = 4;    // screen px before press-pending → drag/marquee
-export const CLICK_MAX_MS           = 500;  // longer press with no move is still a click
-export const DBLCLICK_MAX_MS        = 320;
-export const LONG_PRESS_MS          = 480;  // touch: opens context menu
-export const HOVER_ENTER_MS         = 0;    // hover is immediate…
-export const HOVER_LEAVE_MS         = 80;   // …but leaving debounces, to survive gaps
-export const EDGE_HIT_TOL_PX        = 10;   // screen px
-export const HANDLE_HIT_PAD_PX      = 6;    // screen px added around 8px handles
-export const ANCHOR_MAGNET_PX       = 28;   // screen px snap radius for connection targets
-export const SNAP_TOL_PX            = 6;    // screen px for object/grid snapping
-export const AUTOPAN_EDGE_PX        = 48;   // distance from viewport edge that starts auto-pan
-export const AUTOPAN_MAX_SPEED      = 18;   // screen px per frame at the very edge
-export const MULTI_DRAG_GHOST_LIMIT = 120;  // above this, drag renders a bounding box only
+export const DRAG_THRESHOLD_PX = 4; // screen px before press-pending → drag/marquee
+export const CLICK_MAX_MS = 500; // longer press with no move is still a click
+export const DBLCLICK_MAX_MS = 320;
+export const LONG_PRESS_MS = 480; // touch: opens context menu
+export const HOVER_ENTER_MS = 0; // hover is immediate…
+export const HOVER_LEAVE_MS = 80; // …but leaving debounces, to survive gaps
+export const EDGE_HIT_TOL_PX = 10; // screen px
+export const HANDLE_HIT_PAD_PX = 6; // screen px added around 8px handles
+export const ANCHOR_MAGNET_PX = 28; // screen px snap radius for connection targets
+export const SNAP_TOL_PX = 6; // screen px for object/grid snapping
+export const AUTOPAN_EDGE_PX = 48; // distance from viewport edge that starts auto-pan
+export const AUTOPAN_MAX_SPEED = 18; // screen px per frame at the very edge
+export const MULTI_DRAG_GHOST_LIMIT = 120; // above this, drag renders a bounding box only
 ```
 
 All are exported so `bench/`, e2e tests and the debug overlay use the same numbers.
 
 ### 7.5 Transition table (abridged to the load-bearing rows)
 
-| From | Event | Guard | To | Effects |
-|---|---|---|---|---|
-| `idle`/`hover` | `pointerdown` btn 0 on canvas | no modifier | `marquee` | start rect at pointer; if no `Shift`, emit `select []` |
-| `idle`/`hover` | `pointerdown` btn 0 on node | node not locked | `press-pending` | record origin, target, `additive = shift/meta` |
-| `idle`/`hover` | `pointerdown` btn 0 on node | node locked | `press-pending` | select-only; drag is blocked in the guard below |
-| `idle`/`hover` | `pointerdown` btn 1 (middle) | — | `pan` | capture |
-| `idle`/`hover` | `pointerdown` btn 0 | `space-pan-armed` active | `pan` | capture |
-| `idle`/`hover` | `pointerdown` btn 0 on handle | selection.size === 1 | `resize` | snapshot rect, record handle id |
-| `idle`/`hover` | `pointerdown` btn 0 on anchor | source connectable | `connect` | compute candidate anchor field |
-| `press-pending` | `pointermove` | `dist > DRAG_THRESHOLD_PX` && target not locked | `drag-node` | resolve drag set (§7.11), emit `move-nodes:start` |
-| `press-pending` | `pointermove` | `dist > DRAG_THRESHOLD_PX` && target **locked** | `marquee` | locked nodes cannot be dragged; the gesture becomes a marquee |
-| `press-pending` | `pointerup` | `elapsed < CLICK_MAX_MS` | `hover` | emit `select` with the recorded mode |
-| `drag-node` | `pointermove` | — | `drag-node` | apply snapping (§7.8); emit `move-nodes:update`; auto-pan if near edge |
-| `drag-node` | `keydown Escape` | — | `idle` | emit `move-nodes:cancel`; restore snapshot |
-| `drag-node` | `keydown Alt` (during drag) | — | `drag-node` | switch to duplicate-drag: emit `duplicate-then-move` on `end` |
-| `drag-node` | `pointerup`/`pointercancel` | — | `hover` | emit `move-nodes:end` |
-| `connect` | `pointermove` | — | `connect` | `nearestHandle(p, ANCHOR_MAGNET_PX/zoom, sourceId)`; preview path from the routing worker's synchronous fast path (§8.1) |
-| `connect` | `pointerup` over valid target | edge allowed by `07_EDGE_SYSTEM.md` §4 | `hover` | emit `create-edge` |
-| `connect` | `pointerup` over empty canvas | — | `hover` | emit `create-node-from-drop` with `payload.kind='note'` and then `create-edge` (drag-to-create; `03_UX.md` §6) |
-| `connect` | `pointerup` over invalid target | — | `hover` | discard; flash the target red for 240 ms with the rule that failed |
-| any gesture | `pointercancel` \| `blur` \| `disable` | — | `idle` | cancel effects, release capture, restore snapshot |
-| `hover` | `dblclick` on node | node editable | `edit-text` | promote, focus the card's editor |
-| `edit-text` | `keydown Escape` \| outside `pointerdown` | — | `hover` | commit (Escape reverts, click-away commits — matches `03_UX.md` §7) |
-| any | `contextmenu` | — | `context-menu` | emit `context-menu` with the hit target; the *selection is not changed* if the target is already selected |
+| From            | Event                                     | Guard                                           | To              | Effects                                                                                                                  |
+| --------------- | ----------------------------------------- | ----------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `idle`/`hover`  | `pointerdown` btn 0 on canvas             | no modifier                                     | `marquee`       | start rect at pointer; if no `Shift`, emit `select []`                                                                   |
+| `idle`/`hover`  | `pointerdown` btn 0 on node               | node not locked                                 | `press-pending` | record origin, target, `additive = shift/meta`                                                                           |
+| `idle`/`hover`  | `pointerdown` btn 0 on node               | node locked                                     | `press-pending` | select-only; drag is blocked in the guard below                                                                          |
+| `idle`/`hover`  | `pointerdown` btn 1 (middle)              | —                                               | `pan`           | capture                                                                                                                  |
+| `idle`/`hover`  | `pointerdown` btn 0                       | `space-pan-armed` active                        | `pan`           | capture                                                                                                                  |
+| `idle`/`hover`  | `pointerdown` btn 0 on handle             | selection.size === 1                            | `resize`        | snapshot rect, record handle id                                                                                          |
+| `idle`/`hover`  | `pointerdown` btn 0 on anchor             | source connectable                              | `connect`       | compute candidate anchor field                                                                                           |
+| `press-pending` | `pointermove`                             | `dist > DRAG_THRESHOLD_PX` && target not locked | `drag-node`     | resolve drag set (§7.11), emit `move-nodes:start`                                                                        |
+| `press-pending` | `pointermove`                             | `dist > DRAG_THRESHOLD_PX` && target **locked** | `marquee`       | locked nodes cannot be dragged; the gesture becomes a marquee                                                            |
+| `press-pending` | `pointerup`                               | `elapsed < CLICK_MAX_MS`                        | `hover`         | emit `select` with the recorded mode                                                                                     |
+| `drag-node`     | `pointermove`                             | —                                               | `drag-node`     | apply snapping (§7.8); emit `move-nodes:update`; auto-pan if near edge                                                   |
+| `drag-node`     | `keydown Escape`                          | —                                               | `idle`          | emit `move-nodes:cancel`; restore snapshot                                                                               |
+| `drag-node`     | `keydown Alt` (during drag)               | —                                               | `drag-node`     | switch to duplicate-drag: emit `duplicate-then-move` on `end`                                                            |
+| `drag-node`     | `pointerup`/`pointercancel`               | —                                               | `hover`         | emit `move-nodes:end`                                                                                                    |
+| `connect`       | `pointermove`                             | —                                               | `connect`       | `nearestHandle(p, ANCHOR_MAGNET_PX/zoom, sourceId)`; preview path from the routing worker's synchronous fast path (§8.1) |
+| `connect`       | `pointerup` over valid target             | edge allowed by `07_EDGE_SYSTEM.md` §4          | `hover`         | emit `create-edge`                                                                                                       |
+| `connect`       | `pointerup` over empty canvas             | —                                               | `hover`         | emit `create-node-from-drop` with `payload.kind='note'` and then `create-edge` (drag-to-create; `03_UX.md` §6)           |
+| `connect`       | `pointerup` over invalid target           | —                                               | `hover`         | discard; flash the target red for 240 ms with the rule that failed                                                       |
+| any gesture     | `pointercancel` \| `blur` \| `disable`    | —                                               | `idle`          | cancel effects, release capture, restore snapshot                                                                        |
+| `hover`         | `dblclick` on node                        | node editable                                   | `edit-text`     | promote, focus the card's editor                                                                                         |
+| `edit-text`     | `keydown Escape` \| outside `pointerdown` | —                                               | `hover`         | commit (Escape reverts, click-away commits — matches `03_UX.md` §7)                                                      |
+| any             | `contextmenu`                             | —                                               | `context-menu`  | emit `context-menu` with the hit target; the _selection is not changed_ if the target is already selected                |
 
 **Cancellation is universal.** `pointercancel`, window `blur`, tab hide (`visibilitychange`),
 `Escape`, and `engine.disable()` all route to the same `abortGesture()` routine, which: releases
@@ -893,7 +930,7 @@ pointer capture, restores the pre-gesture geometry snapshot, emits `phase: 'canc
 interaction layer and returns to `idle`. There is exactly one implementation of this routine.
 
 **Pointer capture.** On entering any capturing state, `container.setPointerCapture(e.pointerId)` is
-called on the *container*, never on a card. Capturing on the container is what makes drags survive
+called on the _container_, never on a card. Capturing on the container is what makes drags survive
 a card being unmounted mid-gesture (which happens when a collaborator deletes it) and what makes
 `pointerup` outside the window still arrive.
 
@@ -906,12 +943,12 @@ text type, see §8.4), and `Tab` reach the engine. Every other engine key bindin
 
 ### 7.7 Locking and hiding
 
-* `locked`: selectable, inspectable, not movable/resizable/deletable; the resize handles are not
+- `locked`: selectable, inspectable, not movable/resizable/deletable; the resize handles are not
   drawn; the drag guard converts a drag attempt into a marquee (row 11 above) so the user is not
   stuck. A lock badge is drawn on the selection ring.
-* `hidden`: removed from the spatial index, not painted, not hit-testable, not exported to the
+- `hidden`: removed from the spatial index, not painted, not hit-testable, not exported to the
   viewport a11y mirror. Only reachable from the Layers panel (`03_UX.md` §11).
-* Locking a group locks its children by inheritance; the child's own `locked` flag is unchanged, so
+- Locking a group locks its children by inheritance; the child's own `locked` flag is unchanged, so
   unlocking the group restores the previous per-child state.
 
 ### 7.8 Snapping and guides
@@ -973,15 +1010,15 @@ interface SelectionController {
 }
 ```
 
-* Click = replace. `Shift`+click = toggle. `Alt`+click = subtract. Marquee replaces unless `Shift`
+- Click = replace. `Shift`+click = toggle. `Alt`+click = subtract. Marquee replaces unless `Shift`
   (add) or `Alt` (subtract) is held at gesture start.
-* Marquee mode: **touch** by default (any intersection); hold `Ctrl` for **contain**.
-* Dragging a node that is *not* in the selection replaces the selection with that node first;
-  dragging a node that *is* in the selection drags the whole selection.
-* Selection of an edge and a node simultaneously is allowed; operations apply where meaningful.
-* Selection is ephemeral UI state (Zustand, `00_MASTER.md` §2) but is mirrored into Yjs awareness
+- Marquee mode: **touch** by default (any intersection); hold `Ctrl` for **contain**.
+- Dragging a node that is _not_ in the selection replaces the selection with that node first;
+  dragging a node that _is_ in the selection drags the whole selection.
+- Selection of an edge and a node simultaneously is allowed; operations apply where meaningful.
+- Selection is ephemeral UI state (Zustand, `00_MASTER.md` §2) but is mirrored into Yjs awareness
   for presence highlighting (`08_DATA_MODEL.md` §7).
-* Above `MULTI_DRAG_GHOST_LIMIT = 120` nodes, the drag renders only the bounding box + count badge
+- Above `MULTI_DRAG_GHOST_LIMIT = 120` nodes, the drag renders only the bounding box + count badge
   instead of per-node ghosts.
 
 ### 7.12 Keyboard
@@ -1001,14 +1038,14 @@ The engine owns canvas-scoped keys only; global shortcuts live in `apps/web`
 
 Routing **algorithms** (curved, orthogonal with obstacle avoidance, smart anchor choice) are pure
 functions in `packages/domain/src/routing/*` and are specified in `07_EDGE_SYSTEM.md` §5. The
-canvas engine owns only *when* they run, *where* they run, and *how results are cached*.
+canvas engine owns only _when_ they run, _where_ they run, and _how results are cached_.
 
 Two execution paths:
 
-| Path | When | Where |
-|---|---|---|
-| **Fast path** | `straight`, `curved` (cubic bezier from anchors) — closed-form, ≤ 2 µs | main thread, inline, never cached beyond the frame |
-| **Worker path** | `orthogonal` and `smart` — obstacle-aware A*/visibility routing, 20 µs–3 ms per edge | `routing.worker.ts` |
+| Path            | When                                                                                  | Where                                              |
+| --------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| **Fast path**   | `straight`, `curved` (cubic bezier from anchors) — closed-form, ≤ 2 µs                | main thread, inline, never cached beyond the frame |
+| **Worker path** | `orthogonal` and `smart` — obstacle-aware A\*/visibility routing, 20 µs–3 ms per edge | `routing.worker.ts`                                |
 
 The connection preview during `connect` always uses the fast path (a bezier), even when the target
 routing mode is orthogonal, so the preview can never stutter; the real route resolves on drop.
@@ -1039,19 +1076,19 @@ interface RoutedPath {
   path2d: Path2D | null;
   aabb: Rect;
   obstacleIds: NodeId[];
-  version: number;           // == edge.visualVersion + endpoint versions, for staleness checks
-  labelAnchor: Vec2;         // point at 50% arc length, used for label placement
+  version: number; // == edge.visualVersion + endpoint versions, for staleness checks
+  labelAnchor: Vec2; // point at 50% arc length, used for label placement
 }
 ```
 
-* Stored in `Map<EdgeId, RoutedPath>`, capacity-unbounded but pruned with the scene (an edge's
+- Stored in `Map<EdgeId, RoutedPath>`, capacity-unbounded but pruned with the scene (an edge's
   entry dies with the edge).
-* `Path2D` objects are **pooled and rebuilt** rather than kept for every edge: keeping 10,000
+- `Path2D` objects are **pooled and rebuilt** rather than kept for every edge: keeping 10,000
   `Path2D` instances measured ~34 MB. Instead `path2d` is built on first paint and dropped when
   the edge leaves the cull rect for > 2 s (weak cache, §10.2).
-* A stale route (version mismatch) is still drawn, dimmed to 85% opacity, until the worker replies.
+- A stale route (version mismatch) is still drawn, dimmed to 85% opacity, until the worker replies.
   Never blank an edge waiting for a route.
-* `edgeIndex.update(edgeId, aabb)` runs whenever a route resolves.
+- `edgeIndex.update(edgeId, aabb)` runs whenever a route resolves.
 
 ### 8.4 Batching and backpressure to the worker
 
@@ -1060,10 +1097,17 @@ Requests are coalesced per frame into one message:
 ```ts
 type RouteRequest = {
   reqId: number;
-  edges: Array<{ id: EdgeId; from: Rect; to: Rect; fromAnchor: AnchorSpec; toAnchor: AnchorSpec; mode: RoutingMode }>;
-  obstacles: Float32Array;      // [id32, x, y, w, h] × n, transferable
-  viewport: Rect;               // worker prioritises visible edges first
-  budgetMs: number;             // worker returns partial results when exceeded
+  edges: Array<{
+    id: EdgeId;
+    from: Rect;
+    to: Rect;
+    fromAnchor: AnchorSpec;
+    toAnchor: AnchorSpec;
+    mode: RoutingMode;
+  }>;
+  obstacles: Float32Array; // [id32, x, y, w, h] × n, transferable
+  viewport: Rect; // worker prioritises visible edges first
+  budgetMs: number; // worker returns partial results when exceeded
 };
 ```
 
@@ -1081,26 +1125,26 @@ classic "routes keep arriving for positions the user already left" artefact).
 The engine has **no history of its own**. `Y.UndoManager` in `apps/web` is the single history
 (`00_MASTER.md` §2).
 
-* **Transaction boundaries.** The host wraps document writes in `ydoc.transact(fn, LOCAL_ORIGIN)`.
+- **Transaction boundaries.** The host wraps document writes in `ydoc.transact(fn, LOCAL_ORIGIN)`.
   The UndoManager is constructed with `trackedOrigins: new Set([LOCAL_ORIGIN])` so remote and
   projection-driven changes are never undone by the local user (N3).
-* **One gesture = one undo step.** On `phase:'start'` the host calls `undoManager.stopCapturing()`
+- **One gesture = one undo step.** On `phase:'start'` the host calls `undoManager.stopCapturing()`
   (closing any previous item), then applies every `update` inside transactions within the
   `captureTimeout` window. `captureTimeout` is set to `500` ms — long enough to merge a continuous
   drag, short enough that two deliberate drags are two undo steps. On `phase:'end'` the host calls
   `stopCapturing()` again to seal the item.
-* **Cancel** (`phase:'cancel'`) does *not* create an undo item: the host re-applies the snapshot it
+- **Cancel** (`phase:'cancel'`) does _not_ create an undo item: the host re-applies the snapshot it
   captured at `start` inside a transaction with the **same** origin and then calls
   `undoManager.stopCapturing()`; because the net effect is identity, the item is empty and Yjs
   discards it. Verified by `undo-cancel.test.ts`.
-* **Text editing** is tracked by a *separate* UndoManager scoped to that node's `Y.Text`, so
+- **Text editing** is tracked by a _separate_ UndoManager scoped to that node's `Y.Text`, so
   `Ctrl+Z` inside an editor undoes typing, not the previous canvas drag. On exiting `edit-text`
   the scoped manager is disposed and its stack discarded.
-* **Tool imports and AI proposals** (N3, N4) apply as one transaction each, so accepting a
+- **Tool imports and AI proposals** (N3, N4) apply as one transaction each, so accepting a
   200-node SpiderFoot import is a single undo step. The engine is uninvolved beyond receiving the
   resulting `bulk` patch.
-* **Camera is never undoable.** Camera intents bypass the document entirely. `Ctrl+Z` after a pan
-  must undo the last *edit*, which is what analysts expect from every professional tool.
+- **Camera is never undoable.** Camera intents bypass the document entirely. `Ctrl+Z` after a pan
+  must undo the last _edit_, which is what analysts expect from every professional tool.
 
 ---
 
@@ -1108,13 +1152,13 @@ The engine has **no history of its own**. `Y.UndoManager` in `apps/web` is the s
 
 ### 10.1 What runs off the main thread
 
-| Work | Worker | Trigger | Why off-thread |
-|---|---|---|---|
-| Orthogonal/smart edge routing | `routing.worker` | endpoint/obstacle invalidation, gesture end | 10k edges × ~0.3 ms would be seconds |
-| Auto-layout (force, hierarchical, grid, radial, timeline) | `layout.worker` | user command, `14_AI_AGENT.md` cluster apply | force layout is iterative and unbounded |
-| Bulk spatial index rebuild | `index.worker` | `setScene` with n > 2,000; bulk patch > 25% of nodes | 5,000 inserts ≈ 6 ms; would drop a frame on board open |
-| Full-text/fuzzy in-board search index | `index.worker` | board open, debounced content change | building a trigram index over 5,000 nodes blocks input |
-| Thumbnail decode + downscale | main thread `createImageBitmap` (already off-thread internally) | image node load | `createImageBitmap` decodes off the main thread already; a worker adds no benefit |
+| Work                                                      | Worker                                                          | Trigger                                              | Why off-thread                                                                    |
+| --------------------------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Orthogonal/smart edge routing                             | `routing.worker`                                                | endpoint/obstacle invalidation, gesture end          | 10k edges × ~0.3 ms would be seconds                                              |
+| Auto-layout (force, hierarchical, grid, radial, timeline) | `layout.worker`                                                 | user command, `14_AI_AGENT.md` cluster apply         | force layout is iterative and unbounded                                           |
+| Bulk spatial index rebuild                                | `index.worker`                                                  | `setScene` with n > 2,000; bulk patch > 25% of nodes | 5,000 inserts ≈ 6 ms; would drop a frame on board open                            |
+| Full-text/fuzzy in-board search index                     | `index.worker`                                                  | board open, debounced content change                 | building a trigram index over 5,000 nodes blocks input                            |
+| Thumbnail decode + downscale                              | main thread `createImageBitmap` (already off-thread internally) | image node load                                      | `createImageBitmap` decodes off the main thread already; a worker adds no benefit |
 
 Rendering does **not** move to a worker (option 6, §1).
 
@@ -1126,19 +1170,19 @@ compiled out in production via `import.meta.env.DEV` to avoid the parse cost on 
 
 ```ts
 type Req =
-  | { k: 'route';        id: number; payload: RouteRequest }
-  | { k: 'layout';       id: number; payload: LayoutRequest }
-  | { k: 'index-build';  id: number; payload: IndexBuildRequest }
+  | { k: 'route'; id: number; payload: RouteRequest }
+  | { k: 'layout'; id: number; payload: LayoutRequest }
+  | { k: 'index-build'; id: number; payload: IndexBuildRequest }
   | { k: 'search-build'; id: number; payload: SearchBuildRequest }
-  | { k: 'cancel';       id: number };
+  | { k: 'cancel'; id: number };
 
 type Res =
   | { k: 'route:partial'; id: number; routes: PackedRoutes }
-  | { k: 'route:done';    id: number }
-  | { k: 'layout:tick';   id: number; positions: Float32Array; iteration: number }
-  | { k: 'layout:done';   id: number; positions: Float32Array }
-  | { k: 'index:done';    id: number; cells: Uint32Array; ids: Uint32Array }
-  | { k: 'error';         id: number; code: string; message: string };
+  | { k: 'route:done'; id: number }
+  | { k: 'layout:tick'; id: number; positions: Float32Array; iteration: number }
+  | { k: 'layout:done'; id: number; positions: Float32Array }
+  | { k: 'index:done'; id: number; cells: Uint32Array; ids: Uint32Array }
+  | { k: 'error'; id: number; code: string; message: string };
 ```
 
 ### 10.3 Transferable data formats
@@ -1151,12 +1195,12 @@ is zero-copy for the buffer itself and is sufficient at our data volumes.
 
 Encodings (all little-endian, defined once in `protocol.ts`):
 
-* **Node geometry** → `Float32Array`, stride 5: `[idIndex, x, y, w, h]`, with a parallel
+- **Node geometry** → `Float32Array`, stride 5: `[idIndex, x, y, w, h]`, with a parallel
   `ids: string[]` sent once per scene generation and referenced by index thereafter. 5,000 nodes =
   100 KB, transferred in ~0.05 ms.
-* **Routes (`PackedRoutes`)** → `{ offsets: Uint32Array, points: Float32Array, ids: Uint32Array }`,
+- **Routes (`PackedRoutes`)** → `{ offsets: Uint32Array, points: Float32Array, ids: Uint32Array }`,
   a single flat point buffer with per-edge offsets. 10,000 edges × avg 6 points = 480 KB.
-* **Layout positions** → `Float32Array` stride 3: `[idIndex, x, y]`.
+- **Layout positions** → `Float32Array` stride 3: `[idIndex, x, y]`.
 
 `SharedArrayBuffer` is used **only** for the 4-byte cancellation flag, and only when
 `crossOriginIsolated === true`; the fallback is chunked cancellation checks (the worker processes
@@ -1165,16 +1209,16 @@ cancel latency differs (≤ 0.2 ms vs ≤ 20 ms).
 
 ### 10.4 Pool and backpressure
 
-* One dedicated `routing.worker` (routing is inherently serialised by the cancel-supersede rule).
-* One `layout.worker`, restarted per run (layout runs are long; termination is the cancel).
-* One shared `index.worker` for index + search builds, FIFO.
-* Workers are created lazily on first use and terminated after 60 s idle to free ~4 MB each; they
+- One dedicated `routing.worker` (routing is inherently serialised by the cancel-supersede rule).
+- One `layout.worker`, restarted per run (layout runs are long; termination is the cancel).
+- One shared `index.worker` for index + search builds, FIFO.
+- Workers are created lazily on first use and terminated after 60 s idle to free ~4 MB each; they
   are recreated transparently.
-* **Backpressure rules:** at most one in-flight request per worker; new requests supersede; if a
+- **Backpressure rules:** at most one in-flight request per worker; new requests supersede; if a
   worker fails to respond within 5 s it is terminated and restarted, the request is retried once,
   and on a second failure the engine falls back to the main-thread implementation with a degraded
   route mode and emits `engine:worker-degraded` for telemetry. Never silently do nothing.
-* Worker errors never reach the user as a raw exception; they surface as a toast per
+- Worker errors never reach the user as a raw exception; they surface as a toast per
   `03_UX.md` §12 ("Edge routing is running in reduced quality — retry").
 
 ---
@@ -1183,13 +1227,13 @@ cancel latency differs (≤ 0.2 ms vs ≤ 20 ms).
 
 ### 11.1 Pools
 
-| Pool | Size | Contents |
-|---|---|---|
-| `Rect` pool | 512 | scratch rects for queries, AABB math; `withRect(fn)` scoped borrow |
-| `Vec2` pool | 256 | pointer math |
+| Pool                | Size                       | Contents                                                                     |
+| ------------------- | -------------------------- | ---------------------------------------------------------------------------- |
+| `Rect` pool         | 512                        | scratch rects for queries, AABB math; `withRect(fn)` scoped borrow           |
+| `Vec2` pool         | 256                        | pointer math                                                                 |
 | Query result arrays | 8 arrays × pre-sized 4,096 | `queryRect(out)` fills caller-provided arrays; no allocation in the hot path |
-| `Path2D` pool | 256 | edge paths, rebuilt not retained (§8.3) |
-| DOM slot pool | 64 | overlay slots (§6.11) |
+| `Path2D` pool       | 256                        | edge paths, rebuilt not retained (§8.3)                                      |
+| DOM slot pool       | 64                         | overlay slots (§6.11)                                                        |
 
 Hot-path allocation rule: `queryRect`, `hitTest`, `update`, the FSM reducer and every layer's paint
 function must allocate **zero** objects per call. Verified by `bench/alloc.bench.ts`, which runs
@@ -1197,14 +1241,14 @@ function must allocate **zero** objects per call. Verified by `bench/alloc.bench
 
 ### 11.2 Weak caches
 
-* Glyph bitmaps: LRU 256, byte-accounted, hard cap 12 MB; evicts least-recently-drawn.
-* Text measurements: LRU 4,000 entries (~600 KB).
-* Thumbnails (`ImageBitmap`): LRU by bytes, hard cap 64 MB; `ImageBitmap.close()` on eviction
+- Glyph bitmaps: LRU 256, byte-accounted, hard cap 12 MB; evicts least-recently-drawn.
+- Text measurements: LRU 4,000 entries (~600 KB).
+- Thumbnails (`ImageBitmap`): LRU by bytes, hard cap 64 MB; `ImageBitmap.close()` on eviction
   (failing to call `close()` leaks GPU memory that GC will not reclaim promptly — this is the
   most likely leak in the whole engine).
-* Routed paths: keyed by edge id, dropped with the edge; `Path2D` field cleared after 2 s
+- Routed paths: keyed by edge id, dropped with the edge; `Path2D` field cleared after 2 s
   off-screen.
-* `WeakRef` + `FinalizationRegistry` are used only for the thumbnail cache's debug accounting,
+- `WeakRef` + `FinalizationRegistry` are used only for the thumbnail cache's debug accounting,
   never for correctness.
 
 ### 11.3 Teardown checklist
@@ -1228,12 +1272,12 @@ function must allocate **zero** objects per call. Verified by `bench/alloc.bench
 
 `tests/leaks.test.ts`, run in CI with `--expose-gc`:
 
-* Mount/dispose the engine 50× with a 1,000-node scene; assert `performance.memory.usedJSHeapSize`
+- Mount/dispose the engine 50× with a 1,000-node scene; assert `performance.memory.usedJSHeapSize`
   growth < 8 MB and `document.querySelectorAll('canvas').length === 0`.
-* Open/close 20 boards; assert worker count returns to 0 and listener count (tracked via a dev-only
+- Open/close 20 boards; assert worker count returns to 0 and listener count (tracked via a dev-only
   `addEventListener` counter) returns to baseline.
-* Pan for 600 synthetic frames; assert heap growth < 2 MB (catches per-frame allocation).
-* Promote/demote 500 nodes 20×; assert slot pool size ≤ 64 and no detached DOM nodes
+- Pan for 600 synthetic frames; assert heap growth < 2 MB (catches per-frame allocation).
+- Promote/demote 500 nodes 20×; assert slot pool size ≤ 64 and no detached DOM nodes
   (Playwright + CDP `Memory.getAllTimeSamplingProfile` heuristics; see `18_TESTING.md` §8).
 
 ---
@@ -1248,8 +1292,9 @@ export interface EngineClock {
   requestFrame(cb: (t: number) => void): number;
   cancelFrame(h: number): void;
 }
-export class TestClock implements EngineClock {   // testing/clock.ts
-  advance(ms: number): void;      // runs due frames deterministically
+export class TestClock implements EngineClock {
+  // testing/clock.ts
+  advance(ms: number): void; // runs due frames deterministically
   step(frames = 1, dt = 16.667): void;
 }
 ```
@@ -1262,8 +1307,9 @@ ESLint `no-restricted-globals` rule scoped to `packages/canvas-engine`.
 
 ```ts
 const io = synthetic(engine);
-io.pointer.down({ x: 100, y: 100, button: 0 })
-  .move({ x: 160, y: 140 }, { steps: 6 })     // emits 6 interpolated pointermove events
+io.pointer
+  .down({ x: 100, y: 100, button: 0 })
+  .move({ x: 160, y: 140 }, { steps: 6 }) // emits 6 interpolated pointermove events
   .up();
 io.wheel({ dy: -120, ctrlKey: true, x: 400, y: 300 });
 io.key('Escape');
@@ -1277,10 +1323,10 @@ through the same listeners as production, so the FSM is exercised end-to-end wit
 
 `testing/headless.ts` renders a scene into a node-canvas 2D context and produces:
 
-* a **structural snapshot** — a stable JSON of what the engine decided to draw
+- a **structural snapshot** — a stable JSON of what the engine decided to draw
   (`{ lod, culledIn: string[], domPromoted: string[], edgesRouted: number, dirtyRects: Rect[] }`).
   This is the primary assertion surface; it is deterministic and diff-readable, unlike pixels.
-* a **pixel snapshot** (PNG) for a small set of golden cases, compared with a 0.1% pixel tolerance.
+- a **pixel snapshot** (PNG) for a small set of golden cases, compared with a 0.1% pixel tolerance.
   Pixel goldens live in `packages/canvas-engine/tests/__snapshots__/` and are regenerated only
   with an explicit flag.
 
@@ -1292,14 +1338,14 @@ through the same listeners as production, so the FSM is exercised end-to-end wit
 
 ## Open risks
 
-| # | Risk | Impact | Mitigation / trigger |
-|---|---|---|---|
-| R1 | The 260-node DOM budget is exceeded on legitimately dense boards (small cards, high zoom-out on a 4K display), degrading a visible region to L2 glyphs | Perceived as "cards lost their content" | Budget is a constant, benchmarked per release on the 4K profile (`16_PERFORMANCE.md` §3.1); raise only with a passing bench. Telemetry event `overlay-budget-exceeded` tells us if it happens in the field |
-| R2 | Uniform-grid degeneracy: a user piles 3,000 nodes into one 512 px cell (e.g. an import that fails to lay out), turning queries into linear scans of that bucket | Frame spikes on hover/marquee | `index.stats().maxBucket` is asserted in bench; if `maxBucket > 256`, the engine logs and the import pipeline is required to pre-layout (`10_INTEGRATIONS.md` §9). A quadtree swap behind `index.contract.ts` is the escape hatch |
-| R3 | Canvas/DOM sub-pixel drift on browsers with fractional DPR (1.25, 1.5) | Shimmering rings, 1 px misalignment | `overlay-alignment.spec.ts` runs at DPR 1, 1.25, 1.5, 2, 3; failures block the build |
-| R4 | Deferring obstacle-aware rerouting to gesture end (§8.2) means orthogonal edges look "wrong" mid-drag | Cosmetic, but analysts may read it as a bug | Degraded routes are drawn at 85% opacity, which is a deliberate, documented visual signal (`03_UX.md` §6); revisit if user testing reads it as breakage |
-| R5 | `SharedArrayBuffer` unavailability (no cross-origin isolation, §10.3) raises cancel latency to ~20 ms | Slightly stale routes after fast gestures | Acceptable; measured. Revisit only if link previews move out of iframes |
-| R6 | Groups do not nest and nodes do not rotate in v1 | Feature gap versus whiteboard expectations | Deliberate: both would require a transform tree in hit-testing, routing and snapping. Adding them later is a scene-graph change (§6.1) confined to `scene/` and `spatial/` |
-| R7 | Long text at L2 makes the glyph pass text-bound (~4 µs/node) | 500 visible nodes ≈ 2 ms of the 12 ms budget | Titles pre-truncated to 96 chars by the host; single `ctx.font` set per frame; measurement cache. If it regresses, drop titles at L2 for `zoom < 0.47` |
-| R8 | Safari's `OffscreenCanvas`/`ImageBitmap` behaviour for the glyph cache differs enough to change costs | Slower L1/L2 on Safari | Feature-detect; fall back to a hidden `<canvas>` as the cache surface. Benched in the Safari CI lane (`18_TESTING.md` §4) |
-| R9 | The engine's intent-only design means one extra hop (intent → Y.Doc → patch → render) on every drag frame | Added latency if the host is slow | Budget: host round-trip ≤ 2 ms p95, asserted in `bench/interaction.bench.ts`. If exceeded, the engine may render an optimistic local transform for the drag set only, reconciled on patch |
+| #   | Risk                                                                                                                                                            | Impact                                       | Mitigation / trigger                                                                                                                                                                                                              |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1  | The 260-node DOM budget is exceeded on legitimately dense boards (small cards, high zoom-out on a 4K display), degrading a visible region to L2 glyphs          | Perceived as "cards lost their content"      | Budget is a constant, benchmarked per release on the 4K profile (`16_PERFORMANCE.md` §3.1); raise only with a passing bench. Telemetry event `overlay-budget-exceeded` tells us if it happens in the field                        |
+| R2  | Uniform-grid degeneracy: a user piles 3,000 nodes into one 512 px cell (e.g. an import that fails to lay out), turning queries into linear scans of that bucket | Frame spikes on hover/marquee                | `index.stats().maxBucket` is asserted in bench; if `maxBucket > 256`, the engine logs and the import pipeline is required to pre-layout (`10_INTEGRATIONS.md` §9). A quadtree swap behind `index.contract.ts` is the escape hatch |
+| R3  | Canvas/DOM sub-pixel drift on browsers with fractional DPR (1.25, 1.5)                                                                                          | Shimmering rings, 1 px misalignment          | `overlay-alignment.spec.ts` runs at DPR 1, 1.25, 1.5, 2, 3; failures block the build                                                                                                                                              |
+| R4  | Deferring obstacle-aware rerouting to gesture end (§8.2) means orthogonal edges look "wrong" mid-drag                                                           | Cosmetic, but analysts may read it as a bug  | Degraded routes are drawn at 85% opacity, which is a deliberate, documented visual signal (`03_UX.md` §6); revisit if user testing reads it as breakage                                                                           |
+| R5  | `SharedArrayBuffer` unavailability (no cross-origin isolation, §10.3) raises cancel latency to ~20 ms                                                           | Slightly stale routes after fast gestures    | Acceptable; measured. Revisit only if link previews move out of iframes                                                                                                                                                           |
+| R6  | Groups do not nest and nodes do not rotate in v1                                                                                                                | Feature gap versus whiteboard expectations   | Deliberate: both would require a transform tree in hit-testing, routing and snapping. Adding them later is a scene-graph change (§6.1) confined to `scene/` and `spatial/`                                                        |
+| R7  | Long text at L2 makes the glyph pass text-bound (~4 µs/node)                                                                                                    | 500 visible nodes ≈ 2 ms of the 12 ms budget | Titles pre-truncated to 96 chars by the host; single `ctx.font` set per frame; measurement cache. If it regresses, drop titles at L2 for `zoom < 0.47`                                                                            |
+| R8  | Safari's `OffscreenCanvas`/`ImageBitmap` behaviour for the glyph cache differs enough to change costs                                                           | Slower L1/L2 on Safari                       | Feature-detect; fall back to a hidden `<canvas>` as the cache surface. Benched in the Safari CI lane (`18_TESTING.md` §4)                                                                                                         |
+| R9  | The engine's intent-only design means one extra hop (intent → Y.Doc → patch → render) on every drag frame                                                       | Added latency if the host is slow            | Budget: host round-trip ≤ 2 ms p95, asserted in `bench/interaction.bench.ts`. If exceeded, the engine may render an optimistic local transform for the drag set only, reconciled on patch                                         |

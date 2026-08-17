@@ -19,7 +19,7 @@ that keep 10,000 edges inside the frame budget of `00_MASTER.md` N1. Node semant
 2. **Edges are always canvas.** No edge is ever a DOM or SVG element, at any zoom. This is what
    makes 10,000 edges affordable (`05_CANVAS_ENGINE.md` §2).
 3. **Geometry is derived and cached; semantics are stored.** Only endpoints, type, style overrides
-   and *manual* waypoints are in the document. Everything else (routed path, label box, clip
+   and _manual_ waypoints are in the document. Everything else (routed path, label box, clip
    points) is recomputed and cached.
 4. **Manual beats automatic.** Once a user drags a waypoint, routing never overwrites it; it only
    transforms it (§8.3).
@@ -49,43 +49,54 @@ export const Waypoint = z.object({
   /** relative anchoring so the point survives node movement (§8.3) */
   rel: z.object({
     base: z.enum(['source', 'target', 'midpoint', 'absolute']),
-    dx: z.number(), dy: z.number(),
+    dx: z.number(),
+    dy: z.number(),
   }),
 });
 
 export const EdgeStyle = z.object({
   routing: z.enum(['smart', 'curved', 'orthogonal', 'straight']).nullable().default(null), // null = type default
-  stroke: z.string().regex(/^--edge-[a-z0-9-]+$/).nullable().default(null),
+  stroke: z
+    .string()
+    .regex(/^--edge-[a-z0-9-]+$/)
+    .nullable()
+    .default(null),
   width: z.number().min(0.5).max(8).nullable().default(null),
   dash: z.enum(['solid', 'dashed', 'dotted', 'dash-dot']).nullable().default(null),
-  arrowSource: z.enum(['none', 'arrow', 'hollow', 'dot', 'diamond', 'tee']).nullable().default(null),
-  arrowTarget: z.enum(['none', 'arrow', 'hollow', 'dot', 'diamond', 'tee']).nullable().default(null),
+  arrowSource: z
+    .enum(['none', 'arrow', 'hollow', 'dot', 'diamond', 'tee'])
+    .nullable()
+    .default(null),
+  arrowTarget: z
+    .enum(['none', 'arrow', 'hollow', 'dot', 'diamond', 'tee'])
+    .nullable()
+    .default(null),
   animated: z.boolean().nullable().default(null),
-  labelPosition: z.number().min(0).max(1).default(0.5),   // t along the path
+  labelPosition: z.number().min(0).max(1).default(0.5), // t along the path
   labelOffset: z.object({ dx: z.number(), dy: z.number() }).default({ dx: 0, dy: 0 }),
-  curvature: z.number().min(0).max(1).nullable().default(null),  // bezier tension override
+  curvature: z.number().min(0).max(1).nullable().default(null), // bezier tension override
   cornerRadius: z.number().min(0).max(40).nullable().default(null), // orthogonal corners
   zBias: z.number().int().min(-5).max(5).default(0),
 });
 
 export const Edge = z.object({
   id: z.string().ulid(),
-  type: z.string().min(1).max(48),                 // relationship type id (§3)
+  type: z.string().min(1).max(48), // relationship type id (§3)
   source: EdgeEndpoint,
   target: EdgeEndpoint,
-  directed: z.boolean(),                            // from the type default, user-overridable
+  directed: z.boolean(), // from the type default, user-overridable
   label: z.string().max(200).default(''),
   description: z.string().max(2000).nullable().default(null),
   confidence: Confidence.default('unverified'),
-  weight: z.number().min(0).max(1).default(0.5),    // strength/importance; drives width + layout
+  weight: z.number().min(0).max(1).default(0.5), // strength/importance; drives width + layout
   provenance: Provenance,
   /** temporal validity */
-  observedAt: z.string().datetime(),                // when the relationship was observed
-  validFrom: z.string().datetime().nullable(),      // when it started being true
-  validTo: z.string().datetime().nullable(),        // when it stopped being true (null = still true)
+  observedAt: z.string().datetime(), // when the relationship was observed
+  validFrom: z.string().datetime().nullable(), // when it started being true
+  validTo: z.string().datetime().nullable(), // when it stopped being true (null = still true)
   tags: z.array(z.string().max(48)).max(32).default([]),
   waypoints: z.array(Waypoint).max(24).default([]),
-  manualRoute: z.boolean().default(false),          // true once the user edits waypoints
+  manualRoute: z.boolean().default(false), // true once the user edits waypoints
   style: EdgeStyle,
   locked: z.boolean().default(false),
   hidden: z.boolean().default(false),
@@ -94,7 +105,7 @@ export const Edge = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   version: z.number().int().min(1),
-  data: z.record(z.string(), z.unknown()).default({}),  // type-specific extras (§3.3)
+  data: z.record(z.string(), z.unknown()).default({}), // type-specific extras (§3.3)
 });
 export type Edge = z.infer<typeof Edge>;
 ```
@@ -114,11 +125,11 @@ export type Edge = z.infer<typeof Edge>;
 
 Three timestamps with distinct meaning, all optional except `observedAt`:
 
-| Field | Meaning | Example |
-|---|---|---|
-| `observedAt` | when *we* saw the evidence for the relationship | Sherlock run at 2026-08-17T10:03Z |
-| `validFrom` | when the relationship began in the real world | employment start 2019-04-01 |
-| `validTo` | when it ended; `null` = ongoing | employment end 2023-11-30 |
+| Field        | Meaning                                         | Example                           |
+| ------------ | ----------------------------------------------- | --------------------------------- |
+| `observedAt` | when _we_ saw the evidence for the relationship | Sherlock run at 2026-08-17T10:03Z |
+| `validFrom`  | when the relationship began in the real world   | employment start 2019-04-01       |
+| `validTo`    | when it ended; `null` = ongoing                 | employment end 2023-11-30         |
 
 Check constraint: `validTo === null || validFrom === null || validTo >= validFrom`
 (`TIME_RANGE_INVERTED`). The timeline view filters edges by these fields; an edge with
@@ -126,7 +137,7 @@ Check constraint: `validTo === null || validFrom === null || validTo >= validFro
 
 ### 2.3 Weight and confidence
 
-- `confidence` is the analyst's belief in the *claim*. It maps to opacity: confirmed 1.0, high 0.92,
+- `confidence` is the analyst's belief in the _claim_. It maps to opacity: confirmed 1.0, high 0.92,
   medium 0.78, low 0.6, unverified 0.45, and to dash: `unverified`/`low` → `dashed` unless the type
   or the user overrides.
 - `weight` is importance, not belief. It maps to stroke width `1 + weight × 2` px (device-independent,
@@ -141,12 +152,19 @@ Check constraint: `validTo === null || validFrom === null || validTo >= validFro
 
 ```ts
 export interface EdgeTypeDefinition {
-  type: string;                  // stable id, never renamed
-  label: string;                 // 'works at'
-  inverseLabel: string;          // 'employs' — shown when reading the edge backwards
-  category: 'identity' | 'social' | 'infrastructure' | 'code' | 'reasoning' | 'structural' | 'temporal';
+  type: string; // stable id, never renamed
+  label: string; // 'works at'
+  inverseLabel: string; // 'employs' — shown when reading the edge backwards
+  category:
+    | 'identity'
+    | 'social'
+    | 'infrastructure'
+    | 'code'
+    | 'reasoning'
+    | 'structural'
+    | 'temporal';
   directed: boolean;
-  strokeToken: string;           // '--edge-identity'
+  strokeToken: string; // '--edge-identity'
   dash: 'solid' | 'dashed' | 'dotted' | 'dash-dot';
   arrowTarget: 'none' | 'arrow' | 'hollow' | 'dot' | 'diamond' | 'tee';
   arrowSource: 'none' | 'arrow' | 'hollow' | 'dot' | 'diamond' | 'tee';
@@ -163,7 +181,7 @@ export interface EdgeTypeDefinition {
   onAttach?(edge: Edge, ctx: GraphContext): void;
   onDetach?(edge: Edge, ctx: GraphContext): void;
 }
-export const EdgeTypeRegistry = { register, get, list, has };  // same contract as node registry
+export const EdgeTypeRegistry = { register, get, list, has }; // same contract as node registry
 ```
 
 Same extensibility rule as nodes: no engine or UI file switches on `edge.type`; plugins register
@@ -173,34 +191,34 @@ new relationship types through `17_PLUGIN_SDK.md` §4.
 
 `*` = any node type. Node type ids are those of `06_NODE_SYSTEM.md` §4.
 
-| # | type | label / inverse | dir | allowed source → target | style | routing | category |
-|---|---|---|---|---|---|---|---|
-| 1 | `references` | references / referenced by | ✓ | `*` → `*` | `--edge-neutral`, solid, 1.5 px, arrow | smart | structural |
-| 2 | `derived_from` | derived from / produced | ✓ | `*` → `*` | `--edge-derived`, dashed, animated | curved | structural |
-| 3 | `same_as` | same as / same as | ✗ | same-type pairs only | `--edge-identity`, solid, 2 px, dot–dot | straight | identity |
-| 4 | `alias_of` | alias of / has alias | ✓ | `username,person,organization,domain` → same | `--edge-identity`, dash-dot | curved | identity |
-| 5 | `has_account` | has account / belongs to | ✓ | `person,organization` → `username,email` | `--edge-identity`, solid, arrow | smart | identity |
-| 6 | `owns` | owns / owned by | ✓ | `person,organization` → `domain,ip,repository,file,website` | `--edge-infra`, solid, diamond source | smart | infrastructure |
-| 7 | `member_of` | member of / has member | ✓ | `person` → `organization,group` | `--edge-social`, solid, hollow arrow | curved | social |
-| 8 | `works_at` | works at / employs | ✓ | `person` → `organization` | `--edge-social`, solid, arrow | curved | social |
-| 9 | `knows` | knows / knows | ✗ | `person` → `person` | `--edge-social`, solid, 1.25 px | curved | social |
-| 10 | `communicates_with` | communicates with / communicates with | ✗ | `person,username,email` → same | `--edge-social`, dotted | curved | social |
-| 11 | `resolves_to` | resolves to / resolved from | ✓ | `domain` → `ip`; `domain` → `domain` (CNAME) | `--edge-infra`, solid, arrow | orthogonal | infrastructure |
-| 12 | `hosted_on` | hosted on / hosts | ✓ | `website,domain,repository` → `ip,organization` | `--edge-infra`, solid, arrow | orthogonal | infrastructure |
-| 13 | `part_of` | part of / contains | ✓ | `*` → `domain,organization,group,repository` | `--edge-structure`, solid, tee | orthogonal | structural |
-| 14 | `contributed_to` | contributed to / has contributor | ✓ | `person,username,organization` → `repository` | `--edge-code`, solid, arrow | smart | code |
-| 15 | `depends_on` | depends on / is dependency of | ✓ | `repository` → `repository` | `--edge-code`, dashed, arrow | orthogonal | code |
-| 16 | `forked_from` | forked from / has fork | ✓ | `repository` → `repository` | `--edge-code`, solid, hollow | curved | code |
-| 17 | `mentions` | mentions / mentioned in | ✓ | `text,evidence,website,file,repository` → `*` | `--edge-neutral`, dotted | curved | structural |
-| 18 | `supports` | supports / supported by | ✓ | `evidence,text,tool-result,file,website` → `hypothesis` | `--edge-positive`, solid, arrow | curved | reasoning |
-| 19 | `contradicts` | contradicts / contradicted by | ✓ | `evidence,text,tool-result,file,website` → `hypothesis` | `--edge-danger`, solid, tee | curved | reasoning |
-| 20 | `caused_by` | caused by / caused | ✓ | `timeline-event,*` → `timeline-event,*` | `--edge-time`, solid, arrow | smart | temporal |
-| 21 | `precedes` | precedes / follows | ✓ | `timeline-event` → `timeline-event` | `--edge-time`, dashed, arrow | orthogonal | temporal |
-| 22 | `located_at` | located at / location of | ✓ | `person,organization,ip,timeline-event,image` → `location` | `--edge-geo`, solid, dot | curved | infrastructure |
+| #   | type                | label / inverse                       | dir | allowed source → target                                     | style                                   | routing    | category       |
+| --- | ------------------- | ------------------------------------- | --- | ----------------------------------------------------------- | --------------------------------------- | ---------- | -------------- |
+| 1   | `references`        | references / referenced by            | ✓   | `*` → `*`                                                   | `--edge-neutral`, solid, 1.5 px, arrow  | smart      | structural     |
+| 2   | `derived_from`      | derived from / produced               | ✓   | `*` → `*`                                                   | `--edge-derived`, dashed, animated      | curved     | structural     |
+| 3   | `same_as`           | same as / same as                     | ✗   | same-type pairs only                                        | `--edge-identity`, solid, 2 px, dot–dot | straight   | identity       |
+| 4   | `alias_of`          | alias of / has alias                  | ✓   | `username,person,organization,domain` → same                | `--edge-identity`, dash-dot             | curved     | identity       |
+| 5   | `has_account`       | has account / belongs to              | ✓   | `person,organization` → `username,email`                    | `--edge-identity`, solid, arrow         | smart      | identity       |
+| 6   | `owns`              | owns / owned by                       | ✓   | `person,organization` → `domain,ip,repository,file,website` | `--edge-infra`, solid, diamond source   | smart      | infrastructure |
+| 7   | `member_of`         | member of / has member                | ✓   | `person` → `organization,group`                             | `--edge-social`, solid, hollow arrow    | curved     | social         |
+| 8   | `works_at`          | works at / employs                    | ✓   | `person` → `organization`                                   | `--edge-social`, solid, arrow           | curved     | social         |
+| 9   | `knows`             | knows / knows                         | ✗   | `person` → `person`                                         | `--edge-social`, solid, 1.25 px         | curved     | social         |
+| 10  | `communicates_with` | communicates with / communicates with | ✗   | `person,username,email` → same                              | `--edge-social`, dotted                 | curved     | social         |
+| 11  | `resolves_to`       | resolves to / resolved from           | ✓   | `domain` → `ip`; `domain` → `domain` (CNAME)                | `--edge-infra`, solid, arrow            | orthogonal | infrastructure |
+| 12  | `hosted_on`         | hosted on / hosts                     | ✓   | `website,domain,repository` → `ip,organization`             | `--edge-infra`, solid, arrow            | orthogonal | infrastructure |
+| 13  | `part_of`           | part of / contains                    | ✓   | `*` → `domain,organization,group,repository`                | `--edge-structure`, solid, tee          | orthogonal | structural     |
+| 14  | `contributed_to`    | contributed to / has contributor      | ✓   | `person,username,organization` → `repository`               | `--edge-code`, solid, arrow             | smart      | code           |
+| 15  | `depends_on`        | depends on / is dependency of         | ✓   | `repository` → `repository`                                 | `--edge-code`, dashed, arrow            | orthogonal | code           |
+| 16  | `forked_from`       | forked from / has fork                | ✓   | `repository` → `repository`                                 | `--edge-code`, solid, hollow            | curved     | code           |
+| 17  | `mentions`          | mentions / mentioned in               | ✓   | `text,evidence,website,file,repository` → `*`               | `--edge-neutral`, dotted                | curved     | structural     |
+| 18  | `supports`          | supports / supported by               | ✓   | `evidence,text,tool-result,file,website` → `hypothesis`     | `--edge-positive`, solid, arrow         | curved     | reasoning      |
+| 19  | `contradicts`       | contradicts / contradicted by         | ✓   | `evidence,text,tool-result,file,website` → `hypothesis`     | `--edge-danger`, solid, tee             | curved     | reasoning      |
+| 20  | `caused_by`         | caused by / caused                    | ✓   | `timeline-event,*` → `timeline-event,*`                     | `--edge-time`, solid, arrow             | smart      | temporal       |
+| 21  | `precedes`          | precedes / follows                    | ✓   | `timeline-event` → `timeline-event`                         | `--edge-time`, dashed, arrow            | orthogonal | temporal       |
+| 22  | `located_at`        | located at / location of              | ✓   | `person,organization,ip,timeline-event,image` → `location`  | `--edge-geo`, solid, dot                | curved     | infrastructure |
 
 Notes on semantics that are easy to get wrong:
 
-- `same_as` merges *identity*, `alias_of` does not. `same_as` between two nodes is the strongest
+- `same_as` merges _identity_, `alias_of` does not. `same_as` between two nodes is the strongest
   duplicate signal and the Duplicates panel (`06_NODE_SYSTEM.md` §10) offers a merge whenever one
   exists.
 - `derived_from` always points **from the derived node to its origin** (`nodeCreated → source`).
@@ -213,21 +231,21 @@ Notes on semantics that are easy to get wrong:
 
 ### 3.3 Type-specific `data`
 
-| type | `data` fields |
-|---|---|
-| `resolves_to` | `{ recordType: 'A'\|'AAAA'\|'CNAME', ttl: number \| null }` |
-| `contributed_to` | `{ commits: number \| null, firstCommitAt: string \| null, lastCommitAt: string \| null, role: 'author'\|'maintainer'\|'contributor' }` |
-| `depends_on` | `{ ecosystem: string, versionRange: string \| null, scope: 'runtime'\|'dev'\|'peer' }` |
-| `works_at` / `member_of` | `{ role: string \| null }` |
-| `has_account` | `{ verificationMethod: 'manual'\|'tool'\|'self-declared', verified: boolean }` |
-| `supports` / `contradicts` | `{ strength: 'weak'\|'moderate'\|'strong' }` |
-| `communicates_with` | `{ channel: string \| null, messageCount: number \| null }` |
-| all others | `{}` |
+| type                       | `data` fields                                                                                                                           |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `resolves_to`              | `{ recordType: 'A'\|'AAAA'\|'CNAME', ttl: number \| null }`                                                                             |
+| `contributed_to`           | `{ commits: number \| null, firstCommitAt: string \| null, lastCommitAt: string \| null, role: 'author'\|'maintainer'\|'contributor' }` |
+| `depends_on`               | `{ ecosystem: string, versionRange: string \| null, scope: 'runtime'\|'dev'\|'peer' }`                                                  |
+| `works_at` / `member_of`   | `{ role: string \| null }`                                                                                                              |
+| `has_account`              | `{ verificationMethod: 'manual'\|'tool'\|'self-declared', verified: boolean }`                                                          |
+| `supports` / `contradicts` | `{ strength: 'weak'\|'moderate'\|'strong' }`                                                                                            |
+| `communicates_with`        | `{ channel: string \| null, messageCount: number \| null }`                                                                             |
+| all others                 | `{}`                                                                                                                                    |
 
 ### 3.4 Endpoint validation
 
 ```ts
-function validateEndpoints(type: string, src: NodeLike, dst: NodeLike): ValidationIssue[]
+function validateEndpoints(type: string, src: NodeLike, dst: NodeLike): ValidationIssue[];
 ```
 
 - If the pair is not in `allowed`, the result is a **warning**, not an error: the edge is created
@@ -266,12 +284,12 @@ does not explode the bucket count. On a 10,000-edge board this collapses to ≤ 
 
 ### 4.2 LOD
 
-| Level | Zoom | Edge rendering |
-|---|---|---|
-| L0 | `< 0.28` | 1 px straight line between node centers, `--edge-far` at 35% alpha, no arrowheads, no labels; edges shorter than 6 px on screen are skipped entirely |
-| L1 | `0.28–0.55` | real routing but at reduced fidelity: bezier flattened with 8 segments, arrowheads only for `directed` edges longer than 24 px on screen, labels only for selected/hovered |
-| L2 | `0.55–1.6` | full routing, arrowheads, labels for edges longer than 60 px on screen |
-| L3 | `≥ 1.6` | full routing, labels always, waypoint handles on selection, hover hit area widened |
+| Level | Zoom        | Edge rendering                                                                                                                                                             |
+| ----- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| L0    | `< 0.28`    | 1 px straight line between node centers, `--edge-far` at 35% alpha, no arrowheads, no labels; edges shorter than 6 px on screen are skipped entirely                       |
+| L1    | `0.28–0.55` | real routing but at reduced fidelity: bezier flattened with 8 segments, arrowheads only for `directed` edges longer than 24 px on screen, labels only for selected/hovered |
+| L2    | `0.55–1.6`  | full routing, arrowheads, labels for edges longer than 60 px on screen                                                                                                     |
+| L3    | `≥ 1.6`     | full routing, labels always, waypoint handles on selection, hover hit area widened                                                                                         |
 
 ### 4.3 Path construction
 
@@ -281,19 +299,20 @@ All routing modes emit a common structure so drawing and hit-testing are mode-ag
 interface EdgeGeometry {
   kind: 'line' | 'bezier' | 'poly';
   /** flattened polyline in canvas units, used for hit-testing, labels and arrow angles */
-  flat: Float32Array;            // [x0,y0,x1,y1,…]
+  flat: Float32Array; // [x0,y0,x1,y1,…]
   /** exact drawing commands */
   cmds: Array<
     | { t: 'M'; x: number; y: number }
     | { t: 'L'; x: number; y: number }
     | { t: 'C'; x1: number; y1: number; x2: number; y2: number; x: number; y: number }
-    | { t: 'Q'; x1: number; y1: number; x: number; y: number }>;
+    | { t: 'Q'; x1: number; y1: number; x: number; y: number }
+  >;
   bbox: { minX: number; minY: number; maxX: number; maxY: number };
   length: number;
-  startPoint: { x: number; y: number; angle: number };  // after clipping (§7.4)
+  startPoint: { x: number; y: number; angle: number }; // after clipping (§7.4)
   endPoint: { x: number; y: number; angle: number };
   labelAnchor: { x: number; y: number; angle: number };
-  revision: number;              // increments on every recompute
+  revision: number; // increments on every recompute
 }
 ```
 
@@ -322,20 +341,20 @@ pooled `Float32Array` allocated from a slab allocator to avoid GC churn (`16_PER
 
 ### 5.2 Connect by selection and keyboard
 
-| Input | Behavior |
-|---|---|
-| Select exactly 2 nodes, press `E` | creates the suggested edge type (§5.3) from the first-selected to the second |
-| Select N > 2 nodes, press `E` | opens the connect dialog: `chain` (1→2→3…), `star from first`, `star to first`, `mesh` (all pairs, capped at 200 edges) |
-| Select 2 nodes, `Shift+E` | opens the type picker instead of using the suggestion |
-| Edge selected, `R` | reverse direction (swaps endpoints, keeps waypoints mirrored) |
-| Edge selected, `T` | cycle routing mode smart → curved → orthogonal → straight |
-| Edge selected, `L` | focus the label editor inline |
-| Edge selected, `Backspace/Del` | soft delete (undoable) |
-| Node focused, `Tab` | move focus along outgoing edges (accessibility traversal, N6) |
-| Node focused, `Shift+Tab` | move focus along incoming edges |
-| During connect drag, `1`–`9` | force the relationship type by its rank in the suggestion list |
-| During connect drag, hold `Alt` | force `port` to the side under the cursor instead of `auto` |
-| During connect drag, hold `Shift` | constrain the ghost to 0/45/90° |
+| Input                             | Behavior                                                                                                                |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Select exactly 2 nodes, press `E` | creates the suggested edge type (§5.3) from the first-selected to the second                                            |
+| Select N > 2 nodes, press `E`     | opens the connect dialog: `chain` (1→2→3…), `star from first`, `star to first`, `mesh` (all pairs, capped at 200 edges) |
+| Select 2 nodes, `Shift+E`         | opens the type picker instead of using the suggestion                                                                   |
+| Edge selected, `R`                | reverse direction (swaps endpoints, keeps waypoints mirrored)                                                           |
+| Edge selected, `T`                | cycle routing mode smart → curved → orthogonal → straight                                                               |
+| Edge selected, `L`                | focus the label editor inline                                                                                           |
+| Edge selected, `Backspace/Del`    | soft delete (undoable)                                                                                                  |
+| Node focused, `Tab`               | move focus along outgoing edges (accessibility traversal, N6)                                                           |
+| Node focused, `Shift+Tab`         | move focus along incoming edges                                                                                         |
+| During connect drag, `1`–`9`      | force the relationship type by its rank in the suggestion list                                                          |
+| During connect drag, hold `Alt`   | force `port` to the side under the cursor instead of `auto`                                                             |
+| During connect drag, hold `Shift` | constrain the ghost to 0/45/90°                                                                                         |
 
 Keyboard-only creation path (no pointer required, N6): focus a node → `E` → a target picker opens
 (fuzzy search over board nodes) → Enter → type picker (pre-ranked) → Enter. Every step is
@@ -360,17 +379,17 @@ org employs person").
 
 ### 5.4 Edge creation states
 
-| State | Visual |
-|---|---|
-| idle | handles hidden (L2) or shown for selection (L3) |
-| handle-hover | handle grows to 10×10, `--accent` |
-| dragging | ghost path, cursor `crosshair`, source handle pinned |
-| valid-target | target ring, ghost snaps to the computed port, label preview chip shows the suggested type |
-| invalid-target | no ring, `not-allowed` cursor, ghost turns `--text-muted` |
-| dropped-empty | quick-create menu at cursor |
-| created | 180 ms draw-on animation (dash offset from `length` → 0); reduced-motion → instant |
-| duplicate-rejected | 120 ms shake on the existing edge + toast with `Open existing edge` |
-| error | toast: what/why/what to do (`03_UX.md` §12) |
+| State              | Visual                                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------ |
+| idle               | handles hidden (L2) or shown for selection (L3)                                            |
+| handle-hover       | handle grows to 10×10, `--accent`                                                          |
+| dragging           | ghost path, cursor `crosshair`, source handle pinned                                       |
+| valid-target       | target ring, ghost snaps to the computed port, label preview chip shows the suggested type |
+| invalid-target     | no ring, `not-allowed` cursor, ghost turns `--text-muted`                                  |
+| dropped-empty      | quick-create menu at cursor                                                                |
+| created            | 180 ms draw-on animation (dash offset from `length` → 0); reduced-motion → instant         |
+| duplicate-rejected | 120 ms shake on the existing edge + toast with `Open existing edge`                        |
+| error              | toast: what/why/what to do (`03_UX.md` §12)                                                |
 
 ---
 
@@ -403,13 +422,18 @@ main thread and inside the routing worker (§11.2).
 
 ```ts
 interface RouteInput {
-  source: NodeBox; target: NodeBox;               // {x,y,w,h,shape}
-  srcPort: Port; dstPort: Port;                   // resolved ports (§7.1)
-  waypoints: Waypoint[]; manualRoute: boolean;
+  source: NodeBox;
+  target: NodeBox; // {x,y,w,h,shape}
+  srcPort: Port;
+  dstPort: Port; // resolved ports (§7.1)
+  waypoints: Waypoint[];
+  manualRoute: boolean;
   mode: 'straight' | 'curved' | 'orthogonal' | 'smart';
-  siblingIndex: number; siblingCount: number;     // multi-edge separation (§7.6)
-  obstacles?: ObstacleGrid;                       // only for orthogonal
-  curvature: number; cornerRadius: number;
+  siblingIndex: number;
+  siblingCount: number; // multi-edge separation (§7.6)
+  obstacles?: ObstacleGrid; // only for orthogonal
+  curvature: number;
+  cornerRadius: number;
 }
 ```
 
@@ -524,7 +548,7 @@ For `n > 7` the edges are **bundled**: they are drawn as one thicker path (width
 (temporarily setting `SEP = 12` and drawing all members) until the selection changes. Bundling is
 computed once per pair per invalidation and cached with the pair key.
 
-### 7.7 Orthogonal (A* on a sparse visibility grid)
+### 7.7 Orthogonal (A\* on a sparse visibility grid)
 
 Only orthogonal routing needs obstacle avoidance. The grid is **sparse** and built from the node
 spatial index, not a dense raster — a dense grid over an infinite canvas is not affordable.
@@ -569,7 +593,7 @@ otherwise (L-shape):                [p0, (p1.x,p0.y) or (p0.x,p1.y), p1]  choosi
 ```
 
 Complexity: grid build `O(m log m)` for `m` nearby boxes (typically m ≤ 60 because the region is
-the endpoint bounding box inflated by 240 units); A* is `O(V log V)` on a lattice of
+the endpoint bounding box inflated by 240 units); A\* is `O(V log V)` on a lattice of
 `|xs| × |ys| ≤ 130 × 130` in the worst case, bounded by the expansion budget. Measured budget:
 p95 ≤ 2.1 ms per edge on a 5,000-node board (`bench/routing.bench.ts`).
 
@@ -622,10 +646,10 @@ Moving a node must not re-route the whole board. The rule set:
    A move invalidates only incident edges — O(deg).
 2. **During** a drag (pointer down → up), incident edges route in **draft mode**: `curved` and
    `smart` degrade to `curved` with no obstacle checks; `orthogonal` degrades to the Z-fallback.
-   No A*, ever, during a drag. On pointer-up, the affected edges are re-routed at full fidelity in
+   No A\*, ever, during a drag. On pointer-up, the affected edges are re-routed at full fidelity in
    the worker, and the result swaps in on the next frame (typically < 1 frame later; if the worker
    is slow the draft geometry stays visible — it is never wrong, only less pretty).
-3. Orthogonal edges *not* incident to the moved node can become obstructed. Re-routing all of them
+3. Orthogonal edges _not_ incident to the moved node can become obstructed. Re-routing all of them
    would be O(E). Instead: on pointer-up, query the spatial index for edges whose cached bbox
    intersects the moved node's old **or** new inflated box (an R-tree over edge bboxes, maintained
    incrementally) and invalidate only those — typically < 30 edges. `obstacleEpoch` is used as a
@@ -705,7 +729,7 @@ exists — hovering shows it.
 
 ### 9.3 Label content
 
-Default label text is empty; the *type* is conveyed by color, dash and arrowhead. When the user
+Default label text is empty; the _type_ is conveyed by color, dash and arrowhead. When the user
 sets `label`, it is shown verbatim. Two display toggles exist per board (view setting, not document
 data): `Show relationship types as labels` (renders `def.label` when `label` is empty) and
 `Show confidence badges` (a 1-char suffix `⁇` for unverified, `!` for confirmed).
@@ -738,18 +762,18 @@ edge's label chip or within 4 px of the path and ≥ 6 px outside the node borde
 
 ### 10.2 Hover and selection states
 
-| State | Rendering |
-|---|---|
-| idle | type style, confidence alpha |
-| hover | +0.75 px width, alpha → 1.0, label forced visible, cursor `pointer`, 90 ms transition |
-| selected | `--accent` stroke, 6 px halo at 18% alpha, endpoint handles, waypoint handles at L3 |
-| multi-selected | same but no handles |
-| dimmed | when a "focus subgraph" filter is active and this edge is out of scope: alpha 0.12, no label |
-| dragging-waypoint | live re-route each frame in draft mode, snap guides to lanes/45° |
-| invalid | 2 px `--danger` dashed overlay + inspector issue (endpoint constraint warning) |
-| archived | 35% alpha, dotted |
-| past (`validTo < now`) | 55% alpha, `past` badge |
-| orphaned | one endpoint soft-deleted: 25% alpha, endpoint rendered as a hollow circle at the last known position; hidden by default (view toggle) |
+| State                  | Rendering                                                                                                                              |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| idle                   | type style, confidence alpha                                                                                                           |
+| hover                  | +0.75 px width, alpha → 1.0, label forced visible, cursor `pointer`, 90 ms transition                                                  |
+| selected               | `--accent` stroke, 6 px halo at 18% alpha, endpoint handles, waypoint handles at L3                                                    |
+| multi-selected         | same but no handles                                                                                                                    |
+| dimmed                 | when a "focus subgraph" filter is active and this edge is out of scope: alpha 0.12, no label                                           |
+| dragging-waypoint      | live re-route each frame in draft mode, snap guides to lanes/45°                                                                       |
+| invalid                | 2 px `--danger` dashed overlay + inspector issue (endpoint constraint warning)                                                         |
+| archived               | 35% alpha, dotted                                                                                                                      |
+| past (`validTo < now`) | 55% alpha, `past` badge                                                                                                                |
+| orphaned               | one endpoint soft-deleted: 25% alpha, endpoint rendered as a hollow circle at the last known position; hidden by default (view toggle) |
 
 ### 10.3 Reduced motion
 
@@ -785,15 +809,15 @@ drawn on top of that composite each frame (`05_CANVAS_ENGINE.md` §6.4).
 
 Budget (subset of `16_PERFORMANCE.md` §3, restated as the edge layer's contract):
 
-| Metric | Budget at 10,000 edges |
-|---|---|
-| Edge layer draw, p95 | ≤ 4.5 ms/frame |
-| Visible edges typical | ≤ 1,200 (viewport culled) |
-| Stroke calls per frame | ≤ 40 (style batching) |
-| Route cache hit rate during pan/zoom | 100% (camera never invalidates) |
-| Route cache hit rate during a 20-node drag | ≥ 97% |
-| Full re-route of 10,000 edges (worker, cold) | ≤ 900 ms, chunked, never blocking |
-| Memory for geometry cache | ≤ 48 MB (slab-allocated Float32Arrays) |
+| Metric                                       | Budget at 10,000 edges                 |
+| -------------------------------------------- | -------------------------------------- |
+| Edge layer draw, p95                         | ≤ 4.5 ms/frame                         |
+| Visible edges typical                        | ≤ 1,200 (viewport culled)              |
+| Stroke calls per frame                       | ≤ 40 (style batching)                  |
+| Route cache hit rate during pan/zoom         | 100% (camera never invalidates)        |
+| Route cache hit rate during a 20-node drag   | ≥ 97%                                  |
+| Full re-route of 10,000 edges (worker, cold) | ≤ 900 ms, chunked, never blocking      |
+| Memory for geometry cache                    | ≤ 48 MB (slab-allocated Float32Arrays) |
 
 ### 11.1 Rules
 
@@ -831,20 +855,20 @@ Worker holds its own copy of the obstacle grid inputs (node boxes as a packed ar
 diffed per epoch), so it never needs the CRDT.
 ```
 
-Only `orthogonal` (A*) and full-fidelity `smart` resolution are offloaded; `straight` and `curved`
+Only `orthogonal` (A\*) and full-fidelity `smart` resolution are offloaded; `straight` and `curved`
 are cheap enough to run inline (≤ 6 µs each) and offloading them would cost more in messaging than
 it saves.
 
 ### 11.3 Caching keys summary
 
-| Cache | Key | Eviction |
-|---|---|---|
-| geometry | `routeKey(edge)` (§8.1) | LRU, 20,000 entries or 48 MB |
-| flattened polyline slab | geometry id | freed with the geometry entry, buffer returned to the pool |
-| label metrics | `${text}|${fontPx}` | LRU 4,000 |
-| style resolution | `${type}|${confidence}|${themeId}|${lod}` | cleared on theme change |
-| sibling grouping | `min(idA,idB)+'|'+max(idA,idB)` | invalidated when an edge in the pair is added/removed |
-| obstacle grid | `${regionQuantized}|${obstacleEpoch}` | LRU 64, cleared on board change |
+| Cache                   | Key                     | Eviction                                                   |
+| ----------------------- | ----------------------- | ---------------------------------------------------------- | ----------------------------------------------------- | ------- | ----------------------- |
+| geometry                | `routeKey(edge)` (§8.1) | LRU, 20,000 entries or 48 MB                               |
+| flattened polyline slab | geometry id             | freed with the geometry entry, buffer returned to the pool |
+| label metrics           | `${text}                | ${fontPx}`                                                 | LRU 4,000                                             |
+| style resolution        | `${type}                | ${confidence}                                              | ${themeId}                                            | ${lod}` | cleared on theme change |
+| sibling grouping        | `min(idA,idB)+'         | '+max(idA,idB)`                                            | invalidated when an edge in the pair is added/removed |
+| obstacle grid           | `${regionQuantized}     | ${obstacleEpoch}`                                          | LRU 64, cleared on board change                       |
 
 ---
 
@@ -853,15 +877,15 @@ it saves.
 These drive the index choices in `08_DATA_MODEL.md` §4.10 and the query shapes in
 `09_BACKEND.md` §5. Listed here because they constrain the model.
 
-| Query | Shape |
-|---|---|
+| Query                                              | Shape                                                                                                          |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | neighbors of node N (both directions, active only) | index on `(board_id, source_node_id)` and `(board_id, target_node_id)` with partial `WHERE deleted_at IS NULL` |
-| shortest path N→M ≤ 6 hops | recursive CTE over the projection, `weight` as cost |
-| all evidence supporting hypothesis H | `type = 'supports' AND target_node_id = H` |
-| edges valid at time T | `observed_at <= T AND (valid_to IS NULL OR valid_to >= T)` |
-| subgraph of a tag | join through `node_tags` on both endpoints |
-| degree histogram (hub detection) | materialized counter maintained by the projection |
-| duplicate edge detection | unique index on `(board_id, source_node_id, target_node_id, type)` where `deleted_at IS NULL` |
+| shortest path N→M ≤ 6 hops                         | recursive CTE over the projection, `weight` as cost                                                            |
+| all evidence supporting hypothesis H               | `type = 'supports' AND target_node_id = H`                                                                     |
+| edges valid at time T                              | `observed_at <= T AND (valid_to IS NULL OR valid_to >= T)`                                                     |
+| subgraph of a tag                                  | join through `node_tags` on both endpoints                                                                     |
+| degree histogram (hub detection)                   | materialized counter maintained by the projection                                                              |
+| duplicate edge detection                           | unique index on `(board_id, source_node_id, target_node_id, type)` where `deleted_at IS NULL`                  |
 
 ---
 
@@ -871,7 +895,7 @@ These drive the index choices in `08_DATA_MODEL.md` §4.10 and the query shapes 
   as `"{source title} {type label} {target title}, confidence {x}, {label}"`.
 - The selected edge exposes its actions through the same context menu as the pointer path
   (`Shift+F10` / Menu key).
-- Edge *type* is never conveyed by color alone (N6): every type has a distinct dash pattern and/or
+- Edge _type_ is never conveyed by color alone (N6): every type has a distinct dash pattern and/or
   arrowhead, listed in §3.2. A "high contrast edges" board setting raises all edge alphas to 1.0 and
   widens strokes by 0.5 px.
 - The relationship list in the node inspector is the non-visual equivalent of the graph: it lists
@@ -881,7 +905,7 @@ These drive the index choices in `08_DATA_MODEL.md` §4.10 and the query shapes 
 
 ## 14. Open risks
 
-1. **A* budget exhaustion on very dense boards** produces the Z-fallback, which can cross nodes.
+1. **A\* budget exhaustion on very dense boards** produces the Z-fallback, which can cross nodes.
    Mitigated by `geom.degraded` (rendered with a subtle 1 px lighter core so it is honest about
    being approximate) and by the fact that the fallback is stable, not flickering. If measured
    degradation exceeds 2% of orthogonal edges on the 5,000-node benchmark, the fix is to raise the
@@ -896,11 +920,11 @@ These drive the index choices in `08_DATA_MODEL.md` §4.10 and the query shapes 
    an inline "Reset this route?" chip.
 4. **Bundling hides individual edge semantics.** A bundle of 12 mixed-type edges is rendered as one
    line; the count chip mitigates it but a user could misread the graph. Bundling therefore only
-   collapses edges *of the same category*; mixed categories stay separate even above the threshold.
+   collapses edges _of the same category_; mixed categories stay separate even above the threshold.
 5. **`same_as` vs merge divergence.** Users can create `same_as` edges without merging, producing a
    graph where identity is asserted but the data is still split. The Duplicates panel surfaces
    these continuously; we deliberately do not auto-merge (N4).
 6. **Edge R-tree accuracy during draft routing.** Draft geometry has a different bbox than the final
    route, so the tree is briefly approximate during a drag. Hit-testing is therefore performed
-   against the *drawn* geometry, and the tree is updated on pointer-up. Acceptable: a mis-hit during
+   against the _drawn_ geometry, and the tree is updated on pointer-up. Acceptable: a mis-hit during
    an active drag has no user-visible consequence.

@@ -22,8 +22,14 @@ with P3/P8 — see `NEXUS-SPEC/08_DATA_MODEL.md` §4 for the full target schema.
 import { prisma, recordAudit } from '@nexus/db';
 
 const projects = await prisma.project.findMany({ where: { orgId, deletedAt: null } });
-await recordAudit({ orgId, actorId: userId, action: 'project.created',
-                    targetKind: 'project', targetId: project.id, outcome: 'success' });
+await recordAudit({
+  orgId,
+  actorId: userId,
+  action: 'project.created',
+  targetKind: 'project',
+  targetId: project.id,
+  outcome: 'success',
+});
 ```
 
 The client is a singleton (`src/client.ts`): pool size from `DATABASE_POOL_MAX`, Prisma log levels
@@ -40,7 +46,7 @@ Migrations are plain SQL under `prisma/migrations/<n>_<name>/migration.sql`, app
    `pnpm exec prisma migrate dev --name <name>` — this writes the migration folder and applies it.
    Without a database you may hand-write the folder; the diff must match the schema exactly
    (`pnpm exec prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel
-   prisma/schema.prisma --shadow-database-url $SHADOW_DATABASE_URL --exit-code` must report no
+prisma/schema.prisma --shadow-database-url $SHADOW_DATABASE_URL --exit-code` must report no
    drift).
 3. Run `node scripts/check-migration-safety.mjs` (also a CI job).
 4. `pnpm --filter @nexus/db build` regenerates the Prisma client types.

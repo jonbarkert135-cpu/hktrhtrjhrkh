@@ -6,8 +6,8 @@ export default function ProjectPage() {
     <section className="nx-stack nx-auth-card">
       <h2>Project</h2>
       <p className="nx-muted">
-        Boards, runs and members of {projectId ?? 'this project'} appear here. Boards arrive with the
-        canvas engine.
+        Boards, runs and members of {projectId ?? 'this project'} appear here. Boards arrive with
+        the canvas engine.
       </p>
     </section>
   );

@@ -240,7 +240,12 @@ export function createGestures(deps: GestureDeps): GestureNormalizer {
 /* ------------------------------------------------------------------- cursor */
 
 export type Cursor =
-  'default' | 'grab' | 'grabbing' | 'crosshair' | 'text' | `${ResizeHandle}-resize`;
+  | 'default'
+  | 'grab'
+  | 'grabbing'
+  | 'crosshair'
+  | 'text'
+  | `${ResizeHandle}-resize`;
 
 const handleCursor = (handle: ResizeHandle): Cursor => `${handle}-resize`;
 

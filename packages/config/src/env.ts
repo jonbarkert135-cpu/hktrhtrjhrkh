@@ -91,7 +91,9 @@ const formatIssues = (error: z.ZodError): string[] =>
  * Parse and validate the server environment. Throws EnvValidationError with one readable
  * line per offending variable — never a zod dump, never a partially valid config.
  */
-export function loadServerEnv(raw: NodeJS.ProcessEnv | Record<string, unknown> = process.env): ServerEnv {
+export function loadServerEnv(
+  raw: NodeJS.ProcessEnv | Record<string, unknown> = process.env,
+): ServerEnv {
   const parsed = serverEnv.safeParse(raw);
   if (!parsed.success) throw new EnvValidationError(formatIssues(parsed.error));
   return parsed.data;

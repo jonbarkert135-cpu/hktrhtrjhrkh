@@ -1,4 +1,5 @@
 # NEXUS — Advanced Research & Intelligence Canvas
+
 ## 00 — MASTER SPECIFICATION (single source of truth)
 
 > **Status:** Phase 0 complete (architecture frozen).
@@ -27,41 +28,41 @@ Three properties define the product and are non-negotiable:
 2. **Deterministic performance.** 5,000 nodes / 10,000 edges at 60 fps pan-zoom on a 2020-class
    laptop, verified by an automated benchmark in CI — not by feel.
 3. **Nothing silently changes data.** Every automatic action (AI suggestion, tool import,
-   auto-layout) is *previewable, reversible and explainable*.
+   auto-layout) is _previewable, reversible and explainable_.
 
 ---
 
 ## 2. Final architecture decision (frozen)
 
-| Layer | Decision | One-line justification |
-|---|---|---|
-| Language | **TypeScript 5.6+, strict**, everywhere | one type language across client, server, plugins |
-| Frontend shell | **React 19 + Vite 6** SPA (not Next.js) | app is behind auth, has no SEO surface, needs fast HMR on a heavy canvas |
-| Canvas renderer | **Custom hybrid engine**: Canvas2D (edges, far-LOD nodes, grid, marquee) + **DOM overlay for visible, near-zoom nodes** + spatial index | React Flow degrades past ~500 rich DOM nodes; pure WebGL loses rich text/HTML cards. Hybrid keeps HTML fidelity where the user looks and canvas speed everywhere else. See `05_CANVAS_ENGINE.md` §2 |
-| Scene state | **Yjs `Y.Doc` per board** = the document; **Zustand** = ephemeral UI state only | CRDT gives offline-first + realtime + conflict-free merge with one model; UI state must never be persisted |
-| Undo/redo | **`Y.UndoManager`** scoped to the local origin | free, correct across concurrent edits; hand-rolled command stacks break under sync |
-| Local persistence | **`y-indexeddb`** + file blobs in **OPFS** | app opens instantly and works fully offline |
-| Sync | **Hocuspocus 4** WebSocket server, one room per board, Redis extension for horizontal scale | official Yjs server, auth hooks, awareness, battle-tested |
-| Backend API | **Fastify 5** (Node 22 LTS) + **tRPC v11** for the app, REST (OpenAPI) for plugins/webhooks | typed end-to-end for our own client, standards-based for third parties |
-| Database | **PostgreSQL 16** + **Prisma** | relational core (projects, ACL, runs, audit) + `jsonb` for flexible node payloads + `pgvector` for embeddings |
-| Graph storage | **Postgres tables (`nodes`, `edges`) as the queryable projection**, Yjs binary as the authoritative live document | one database; recursive CTEs cover the graph queries we need, no second DB to operate |
-| Search | **Postgres FTS + `pg_trgm`** (phase 7), **pgvector** semantic search (phase 11) | avoids a second search cluster until scale demands it |
-| Files | **S3-compatible object storage** (MinIO in dev), presigned uploads, server-side type sniffing | never trust client MIME |
-| Jobs | **BullMQ + Redis** | integration runs, link unfurling, thumbnails, repo analysis |
-| Tool execution | **Runner service** executing every tool in a locked-down container (`--network` allowlist proxy, `--read-only`, `--cap-drop ALL`, non-root, pids/mem/cpu caps, hard timeout); **gVisor runtime class in production** | tools are untrusted third-party code; container flags + user-space kernel are the practical 2026 baseline |
-| Auth | **Better-Auth** (email + OAuth) with sessions in Postgres, org/project RBAC | mature, self-hostable, no vendor lock |
-| AI layer | Provider-abstracted (`AIProvider` interface), default OpenAI-compatible endpoint; **all writes go through a Proposal object** | model choice must be swappable; AI never mutates the graph directly |
-| Styling | **CSS custom properties (design tokens) + Tailwind v4 preset generated from the tokens** | one token source, light theme later without touching components |
-| Component base | **Radix primitives**, all skinned; zero default browser controls | accessibility for free, full visual control |
-| Motion | **Motion (framer-motion 12)** for UI chrome only; canvas animates via rAF on transforms | never animate layout inside the canvas |
-| Testing | Vitest (unit), Playwright (e2e + visual), k6 (API load), custom canvas benchmark harness | see `18_TESTING.md` |
-| Deployment | Docker Compose (self-host reference) + Kubernetes manifests; GitHub Actions CI | self-hostable is a requirement for OSINT users |
+| Layer             | Decision                                                                                                                                                                                                             | One-line justification                                                                                                                                                                              |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Language          | **TypeScript 5.6+, strict**, everywhere                                                                                                                                                                              | one type language across client, server, plugins                                                                                                                                                    |
+| Frontend shell    | **React 19 + Vite 6** SPA (not Next.js)                                                                                                                                                                              | app is behind auth, has no SEO surface, needs fast HMR on a heavy canvas                                                                                                                            |
+| Canvas renderer   | **Custom hybrid engine**: Canvas2D (edges, far-LOD nodes, grid, marquee) + **DOM overlay for visible, near-zoom nodes** + spatial index                                                                              | React Flow degrades past ~500 rich DOM nodes; pure WebGL loses rich text/HTML cards. Hybrid keeps HTML fidelity where the user looks and canvas speed everywhere else. See `05_CANVAS_ENGINE.md` §2 |
+| Scene state       | **Yjs `Y.Doc` per board** = the document; **Zustand** = ephemeral UI state only                                                                                                                                      | CRDT gives offline-first + realtime + conflict-free merge with one model; UI state must never be persisted                                                                                          |
+| Undo/redo         | **`Y.UndoManager`** scoped to the local origin                                                                                                                                                                       | free, correct across concurrent edits; hand-rolled command stacks break under sync                                                                                                                  |
+| Local persistence | **`y-indexeddb`** + file blobs in **OPFS**                                                                                                                                                                           | app opens instantly and works fully offline                                                                                                                                                         |
+| Sync              | **Hocuspocus 4** WebSocket server, one room per board, Redis extension for horizontal scale                                                                                                                          | official Yjs server, auth hooks, awareness, battle-tested                                                                                                                                           |
+| Backend API       | **Fastify 5** (Node 22 LTS) + **tRPC v11** for the app, REST (OpenAPI) for plugins/webhooks                                                                                                                          | typed end-to-end for our own client, standards-based for third parties                                                                                                                              |
+| Database          | **PostgreSQL 16** + **Prisma**                                                                                                                                                                                       | relational core (projects, ACL, runs, audit) + `jsonb` for flexible node payloads + `pgvector` for embeddings                                                                                       |
+| Graph storage     | **Postgres tables (`nodes`, `edges`) as the queryable projection**, Yjs binary as the authoritative live document                                                                                                    | one database; recursive CTEs cover the graph queries we need, no second DB to operate                                                                                                               |
+| Search            | **Postgres FTS + `pg_trgm`** (phase 7), **pgvector** semantic search (phase 11)                                                                                                                                      | avoids a second search cluster until scale demands it                                                                                                                                               |
+| Files             | **S3-compatible object storage** (MinIO in dev), presigned uploads, server-side type sniffing                                                                                                                        | never trust client MIME                                                                                                                                                                             |
+| Jobs              | **BullMQ + Redis**                                                                                                                                                                                                   | integration runs, link unfurling, thumbnails, repo analysis                                                                                                                                         |
+| Tool execution    | **Runner service** executing every tool in a locked-down container (`--network` allowlist proxy, `--read-only`, `--cap-drop ALL`, non-root, pids/mem/cpu caps, hard timeout); **gVisor runtime class in production** | tools are untrusted third-party code; container flags + user-space kernel are the practical 2026 baseline                                                                                           |
+| Auth              | **Better-Auth** (email + OAuth) with sessions in Postgres, org/project RBAC                                                                                                                                          | mature, self-hostable, no vendor lock                                                                                                                                                               |
+| AI layer          | Provider-abstracted (`AIProvider` interface), default OpenAI-compatible endpoint; **all writes go through a Proposal object**                                                                                        | model choice must be swappable; AI never mutates the graph directly                                                                                                                                 |
+| Styling           | **CSS custom properties (design tokens) + Tailwind v4 preset generated from the tokens**                                                                                                                             | one token source, light theme later without touching components                                                                                                                                     |
+| Component base    | **Radix primitives**, all skinned; zero default browser controls                                                                                                                                                     | accessibility for free, full visual control                                                                                                                                                         |
+| Motion            | **Motion (framer-motion 12)** for UI chrome only; canvas animates via rAF on transforms                                                                                                                              | never animate layout inside the canvas                                                                                                                                                              |
+| Testing           | Vitest (unit), Playwright (e2e + visual), k6 (API load), custom canvas benchmark harness                                                                                                                             | see `18_TESTING.md`                                                                                                                                                                                 |
+| Deployment        | Docker Compose (self-host reference) + Kubernetes manifests; GitHub Actions CI                                                                                                                                       | self-hostable is a requirement for OSINT users                                                                                                                                                      |
 
 ### Why this architecture (the three decisions worth arguing about)
 
 **1. Custom hybrid canvas instead of React Flow / tldraw.**
 React Flow renders each node as React DOM + SVG edges; published guidance and issue reports put
-the smooth ceiling at roughly 500 rich nodes, and our nodes are *rich* (favicons, previews, rich
+the smooth ceiling at roughly 500 rich nodes, and our nodes are _rich_ (favicons, previews, rich
 text, badges). tldraw solves this with culling and a spatial index but owns its own document model
 and shape system, which fights our typed-entity graph and our CRDT. So we take tldraw's proven
 techniques (spatial index, culling, LOD, stable zoom during camera movement) and implement them
@@ -106,18 +107,18 @@ never a change to the canvas. See `10_INTEGRATIONS.md` and `17_PLUGIN_SDK.md`.
 
 ## 4. Non-negotiable requirements
 
-| # | Requirement | Verified by |
-|---|---|---|
-| N1 | 5,000 nodes / 10,000 edges: pan-zoom p95 frame ≤ 16.6 ms, first interactive ≤ 2.5 s | `bench/canvas.bench.ts` in CI, fails the build on regression |
-| N2 | No data loss: every mutation is durable locally within 100 ms, server-acked within 2 s, `Saved / Saving… / Offline` always visible | Playwright offline suite + kill-tab test |
-| N3 | Undo/redo works for every mutation including tool imports and AI actions | e2e matrix, one case per mutation type |
-| N4 | No AI or tool output enters the graph without an explicit user-accepted **Proposal** | e2e + code-level lint rule (`no-direct-graph-write` outside `applyProposal`) |
-| N5 | Every tool runs inside the sandboxed runner; no tool ever executes in the API process | architecture test: runner is a separate service, API has no `child_process` import |
-| N6 | Full keyboard operability, visible focus, `prefers-reduced-motion` honored, contrast ≥ 4.5:1 for text / 3:1 for UI | axe-core in CI + manual checklist per phase |
-| N7 | SSRF-safe URL handling for every user-supplied URL (DNS re-resolution pinning, private-range denylist, redirect cap) | unit tests with a hostile URL corpus |
-| N8 | Every destructive action is undoable or confirmed; nothing is deleted silently | e2e |
-| N9 | Board export/import round-trips losslessly (`JSON v1` schema) | property test: export → import → deep-equal |
-| N10 | No `TODO` for core functionality; every core feature has a full architectural solution | PR review gate |
+| #   | Requirement                                                                                                                        | Verified by                                                                        |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| N1  | 5,000 nodes / 10,000 edges: pan-zoom p95 frame ≤ 16.6 ms, first interactive ≤ 2.5 s                                                | `bench/canvas.bench.ts` in CI, fails the build on regression                       |
+| N2  | No data loss: every mutation is durable locally within 100 ms, server-acked within 2 s, `Saved / Saving… / Offline` always visible | Playwright offline suite + kill-tab test                                           |
+| N3  | Undo/redo works for every mutation including tool imports and AI actions                                                           | e2e matrix, one case per mutation type                                             |
+| N4  | No AI or tool output enters the graph without an explicit user-accepted **Proposal**                                               | e2e + code-level lint rule (`no-direct-graph-write` outside `applyProposal`)       |
+| N5  | Every tool runs inside the sandboxed runner; no tool ever executes in the API process                                              | architecture test: runner is a separate service, API has no `child_process` import |
+| N6  | Full keyboard operability, visible focus, `prefers-reduced-motion` honored, contrast ≥ 4.5:1 for text / 3:1 for UI                 | axe-core in CI + manual checklist per phase                                        |
+| N7  | SSRF-safe URL handling for every user-supplied URL (DNS re-resolution pinning, private-range denylist, redirect cap)               | unit tests with a hostile URL corpus                                               |
+| N8  | Every destructive action is undoable or confirmed; nothing is deleted silently                                                     | e2e                                                                                |
+| N9  | Board export/import round-trips losslessly (`JSON v1` schema)                                                                      | property test: export → import → deep-equal                                        |
+| N10 | No `TODO` for core functionality; every core feature has a full architectural solution                                             | PR review gate                                                                     |
 
 ---
 
@@ -181,25 +182,25 @@ depend on nothing internal except `packages/config`.
 Each phase has a self-contained implementation prompt in `20_ROADMAP.md` and ships behind a
 quality gate (§8). Order optimizes for "the risky, architecture-defining parts first".
 
-| Phase | Name | Ships |
-|---|---|---|
-| P0 | Architecture | this spec (done) |
-| P1 | Foundation | monorepo, tokens, app shell, auth, Postgres, CI, benchmark harness |
-| P2 | Canvas engine | camera, spatial index, hybrid renderer, selection, drag, grid, minimap |
-| P3 | Document & persistence | Y.Doc schema, IndexedDB, undo/redo, save indicator, snapshots |
-| P4 | Node system | all node types, inspector, rich text, files, images, tags |
-| P5 | Edge system | typed edges, routing modes (curved/orthogonal/straight/smart), labels, editing |
-| P6 | Capture | paste pipeline, drag-drop, unfurl service, quick-add, browser extension hook |
-| P7 | Projects & search | multi-project, boards, global search, `Ctrl+K` command palette |
-| P8 | Sync & collaboration | Hocuspocus, projection, presence, comments, conflict UX |
-| P9 | Integration framework | manifest schema, runner sandbox, proposal/import UX, run history |
-| P10 | GitHub integration | repo nodes, README/releases/contributors, repo analysis agent |
-| P11 | Sherlock integration | username enumeration → entity mapping |
-| P12 | SpiderFoot integration | scan orchestration → entity mapping, correlation import |
-| P13 | AI layer | summarize, explain, suggest links, dedupe, cluster, investigation summary |
-| P14 | Views | graph / timeline / table / list / map modes, auto-layout suite |
-| P15 | Groups, presentation & export | groups, presentation mode, report export, archives |
-| P16 | Hardening | performance pass, security audit, a11y audit, observability, GA |
+| Phase | Name                          | Ships                                                                          |
+| ----- | ----------------------------- | ------------------------------------------------------------------------------ |
+| P0    | Architecture                  | this spec (done)                                                               |
+| P1    | Foundation                    | monorepo, tokens, app shell, auth, Postgres, CI, benchmark harness             |
+| P2    | Canvas engine                 | camera, spatial index, hybrid renderer, selection, drag, grid, minimap         |
+| P3    | Document & persistence        | Y.Doc schema, IndexedDB, undo/redo, save indicator, snapshots                  |
+| P4    | Node system                   | all node types, inspector, rich text, files, images, tags                      |
+| P5    | Edge system                   | typed edges, routing modes (curved/orthogonal/straight/smart), labels, editing |
+| P6    | Capture                       | paste pipeline, drag-drop, unfurl service, quick-add, browser extension hook   |
+| P7    | Projects & search             | multi-project, boards, global search, `Ctrl+K` command palette                 |
+| P8    | Sync & collaboration          | Hocuspocus, projection, presence, comments, conflict UX                        |
+| P9    | Integration framework         | manifest schema, runner sandbox, proposal/import UX, run history               |
+| P10   | GitHub integration            | repo nodes, README/releases/contributors, repo analysis agent                  |
+| P11   | Sherlock integration          | username enumeration → entity mapping                                          |
+| P12   | SpiderFoot integration        | scan orchestration → entity mapping, correlation import                        |
+| P13   | AI layer                      | summarize, explain, suggest links, dedupe, cluster, investigation summary      |
+| P14   | Views                         | graph / timeline / table / list / map modes, auto-layout suite                 |
+| P15   | Groups, presentation & export | groups, presentation mode, report export, archives                             |
+| P16   | Hardening                     | performance pass, security audit, a11y audit, observability, GA                |
 
 ---
 
@@ -221,36 +222,36 @@ A phase is **done** only when all seven checks pass and the evidence is in the P
 7. **Tests** — unit tests for logic, e2e for the flow, and the phase's acceptance table encoded as
    tests. Coverage on `packages/domain` and `packages/canvas-engine` ≥ 85% lines.
 
-Every phase PR must also state: *what existed before, what was reused, what was intentionally not
-touched.* Rewriting a working subsystem without a stated reason is a gate failure.
+Every phase PR must also state: _what existed before, what was reused, what was intentionally not
+touched._ Rewriting a working subsystem without a stated reason is a gate failure.
 
 ---
 
 ## 9. Document index
 
-| File | Contains |
-|---|---|
-| `00_MASTER.md` | this file — decisions, principles, phases, gates |
-| `01_PRODUCT.md` | vision, users, jobs-to-be-done, feature set incl. the 20+ self-proposed features |
-| `02_ARCHITECTURE.md` | layer contracts, module boundaries, runtime topology, key sequences |
-| `03_UX.md` | full interaction specification, state-by-state, shortcuts, error copy |
-| `04_DESIGN_SYSTEM.md` | token architecture, color/type/space scales, component variants |
-| `05_CANVAS_ENGINE.md` | renderer, camera, spatial index, LOD, interaction FSM, performance budget |
-| `06_NODE_SYSTEM.md` | node type registry, schemas, editors, lifecycle |
-| `07_EDGE_SYSTEM.md` | edge semantics, routing algorithms, labels, editing |
-| `08_DATA_MODEL.md` | Y.Doc schema, Postgres schema, indexes, migrations, export format |
-| `09_BACKEND.md` | services, APIs, jobs, files, observability |
-| `10_INTEGRATIONS.md` | manifest schema, runner sandbox, pipeline, proposals |
-| `11_GITHUB.md` | GitHub integration + repository analysis agent |
-| `12_SPIDERFOOT.md` | SpiderFoot adapter, risks, entity mapping |
-| `13_SHERLOCK.md` | Sherlock adapter, entity mapping |
-| `14_AI_AGENT.md` | AI layer, proposal model, prompts, guardrails, cost control |
-| `15_SECURITY.md` | authn/z, isolation, SSRF, files, secrets, audit, acceptable use |
-| `16_PERFORMANCE.md` | budgets, techniques, measurement, regression gates |
-| `17_PLUGIN_SDK.md` | plugin manifest, permissions, extension points, lifecycle, sandbox |
-| `18_TESTING.md` | test strategy, layers, fixtures, visual and performance testing |
-| `19_DEPLOYMENT.md` | environments, IaC, CI/CD, migrations, backup, monitoring |
-| `20_ROADMAP.md` | phase-by-phase implementation prompts (P1…P16) |
+| File                  | Contains                                                                         |
+| --------------------- | -------------------------------------------------------------------------------- |
+| `00_MASTER.md`        | this file — decisions, principles, phases, gates                                 |
+| `01_PRODUCT.md`       | vision, users, jobs-to-be-done, feature set incl. the 20+ self-proposed features |
+| `02_ARCHITECTURE.md`  | layer contracts, module boundaries, runtime topology, key sequences              |
+| `03_UX.md`            | full interaction specification, state-by-state, shortcuts, error copy            |
+| `04_DESIGN_SYSTEM.md` | token architecture, color/type/space scales, component variants                  |
+| `05_CANVAS_ENGINE.md` | renderer, camera, spatial index, LOD, interaction FSM, performance budget        |
+| `06_NODE_SYSTEM.md`   | node type registry, schemas, editors, lifecycle                                  |
+| `07_EDGE_SYSTEM.md`   | edge semantics, routing algorithms, labels, editing                              |
+| `08_DATA_MODEL.md`    | Y.Doc schema, Postgres schema, indexes, migrations, export format                |
+| `09_BACKEND.md`       | services, APIs, jobs, files, observability                                       |
+| `10_INTEGRATIONS.md`  | manifest schema, runner sandbox, pipeline, proposals                             |
+| `11_GITHUB.md`        | GitHub integration + repository analysis agent                                   |
+| `12_SPIDERFOOT.md`    | SpiderFoot adapter, risks, entity mapping                                        |
+| `13_SHERLOCK.md`      | Sherlock adapter, entity mapping                                                 |
+| `14_AI_AGENT.md`      | AI layer, proposal model, prompts, guardrails, cost control                      |
+| `15_SECURITY.md`      | authn/z, isolation, SSRF, files, secrets, audit, acceptable use                  |
+| `16_PERFORMANCE.md`   | budgets, techniques, measurement, regression gates                               |
+| `17_PLUGIN_SDK.md`    | plugin manifest, permissions, extension points, lifecycle, sandbox               |
+| `18_TESTING.md`       | test strategy, layers, fixtures, visual and performance testing                  |
+| `19_DEPLOYMENT.md`    | environments, IaC, CI/CD, migrations, backup, monitoring                         |
+| `20_ROADMAP.md`       | phase-by-phase implementation prompts (P1…P16)                                   |
 
 ---
 
@@ -263,7 +264,7 @@ touched.* Rewriting a working subsystem without a stated reason is a gate failur
    update the affected spec document in the same PR.
 4. **Types and docs are part of the change.** Public API changes update `packages/*/README.md`
    and the relevant `NEXUS-SPEC` file.
-5. **No generic errors.** Every failure surfaces *what happened, why, what to do* (see
+5. **No generic errors.** Every failure surfaces _what happened, why, what to do_ (see
    `03_UX.md` §12).
 6. **No hardcoded design values.** Colors, spacing, radii, durations come from tokens only.
 7. **Bug prevention checklist** before finishing any phase: race conditions, stale closures,

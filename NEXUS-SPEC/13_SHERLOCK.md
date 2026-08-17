@@ -16,16 +16,16 @@ arrives through a Proposal (N4).
 
 As of 2026-08-17, from live sources:
 
-| Fact | Value |
-|---|---|
-| Repository | `sherlock-project/sherlock` |
-| License | MIT |
-| Latest release | **v0.16.0**, published **2025-09-16** |
-| Implementation | Python CLI |
-| Coverage | ~400+ sites |
-| Relevant flags | `--json FILE`, `--site`, `--timeout`, `--print-found`, `--nsfw`, `--local`, `--proxy` |
-| Official container image | `sherlock/sherlock` |
-| Maintenance | actively maintained |
+| Fact                     | Value                                                                                 |
+| ------------------------ | ------------------------------------------------------------------------------------- |
+| Repository               | `sherlock-project/sherlock`                                                           |
+| License                  | MIT                                                                                   |
+| Latest release           | **v0.16.0**, published **2025-09-16**                                                 |
+| Implementation           | Python CLI                                                                            |
+| Coverage                 | ~400+ sites                                                                           |
+| Relevant flags           | `--json FILE`, `--site`, `--timeout`, `--print-found`, `--nsfw`, `--local`, `--proxy` |
+| Official container image | `sherlock/sherlock`                                                                   |
+| Maintenance              | actively maintained                                                                   |
 
 Applying `11_GITHUB.md` §5.8: recent release + active maintenance → band `healthy`. This is why
 Sherlock is also the **tier-2 fallback** for SpiderFoot's username family
@@ -52,20 +52,27 @@ export const sherlockManifest: IntegrationManifest = {
   id: 'sherlock',
   name: 'Sherlock',
   version: '1.0.0',
-  upstream: { repository: 'https://github.com/sherlock-project/sherlock', license: 'MIT',
-              pinnedRelease: 'v0.16.0' },
+  upstream: {
+    repository: 'https://github.com/sherlock-project/sherlock',
+    license: 'MIT',
+    pinnedRelease: 'v0.16.0',
+  },
   category: 'identity',
   execution: {
     kind: 'container',
     image: 'sherlock/sherlock',
-    imageDigest: process.env.SHERLOCK_IMAGE_DIGEST ?? null,   // required in production
+    imageDigest: process.env.SHERLOCK_IMAGE_DIGEST ?? null, // required in production
     network: 'allowlist',
     timeoutMs: 600_000,
     resources: { memoryMb: 1024, cpus: 1, pidsLimit: 256, tmpfsMb: 256 },
   },
   inputs: [
-    { name: 'username', type: 'username', required: true,
-      pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$' },
+    {
+      name: 'username',
+      type: 'username',
+      required: true,
+      pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$',
+    },
     { name: 'sites', type: 'string[]', required: false },
     { name: 'timeoutSec', type: 'number', required: false, default: 15, min: 3, max: 60 },
     { name: 'nsfw', type: 'boolean', required: false, default: false },
@@ -113,19 +120,20 @@ into a shell):
 ```ts
 function buildArgv(input: SherlockInput, caps: SherlockCapabilities): string[] {
   const a: string[] = [];
-  a.push(input.username);                                  // positional, validated by pattern
+  a.push(input.username); // positional, validated by pattern
   a.push('--json', `/out/${safeFile(input.username)}.json`);
   a.push('--timeout', String(input.timeoutSec ?? 15));
   if (input.sites?.length) for (const s of input.sites.slice(0, 40)) a.push('--site', s);
   if (input.nsfw && caps.flags.has('--nsfw')) a.push('--nsfw');
-  if (caps.flags.has('--print-found')) a.push('--print-found');   // stdout readability only
+  if (caps.flags.has('--print-found')) a.push('--print-found'); // stdout readability only
   if (input.proxy && caps.flags.has('--proxy')) a.push('--proxy', input.proxy);
-  if (caps.flags.has('--local')) a.push('--local');               // use the image's bundled site list
+  if (caps.flags.has('--local')) a.push('--local'); // use the image's bundled site list
   return a;
 }
 ```
 
 Notes on flag choices:
+
 - `--json FILE` is the machine-readable contract; stdout is captured but never parsed for results.
 - `--local` uses the site list shipped in the image instead of fetching a remote list, which keeps
   the run deterministic and removes one network dependency. If the probe does not report `--local`,
@@ -142,17 +150,17 @@ copied out by the runner sidecar (`19_DEPLOYMENT.md` §5).
 
 ### 3.2 Resource limits and timeouts
 
-| Limit | Value | Enforcement |
-|---|---|---|
-| Wall clock | 600 s default, max 1800 s | runner: SIGTERM at limit, SIGKILL at +10 s |
-| Per-site timeout | `--timeout` 15 s default (3–60) | tool flag |
-| Memory | 1 GiB | cgroup, OOM → `SH_OOM` |
-| CPU | 1 core | cgroup |
-| PIDs | 256 | cgroup |
-| Output artifact | 32 MB | runner refuses to read beyond; `SH_OUTPUT_TOO_LARGE` |
-| stdout/stderr capture | 2 MB each, head+tail truncation | runner |
-| Concurrent Sherlock runs | 2 per user, 8 per instance | BullMQ concurrency + rate limiter |
-| Runs per user | 20 / hour, 100 / day | Redis counter, `SH_QUOTA` |
+| Limit                    | Value                           | Enforcement                                          |
+| ------------------------ | ------------------------------- | ---------------------------------------------------- |
+| Wall clock               | 600 s default, max 1800 s       | runner: SIGTERM at limit, SIGKILL at +10 s           |
+| Per-site timeout         | `--timeout` 15 s default (3–60) | tool flag                                            |
+| Memory                   | 1 GiB                           | cgroup, OOM → `SH_OOM`                               |
+| CPU                      | 1 core                          | cgroup                                               |
+| PIDs                     | 256                             | cgroup                                               |
+| Output artifact          | 32 MB                           | runner refuses to read beyond; `SH_OUTPUT_TOO_LARGE` |
+| stdout/stderr capture    | 2 MB each, head+tail truncation | runner                                               |
+| Concurrent Sherlock runs | 2 per user, 8 per instance      | BullMQ concurrency + rate limiter                    |
+| Runs per user            | 20 / hour, 100 / day            | Redis counter, `SH_QUOTA`                            |
 
 ### 3.3 Proxy and egress policy
 
@@ -185,7 +193,7 @@ copied out by the runner sidecar (`19_DEPLOYMENT.md` §5).
    - deletes the host directory.
 3. The parser reads from S3 with a streaming JSON parser; the raw artifact remains downloadable
    from the run drawer ("Download raw result") — the roadmap's requirement that the analyst can see
-   raw *and* parsed results.
+   raw _and_ parsed results.
 
 ### 3.5 Exit code handling
 
@@ -218,15 +226,16 @@ docker run --rm --network none {image}@{digest} --help      -> stdout
 export interface SherlockCapabilities {
   imageDigest: string;
   probedAt: string;
-  versionString: string | null;      // raw line
-  semver: string | null;             // parsed x.y.z if present
-  flags: Set<string>;                // parsed from --help: every /^\s+(-{1,2}[\w-]+)/ token
-  supportsJsonFlag: boolean;         // '--json' in flags  (required)
+  versionString: string | null; // raw line
+  semver: string | null; // parsed x.y.z if present
+  flags: Set<string>; // parsed from --help: every /^\s+(-{1,2}[\w-]+)/ token
+  supportsJsonFlag: boolean; // '--json' in flags  (required)
   jsonShape: 'unknown' | 'map-of-sites' | 'map-of-usernames' | 'array-of-records';
 }
 ```
 
 Rules:
+
 - `supportsJsonFlag === false` → the integration is marked unavailable with
   `SH_INCOMPATIBLE_IMAGE` and the operator is told which digest failed. We never fall back to
   parsing human-readable stdout as a result source.
@@ -248,9 +257,9 @@ always a `SherlockResult` with counts of what it could and could not read.
 
 ```ts
 export interface SherlockSiteResult {
-  site: string;                                   // service name as reported
-  url: string | null;                             // profile URL as reported (validated)
-  urlMain: string | null;                         // service root, as reported or derived
+  site: string; // service name as reported
+  url: string | null; // profile URL as reported (validated)
+  urlMain: string | null; // service root, as reported or derived
   status: 'claimed' | 'available' | 'unknown' | 'error' | 'illegal';
   httpStatus: number | null;
   responseTimeMs: number | null;
@@ -267,9 +276,15 @@ export interface SherlockResult {
   finishedAt: string;
   durationMs: number;
   sites: SherlockSiteResult[];
-  counts: { total: number; claimed: number; available: number; error: number; unknown: number;
-            unreadable: number };
-  partial: boolean;                               // true when the run was cut short
+  counts: {
+    total: number;
+    claimed: number;
+    available: number;
+    error: number;
+    unknown: number;
+    unreadable: number;
+  };
+  partial: boolean; // true when the run was cut short
   warnings: string[];
 }
 ```
@@ -305,20 +320,33 @@ warning).
 
 ```ts
 const STATUS_MAP: Record<string, SherlockSiteResult['status']> = {
-  claimed: 'claimed', found: 'claimed', exists: 'claimed', true: 'claimed',
-  available: 'available', not_found: 'available', notfound: 'available', false: 'available',
-  error: 'error', unknown: 'unknown', illegal: 'illegal', blocked: 'error', waf: 'error',
+  claimed: 'claimed',
+  found: 'claimed',
+  exists: 'claimed',
+  true: 'claimed',
+  available: 'available',
+  not_found: 'available',
+  notfound: 'available',
+  false: 'available',
+  error: 'error',
+  unknown: 'unknown',
+  illegal: 'illegal',
+  blocked: 'error',
+  waf: 'error',
 };
 
 function readStatus(rec: Record<string, unknown>): SherlockSiteResult['status'] {
   const raw = pickAny(rec, ['status', 'exists', 'result', 'state']);
   if (raw === null || raw === undefined) return 'unknown';
-  const key = String(typeof raw === 'object' ? (raw as any).status ?? '' : raw).toLowerCase().trim();
-  return STATUS_MAP[key] ?? 'unknown';                 // never throw, never guess a positive
+  const key = String(typeof raw === 'object' ? ((raw as any).status ?? '') : raw)
+    .toLowerCase()
+    .trim();
+  return STATUS_MAP[key] ?? 'unknown'; // never throw, never guess a positive
 }
 ```
 
 Other fields:
+
 - `url` ← first of `url_user`, `url`, `profile_url`; validated as absolute `http(s)` with a public
   host; anything else becomes `null` plus a warning. This is the SSRF boundary for tool output
   (N7): tool-produced URLs are untrusted input.
@@ -327,7 +355,7 @@ Other fields:
 - `responseTimeMs` ← `response_time_s * 1000` when numeric, else `response_time_ms`, else `null`.
 - `site` ← the record key, or `site`/`name` field; trimmed, max 64 chars.
 
-**Bias rule:** any ambiguity resolves *away from* `claimed`. An unrecognized status is `unknown`,
+**Bias rule:** any ambiguity resolves _away from_ `claimed`. An unrecognized status is `unknown`,
 never a hit. A false negative costs a lead; a false positive costs an accusation.
 
 ### 4.4 Counting and partiality
@@ -353,13 +381,13 @@ first 4 KB of the artifact, and a link to the digest pinning setting. This is th
 
 ### 5.1 What each status means
 
-| Status | Meaning NEXUS may state | Meaning NEXUS may NOT state |
-|---|---|---|
-| `claimed` | "A profile page exists at this URL for this handle." | "This person has an account here." |
-| `available` | "The service reported no profile at this handle at {time}." | "This person has no account here." (private/renamed/shadowbanned profiles exist) |
-| `error` | "The check failed ({reason}); the result is unknown." | anything about existence |
-| `unknown` | "The result could not be interpreted." | anything about existence |
-| `illegal` | "The handle is not valid for this service, so it was not checked." | anything about existence |
+| Status      | Meaning NEXUS may state                                            | Meaning NEXUS may NOT state                                                      |
+| ----------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| `claimed`   | "A profile page exists at this URL for this handle."               | "This person has an account here."                                               |
+| `available` | "The service reported no profile at this handle at {time}."        | "This person has no account here." (private/renamed/shadowbanned profiles exist) |
+| `error`     | "The check failed ({reason}); the result is unknown."              | anything about existence                                                         |
+| `unknown`   | "The result could not be interpreted."                             | anything about existence                                                         |
+| `illegal`   | "The handle is not valid for this service, so it was not checked." | anything about existence                                                         |
 
 ### 5.2 False-positive characteristics
 
@@ -370,7 +398,7 @@ must reflect:
    reports `claimed`.
 2. **Catch-all / vanity routing** — some services render a page for any handle.
 3. **Anti-bot interstitials** — CAPTCHA/WAF pages return 200 and look like a hit.
-4. **Rate limiting** — bursts of checks cause 429s that may be classified as errors *or*, worse, as
+4. **Rate limiting** — bursts of checks cause 429s that may be classified as errors _or_, worse, as
    pages.
 5. **Handle recycling** — a claimed profile may belong to a different person than it did last year.
 6. **Common handles** — `john`, `admin`, `test` exist on nearly every service and mean nothing.
@@ -396,7 +424,7 @@ result, because the tool cannot distinguish "page exists" from "this person owns
 sets live in `packages/integrations/sherlock/site-quality.ts` as data with a comment citing why each
 entry is listed; entries default to neutral (no adjustment) when unknown.
 
-`available` results are stored with `confidence: 0.5` on the *negative* claim and are **not**
+`available` results are stored with `confidence: 0.5` on the _negative_ claim and are **not**
 imported as nodes by default (§6.4).
 
 ### 5.4 What NEXUS must never assert — and the UI copy that enforces it
@@ -413,11 +441,11 @@ Hard rules, encoded as lint-checked copy constants in
 - Export/report rendering (`15_PRESENTATION`) prints the same sentence in the methodology section
   whenever Sherlock-sourced nodes appear.
 - The edge from a `username` node to a `profile` node is `has_profile` with the label
-  *"handle observed"*, never *"owned by"*.
+  _"handle observed"_, never _"owned by"_.
 - Cross-service identity edges are never created automatically. A `same_handle_as` edge between two
   profiles is created only when the user asks, is confidence ≤ 0.6, and renders with a dashed
   stroke and the label "same handle" (`07_EDGE_SYSTEM.md` styling for weak edges).
-- Any AI summary of Sherlock results (`14_AI_AGENT.md`) is given the results *and* these constraints
+- Any AI summary of Sherlock results (`14_AI_AGENT.md`) is given the results _and_ these constraints
   in the system prompt, and its output is schema-limited to descriptive fields — it cannot emit an
   attribution statement into a node field.
 
@@ -435,38 +463,38 @@ Produced per `claimed` site:
 ```ts
 export const ProfileDataSchema = z.object({
   kind: z.literal('profile'),
-  service: z.string(),                    // "GitHub"
-  serviceHost: z.string().nullable(),     // "github.com"
+  service: z.string(), // "GitHub"
+  serviceHost: z.string().nullable(), // "github.com"
   handle: z.string(),
   url: z.string().url(),
-  status: z.enum(['claimed','available','unknown','error','illegal']),
+  status: z.enum(['claimed', 'available', 'unknown', 'error', 'illegal']),
   httpStatus: z.number().int().nullable(),
-  checkedAt: z.string(),                  // ISO, = run finishedAt
+  checkedAt: z.string(), // ISO, = run finishedAt
   firstSeenAt: z.string(),
   lastSeenAt: z.string(),
-  verificationState: z.enum(['lead','verified','rejected']).default('lead'),
-  disappearedAt: z.string().nullable(),   // set by diffing, §6.5
+  verificationState: z.enum(['lead', 'verified', 'rejected']).default('lead'),
+  disappearedAt: z.string().nullable(), // set by diffing, §6.5
   runIds: z.array(z.string().uuid()),
 });
 ```
 
 Derived, opt-in in the import sheet:
 
-| Derived node | Rule | Default |
-|---|---|---|
-| `domain` for `serviceHost` registrable domain | one per distinct service host | off (adds ~N domain nodes with little value) |
-| `link` node for the profile URL | only when the user wants the page itself as an artifact | off |
-| `website` unfurl of the profile URL | requires a separate unfurl job (`06_NODE_SYSTEM.md`) and an extra network fetch **from NEXUS**, which is a different actor than the tool — explicitly consented | off |
+| Derived node                                  | Rule                                                                                                                                                            | Default                                      |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| `domain` for `serviceHost` registrable domain | one per distinct service host                                                                                                                                   | off (adds ~N domain nodes with little value) |
+| `link` node for the profile URL               | only when the user wants the page itself as an artifact                                                                                                         | off                                          |
+| `website` unfurl of the profile URL           | requires a separate unfurl job (`06_NODE_SYSTEM.md`) and an extra network fetch **from NEXUS**, which is a different actor than the tool — explicitly consented | off                                          |
 
 ### 6.2 Edges
 
-| Edge | From → To | Confidence | Notes |
-|---|---|---|---|
-| `has_profile` | username → profile | per §5.3 | label "handle observed"; provenance = run |
-| `hosted_on` | profile → domain | 0.95 | structural fact from the URL, not an inference |
-| `links_to` | profile → link/website | 0.9 | only when the URL node was created |
-| `same_handle_as` | profile ↔ profile | ≤ 0.6 | user-initiated only (§5.4) |
-| `checked_by` | username → run | — | run provenance is an envelope field, not a visible edge |
+| Edge             | From → To              | Confidence | Notes                                                   |
+| ---------------- | ---------------------- | ---------- | ------------------------------------------------------- |
+| `has_profile`    | username → profile     | per §5.3   | label "handle observed"; provenance = run               |
+| `hosted_on`      | profile → domain       | 0.95       | structural fact from the URL, not an inference          |
+| `links_to`       | profile → link/website | 0.9        | only when the URL node was created                      |
+| `same_handle_as` | profile ↔ profile     | ≤ 0.6      | user-initiated only (§5.4)                              |
+| `checked_by`     | username → run         | —          | run provenance is an envelope field, not a visible edge |
 
 ### 6.3 Provenance payload (on every node and edge)
 
@@ -514,12 +542,13 @@ export interface SherlockDiff {
   handle: string;
   previousRunId: string;
   currentRunId: string;
-  previousAt: string; currentAt: string;
+  previousAt: string;
+  currentAt: string;
   digestChanged: boolean;
-  siteListDelta: { added: string[]; removed: string[] };   // sites the tool itself gained/dropped
-  appeared: SherlockSiteResult[];        // available/error/absent -> claimed
-  disappeared: SherlockSiteResult[];     // claimed -> available
-  becameUnknown: SherlockSiteResult[];   // claimed -> error/unknown  (NOT "disappeared")
+  siteListDelta: { added: string[]; removed: string[] }; // sites the tool itself gained/dropped
+  appeared: SherlockSiteResult[]; // available/error/absent -> claimed
+  disappeared: SherlockSiteResult[]; // claimed -> available
+  becameUnknown: SherlockSiteResult[]; // claimed -> error/unknown  (NOT "disappeared")
   unchanged: number;
 }
 ```
@@ -545,13 +574,18 @@ A `username` node can be added to a watchlist:
 
 ```ts
 export interface UsernameWatch {
-  id: string; nodeId: string; handle: string; projectId: string; createdBy: string;
+  id: string;
+  nodeId: string;
+  handle: string;
+  projectId: string;
+  createdBy: string;
   cadence: 'daily' | 'weekly' | 'monthly';
-  sites: string[] | null;                  // null = full list
+  sites: string[] | null; // null = full list
   notifyOn: Array<'appeared' | 'disappeared' | 'becameUnknown'>;
-  consentId: string;                       // the standing consent record, §7.2
+  consentId: string; // the standing consent record, §7.2
   pausedAt: string | null;
-  lastRunId: string | null; nextRunAt: string;
+  lastRunId: string | null;
+  nextRunAt: string;
 }
 ```
 
@@ -619,39 +653,39 @@ handle is available only through the run record, which is ACL'd to the project.
 
 ## 8. Error copy
 
-| Code | Title | Body | Action |
-|---|---|---|---|
-| `SH_DISABLED` | "Sherlock is not enabled" | "An administrator has not enabled username enumeration on this instance." | "Contact admin" |
-| `SH_INCOMPATIBLE_IMAGE` | "Unsupported Sherlock image" | "The configured image ({digest}) does not support `--json`, which NEXUS requires." | "Open settings" |
-| `SH_CONSENT_REQUIRED` | "Confirm authorization" | "This run contacts ~400 external sites. Confirm you have a lawful basis." | "Review and confirm" |
-| `SH_QUOTA` | "Run limit reached" | "You have run 20 username checks this hour. The limit resets at 15:00." | "See run history" |
-| `SH_RECENT_RUN` | "Checked recently" | "@{handle} was checked 4 minutes ago. Re-running now will mostly repeat the same requests." | "Show last result" / "Force re-run" |
-| `SH_TIMEOUT` | "Check timed out" | "The run hit the {limit} limit. {n} sites were checked; results are partial." | "Import partial results" |
-| `SH_TOOL_FAILED` | "Sherlock exited with an error" | "The tool exited with code {code} and produced no results. Last error: {stderrTail}" | "Open run log" |
-| `SH_NONZERO_EXIT` | "Finished with warnings" | "The tool reported errors for some sites but produced a full result file." | "Show details" |
-| `SH_NO_OUTPUT` | "No results file" | "The run finished but wrote no JSON output." | "Open run log" |
-| `SH_OUTPUT_TOO_LARGE` | "Result file too large" | "The output exceeded 32 MB and was not read." | "Download raw" |
-| `SH_PARSE` | "Unreadable results" | "NEXUS did not recognize the structure of this Sherlock build's JSON output." | "Download raw" / "Report" |
-| `SH_PARSE_DEGRADED` | "Some results unreadable" | "{n} of {total} records could not be read. Import with care." | "Continue" |
-| `SH_OOM` | "Ran out of memory" | "The run exceeded its 1 GB memory limit and was stopped." | "Retry with fewer sites" |
-| `SH_PROXY_INVALID` | "Proxy rejected" | "The proxy address must be a public http, https or socks5 endpoint." | "Edit proxy" |
-| `SH_EGRESS_CAP` | "Network limit reached" | "The run reached its request cap ({cap}). Results are partial." | "Import partial results" |
+| Code                    | Title                           | Body                                                                                        | Action                              |
+| ----------------------- | ------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `SH_DISABLED`           | "Sherlock is not enabled"       | "An administrator has not enabled username enumeration on this instance."                   | "Contact admin"                     |
+| `SH_INCOMPATIBLE_IMAGE` | "Unsupported Sherlock image"    | "The configured image ({digest}) does not support `--json`, which NEXUS requires."          | "Open settings"                     |
+| `SH_CONSENT_REQUIRED`   | "Confirm authorization"         | "This run contacts ~400 external sites. Confirm you have a lawful basis."                   | "Review and confirm"                |
+| `SH_QUOTA`              | "Run limit reached"             | "You have run 20 username checks this hour. The limit resets at 15:00."                     | "See run history"                   |
+| `SH_RECENT_RUN`         | "Checked recently"              | "@{handle} was checked 4 minutes ago. Re-running now will mostly repeat the same requests." | "Show last result" / "Force re-run" |
+| `SH_TIMEOUT`            | "Check timed out"               | "The run hit the {limit} limit. {n} sites were checked; results are partial."               | "Import partial results"            |
+| `SH_TOOL_FAILED`        | "Sherlock exited with an error" | "The tool exited with code {code} and produced no results. Last error: {stderrTail}"        | "Open run log"                      |
+| `SH_NONZERO_EXIT`       | "Finished with warnings"        | "The tool reported errors for some sites but produced a full result file."                  | "Show details"                      |
+| `SH_NO_OUTPUT`          | "No results file"               | "The run finished but wrote no JSON output."                                                | "Open run log"                      |
+| `SH_OUTPUT_TOO_LARGE`   | "Result file too large"         | "The output exceeded 32 MB and was not read."                                               | "Download raw"                      |
+| `SH_PARSE`              | "Unreadable results"            | "NEXUS did not recognize the structure of this Sherlock build's JSON output."               | "Download raw" / "Report"           |
+| `SH_PARSE_DEGRADED`     | "Some results unreadable"       | "{n} of {total} records could not be read. Import with care."                               | "Continue"                          |
+| `SH_OOM`                | "Ran out of memory"             | "The run exceeded its 1 GB memory limit and was stopped."                                   | "Retry with fewer sites"            |
+| `SH_PROXY_INVALID`      | "Proxy rejected"                | "The proxy address must be a public http, https or socks5 endpoint."                        | "Edit proxy"                        |
+| `SH_EGRESS_CAP`         | "Network limit reached"         | "The run reached its request cap ({cap}). Results are partial."                             | "Import partial results"            |
 
 State table for the run surface:
 
-| State | UI |
-|---|---|
-| initial | "Run Sherlock" action on any `username` node; handle pre-filled, sites = all |
-| consent-required | dialog, primary disabled until the checkbox is set |
-| queued | "Queued — 1 run ahead of yours", cancelable |
-| running | progress from stdout when `--print-found` is on: "217 / 402 sites · 14 found", elapsed timer, Cancel |
-| partial | banner + Import |
-| success | "402 sites checked · 14 possible profiles · 11 s" → review sheet |
-| review | list grouped by confidence band, each row: service, URL, confidence, `lead` chip, checkbox |
-| empty | "No profiles found for @{handle} across 402 sites. That is not proof the handle is unused." |
-| error | error strip per the table above |
-| imported | ring layout animation + undo toast "Undid: import 14 profiles for @handle" |
-| diff-pending (watchlist) | notification card "3 changes for @handle" → diff sheet |
+| State                    | UI                                                                                                   |
+| ------------------------ | ---------------------------------------------------------------------------------------------------- |
+| initial                  | "Run Sherlock" action on any `username` node; handle pre-filled, sites = all                         |
+| consent-required         | dialog, primary disabled until the checkbox is set                                                   |
+| queued                   | "Queued — 1 run ahead of yours", cancelable                                                          |
+| running                  | progress from stdout when `--print-found` is on: "217 / 402 sites · 14 found", elapsed timer, Cancel |
+| partial                  | banner + Import                                                                                      |
+| success                  | "402 sites checked · 14 possible profiles · 11 s" → review sheet                                     |
+| review                   | list grouped by confidence band, each row: service, URL, confidence, `lead` chip, checkbox           |
+| empty                    | "No profiles found for @{handle} across 402 sites. That is not proof the handle is unused."          |
+| error                    | error strip per the table above                                                                      |
+| imported                 | ring layout animation + undo toast "Undid: import 14 profiles for @handle"                           |
+| diff-pending (watchlist) | notification card "3 changes for @handle" → diff sheet                                               |
 
 ---
 
@@ -678,21 +712,21 @@ State table for the run surface:
 Ordered, each item independently verifiable; this is the table the phase PR must reproduce with
 evidence (`00_MASTER.md` §8).
 
-| # | Deliverable | File(s) | Acceptance evidence |
-|---|---|---|---|
-| 1 | Manifest registered in the integration registry | `packages/integrations/sherlock/manifest.ts` | registry test lists `sherlock` with the declared inputs/permissions |
-| 2 | Capability probe with per-digest cache | `.../probe.ts` | probe fixture for a compliant image and for an image lacking `--json` |
-| 3 | Runner execution profile (flags of §3.1) | `apps/runner/src/profiles/sherlock.ts` | container inspection test asserts non-root, read-only, cap-drop, pids/mem limits |
-| 4 | Egress policy for the run | `apps/runner/src/egress/policy.ts` | proxy denies RFC1918 + metadata IPs after DNS resolution |
-| 5 | Artifact upload + retention | `apps/runner/src/artifacts.ts` | S3 object exists, host dir removed, 30-day lifecycle rule present |
-| 6 | Schema-tolerant parser | `.../parse.ts` | the four shape fixtures + hostile-URL fixtures pass, zero throws |
-| 7 | Confidence model | `.../confidence.ts` | golden-value test of §5.3 |
-| 8 | Node/edge mapper | `.../mapper.ts` | fixture run → expected proposal (nodes, edges, provenance incl. `caveat`) |
-| 9 | Import sheet UI with `lead` framing | `apps/web/src/features/sherlock/*` | Playwright: copy strings present, default selection ≤ 60, one undo removes all |
-| 10 | Diff engine | `.../diff.ts` | claimed→error ⇒ `becameUnknown`; removed site ⇒ not a disappearance |
-| 11 | Watchlist scheduling + consent expiry | `apps/worker/src/jobs/sherlock-watch.ts` | 90-day expiry auto-pauses; diff is pending, never auto-applied |
-| 12 | Consent + audit | `apps/api/src/routes/runs.ts` | run without consent makes zero outbound requests; audit rows written with hashed handle |
-| 13 | Error surface | `.../copy.ts` | every code in §8 renders with title/body/action; lint rule for forbidden attribution words |
+| #   | Deliverable                                     | File(s)                                      | Acceptance evidence                                                                        |
+| --- | ----------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| 1   | Manifest registered in the integration registry | `packages/integrations/sherlock/manifest.ts` | registry test lists `sherlock` with the declared inputs/permissions                        |
+| 2   | Capability probe with per-digest cache          | `.../probe.ts`                               | probe fixture for a compliant image and for an image lacking `--json`                      |
+| 3   | Runner execution profile (flags of §3.1)        | `apps/runner/src/profiles/sherlock.ts`       | container inspection test asserts non-root, read-only, cap-drop, pids/mem limits           |
+| 4   | Egress policy for the run                       | `apps/runner/src/egress/policy.ts`           | proxy denies RFC1918 + metadata IPs after DNS resolution                                   |
+| 5   | Artifact upload + retention                     | `apps/runner/src/artifacts.ts`               | S3 object exists, host dir removed, 30-day lifecycle rule present                          |
+| 6   | Schema-tolerant parser                          | `.../parse.ts`                               | the four shape fixtures + hostile-URL fixtures pass, zero throws                           |
+| 7   | Confidence model                                | `.../confidence.ts`                          | golden-value test of §5.3                                                                  |
+| 8   | Node/edge mapper                                | `.../mapper.ts`                              | fixture run → expected proposal (nodes, edges, provenance incl. `caveat`)                  |
+| 9   | Import sheet UI with `lead` framing             | `apps/web/src/features/sherlock/*`           | Playwright: copy strings present, default selection ≤ 60, one undo removes all             |
+| 10  | Diff engine                                     | `.../diff.ts`                                | claimed→error ⇒ `becameUnknown`; removed site ⇒ not a disappearance                        |
+| 11  | Watchlist scheduling + consent expiry           | `apps/worker/src/jobs/sherlock-watch.ts`     | 90-day expiry auto-pauses; diff is pending, never auto-applied                             |
+| 12  | Consent + audit                                 | `apps/api/src/routes/runs.ts`                | run without consent makes zero outbound requests; audit rows written with hashed handle    |
+| 13  | Error surface                                   | `.../copy.ts`                                | every code in §8 renders with title/body/action; lint rule for forbidden attribution words |
 
 Non-goals for P11, stated so they are not silently attempted: no page-content fetching for
 verification, no multi-handle batch runs, no automatic cross-service identity merging, no

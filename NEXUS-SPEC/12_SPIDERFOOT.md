@@ -24,18 +24,18 @@ Verified facts (as of 2026-08-17):
   i.e. LOW recent maintenance activity.
 
 Applying the maintenance-risk formula of `11_GITHUB.md` §5.8 to those signals yields band
-**`unmaintained`**. That is a statement about *recent activity*, not about code quality: v4.0 is a
+**`unmaintained`**. That is a statement about _recent activity_, not about code quality: v4.0 is a
 widely deployed, functional tool. But for NEXUS it has hard consequences.
 
 ### 1.1 Consequences
 
-| Consequence | Why | Our response |
-|---|---|---|
-| No upstream fixes expected on our timeline | zero recent activity | never block a NEXUS release on an upstream PR; fork-and-patch is the escalation path |
-| Security patches may not arrive | same | strict network isolation (§3.3); the container never gets credentials to anything but the targets the user authorized |
+| Consequence                                          | Why                                                                  | Our response                                                                                                                         |
+| ---------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| No upstream fixes expected on our timeline           | zero recent activity                                                 | never block a NEXUS release on an upstream PR; fork-and-patch is the escalation path                                                 |
+| Security patches may not arrive                      | same                                                                 | strict network isolation (§3.3); the container never gets credentials to anything but the targets the user authorized                |
 | API shape may be undocumented / may differ per build | web-UI-first project, no published stable API contract we can verify | **every endpoint shape is an assumption validated by the capability probe** (§4.2); nothing is called before the probe classifies it |
-| Python dependency rot (old pins) | unmaintained deps | pinned image digest, no `pip install` at runtime, `--read-only` FS |
-| Feature may need removal one day | project could be archived | adapter isolation: deleting `packages/integrations/spiderfoot/` must leave NEXUS compiling and every already-imported node intact |
+| Python dependency rot (old pins)                     | unmaintained deps                                                    | pinned image digest, no `pip install` at runtime, `--read-only` FS                                                                   |
+| Feature may need removal one day                     | project could be archived                                            | adapter isolation: deleting `packages/integrations/spiderfoot/` must leave NEXUS compiling and every already-imported node intact    |
 
 ### 1.2 Mitigation plan (all mandatory)
 
@@ -51,7 +51,7 @@ widely deployed, functional tool. But for NEXUS it has hard consequences.
 3. **Capability probe at install and at every connect** (§4.2). The probe result drives feature
    availability; unprobed capability = unavailable capability.
 4. **Documented fallback path** when the probe fails or the instance is gone:
-   - `fallback.tier1` — run the *individual* capability with a first-party NEXUS module instead:
+   - `fallback.tier1` — run the _individual_ capability with a first-party NEXUS module instead:
      DNS/whois/passive-DNS/certificate-transparency lookups are implemented natively in
      `packages/integrations/netrecon/` (phase P12b, HTTP-only, no third-party code) and cover the
      domain/hostname/IP families of §6.
@@ -99,16 +99,19 @@ Configuration (per project, stored encrypted like §3.4 of `11_GITHUB.md`):
 
 ```ts
 export interface SpiderFootRemoteConfig {
-  baseUrl: string;                 // https://sf.internal.example:5001
-  auth: { kind: 'none' } | { kind: 'basic'; username: string; password: string }
-       | { kind: 'header'; header: string; value: string };
-  tlsFingerprintSha256?: string;   // optional pinning for self-signed instances
-  verifyTls: boolean;              // default true; false requires an explicit acknowledgement
-  timeoutMs: number;               // default 30_000 per request
+  baseUrl: string; // https://sf.internal.example:5001
+  auth:
+    | { kind: 'none' }
+    | { kind: 'basic'; username: string; password: string }
+    | { kind: 'header'; header: string; value: string };
+  tlsFingerprintSha256?: string; // optional pinning for self-signed instances
+  verifyTls: boolean; // default true; false requires an explicit acknowledgement
+  timeoutMs: number; // default 30_000 per request
 }
 ```
 
 Rules:
+
 - The base URL is validated by the SSRF guard (N7, `15_SECURITY.md` §6) at configure time **and**
   at every request (DNS re-resolution + pinning). Private ranges are allowed **only** when the
   operator sets `ALLOW_PRIVATE_INTEGRATION_TARGETS=true`; this is exactly the case where a user
@@ -148,10 +151,10 @@ In Kubernetes the same is expressed with `runtimeClassName: gvisor`, a read-only
 
 Two managed sub-modes, chosen by the probe:
 
-| Sub-mode | How | When |
-|---|---|---|
-| `managed-web` | container runs the `sfwebui` server bound to `127.0.0.1` inside the container's netns, and the runner talks to it over the container port for the scan lifetime | probe confirms the HTTP surface answers |
-| `managed-cli` | container runs the `sf.py` CLI once per scan and writes results to `/out/result.{json,csv}` | probe could not confirm a usable HTTP surface, or the operator forces CLI |
+| Sub-mode      | How                                                                                                                                                             | When                                                                      |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `managed-web` | container runs the `sfwebui` server bound to `127.0.0.1` inside the container's netns, and the runner talks to it over the container port for the scan lifetime | probe confirms the HTTP surface answers                                   |
+| `managed-cli` | container runs the `sf.py` CLI once per scan and writes results to `/out/result.{json,csv}`                                                                     | probe could not confirm a usable HTTP surface, or the operator forces CLI |
 
 `managed-cli` is the **more robust** mode (a process + a file is a smaller contract than an
 undocumented HTTP API) and is the default when both are available. `managed-web` exists because it
@@ -193,58 +196,65 @@ export interface SpiderFootClient {
   listModules(signal: AbortSignal): Promise<SpiderFootModule[]>;
   createScan(req: CreateScanRequest, signal: AbortSignal): Promise<ScanHandle>;
   getStatus(scanId: string, signal: AbortSignal): Promise<ScanStatus>;
-  fetchEvents(scanId: string, cursor: EventCursor | null, limit: number,
-              signal: AbortSignal): Promise<EventPage>;
+  fetchEvents(
+    scanId: string,
+    cursor: EventCursor | null,
+    limit: number,
+    signal: AbortSignal,
+  ): Promise<EventPage>;
   fetchCorrelations(scanId: string, signal: AbortSignal): Promise<RawCorrelation[]>;
   cancel(scanId: string, signal: AbortSignal): Promise<void>;
-  close(): Promise<void>;                      // stops a managed container, closes sockets
+  close(): Promise<void>; // stops a managed container, closes sockets
 }
 
 export interface SpiderFootCapabilities {
   probedAt: string;
   transport: 'http' | 'cli';
   reachable: boolean;
-  version: string | null;                      // parsed from the instance, null if unknown
+  version: string | null; // parsed from the instance, null if unknown
   versionSource: 'api' | 'cli' | 'banner' | 'unknown';
-  modules: SpiderFootModule[];                 // may be [] when unlistable
+  modules: SpiderFootModule[]; // may be [] when unlistable
   supports: {
     createScan: boolean;
     statusPolling: boolean;
-    incrementalEvents: boolean;                // events readable while the scan runs
+    incrementalEvents: boolean; // events readable while the scan runs
     correlations: boolean;
     cancel: boolean;
     csvExport: boolean;
     jsonExport: boolean;
   };
-  endpointMap: Record<KnownOperation, string | null>;   // resolved paths, null = unsupported
-  notes: string[];                             // human-readable probe findings
+  endpointMap: Record<KnownOperation, string | null>; // resolved paths, null = unsupported
+  notes: string[]; // human-readable probe findings
 }
 
 export interface SpiderFootModule {
-  name: string;                                // e.g. sfp_dnsresolve
+  name: string; // e.g. sfp_dnsresolve
   descr: string | null;
   categories: string[];
-  consumes: string[];                          // event types, when the instance reports them
+  consumes: string[]; // event types, when the instance reports them
   produces: string[];
-  flags: string[];                             // e.g. invasive/slow/apikey — when reported
-  requiresApiKey: boolean | null;              // null = unknown
+  flags: string[]; // e.g. invasive/slow/apikey — when reported
+  requiresApiKey: boolean | null; // null = unknown
 }
 
 export interface CreateScanRequest {
   name: string;
   target: string;
   targetType: TargetType;
-  moduleNames: string[] | null;                // null = use-case selection
+  moduleNames: string[] | null; // null = use-case selection
   useCase: 'passive' | 'footprint' | 'investigate' | 'all' | null;
   options: Record<string, string | number | boolean>;
 }
 
-export interface ScanHandle { scanId: string; startedAt: string; }
+export interface ScanHandle {
+  scanId: string;
+  startedAt: string;
+}
 
 export interface ScanStatus {
   scanId: string;
   state: 'created' | 'starting' | 'running' | 'finished' | 'aborted' | 'failed' | 'unknown';
-  raw: string;                                 // instance's own status string, preserved
+  raw: string; // instance's own status string, preserved
   startedAt: string | null;
   endedAt: string | null;
   eventCount: number | null;
@@ -253,33 +263,53 @@ export interface ScanStatus {
 
 export interface RawEvent {
   id: string | null;
-  type: string;                                // SpiderFoot event type, verbatim
+  type: string; // SpiderFoot event type, verbatim
   data: string;
   module: string | null;
   sourceEventId: string | null;
   sourceData: string | null;
-  generatedAt: string | null;                  // ISO, normalized from whatever we receive
+  generatedAt: string | null; // ISO, normalized from whatever we receive
   falsePositive: boolean | null;
   risk: string | null;
-  raw: unknown;                                // untouched original record
+  raw: unknown; // untouched original record
 }
 
-export interface EventPage { events: RawEvent[]; nextCursor: EventCursor | null; done: boolean; }
-export type EventCursor = { kind: 'offset'; offset: number } | { kind: 'time'; after: string }
-                        | { kind: 'opaque'; token: string };
+export interface EventPage {
+  events: RawEvent[];
+  nextCursor: EventCursor | null;
+  done: boolean;
+}
+export type EventCursor =
+  | { kind: 'offset'; offset: number }
+  | { kind: 'time'; after: string }
+  | { kind: 'opaque'; token: string };
 ```
 
 Error types:
 
 ```ts
 export type SpiderFootErrorCode =
-  | 'SF_UNREACHABLE' | 'SF_AUTH' | 'SF_TLS' | 'SF_UNSUPPORTED_OPERATION'
-  | 'SF_PROBE_FAILED' | 'SF_SCAN_REJECTED' | 'SF_SCAN_FAILED' | 'SF_TIMEOUT'
-  | 'SF_PARSE' | 'SF_CANCELED' | 'SF_LIMIT_EXCEEDED' | 'SF_IMAGE_NOT_PINNED';
+  | 'SF_UNREACHABLE'
+  | 'SF_AUTH'
+  | 'SF_TLS'
+  | 'SF_UNSUPPORTED_OPERATION'
+  | 'SF_PROBE_FAILED'
+  | 'SF_SCAN_REJECTED'
+  | 'SF_SCAN_FAILED'
+  | 'SF_TIMEOUT'
+  | 'SF_PARSE'
+  | 'SF_CANCELED'
+  | 'SF_LIMIT_EXCEEDED'
+  | 'SF_IMAGE_NOT_PINNED';
 
 export class SpiderFootError extends Error {
-  constructor(readonly code: SpiderFootErrorCode, message: string,
-              readonly detail?: { httpStatus?: number; bodySnippet?: string; operation?: string }) { super(message); }
+  constructor(
+    readonly code: SpiderFootErrorCode,
+    message: string,
+    readonly detail?: { httpStatus?: number; bodySnippet?: string; operation?: string },
+  ) {
+    super(message);
+  }
 }
 ```
 
@@ -342,7 +372,7 @@ run: {sf.py|spiderfoot} --help   (in the sandbox, network none, 20s timeout)
 
 ### 4.3 Tolerant readers
 
-Every payload is read by a *shape-tolerant* reader, never a strict schema:
+Every payload is read by a _shape-tolerant_ reader, never a strict schema:
 
 ```ts
 // reads a record whether it is an object with named keys or a positional array
@@ -355,10 +385,11 @@ export function readEvent(rec: unknown): RawEvent | null {
 function readKeyedEvent(o: Record<string, unknown>): RawEvent | null {
   const type = pickString(o, ['type', 'eventType', 'event_type', 'etype']);
   const data = pickString(o, ['data', 'value', 'eventData', 'event_data']);
-  if (!type || data === null) return null;                 // unusable record: counted, not thrown
+  if (!type || data === null) return null; // unusable record: counted, not thrown
   return {
     id: pickString(o, ['id', 'eventId', 'hash']),
-    type, data,
+    type,
+    data,
     module: pickString(o, ['module', 'sourceModule', 'src_module']),
     sourceEventId: pickString(o, ['sourceEvent', 'source_event', 'parentId']),
     sourceData: pickString(o, ['sourceData', 'source_data', 'parentData']),
@@ -409,13 +440,13 @@ consecutive status failures: 3 -> mark state 'unknown', keep polling at 30s up t
 
 Two strategies, selected by `supports.incrementalEvents`:
 
-| Strategy | Behavior |
-|---|---|
+| Strategy      | Behavior                                                                                                                                                                                        |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `incremental` | after each status poll, `fetchEvents(scanId, cursor, 500)` until `done`; each page is normalized, deduped and written to the staging table; the UI counter and the family histogram update live |
-| `terminal` | wait for `finished`, then read the JSON export (or CSV if `jsonExport` is false) in one pass, streaming-parsed so a 500 MB export never lands in memory |
+| `terminal`    | wait for `finished`, then read the JSON export (or CSV if `jsonExport` is false) in one pass, streaming-parsed so a 500 MB export never lands in memory                                         |
 
-Cursor handling: offset cursors are re-validated by checking that the first record of page *n+1*
-differs from the last record of page *n*; if the instance ignores the offset (a real risk with an
+Cursor handling: offset cursors are re-validated by checking that the first record of page _n+1_
+differs from the last record of page _n_; if the instance ignores the offset (a real risk with an
 unverified API), the adapter detects the repeat, switches to `terminal` strategy, and logs
 `notes: ['offset paging not honored; switched to terminal export']`.
 
@@ -433,14 +464,14 @@ to narrow the scan.
   continue on the instance." Never a fake success.
 - Degradation matrix:
 
-| Missing capability | Effect | UI copy |
-|---|---|---|
-| `listModules` | module picker replaced by use-case picker | "This instance did not report its module list. Choose a scan profile instead." |
-| `incrementalEvents` | results appear only at the end; live counter shows "collecting…" | "Live results are unavailable on this instance; results will appear when the scan finishes." |
-| `correlations` | no cluster nodes; grouping falls back to our own family grouping (§7.4) | "Correlations are unavailable; NEXUS grouped results by type." |
-| `cancel` | see above | as above |
-| `createScan` | integration unusable for scanning; existing results remain browsable | "This instance cannot start scans from NEXUS. Use fallback tools or run the scan in SpiderFoot and import the export." |
-| all | integration `unavailable` | "SpiderFoot is not reachable — {reason}. Fallbacks: native DNS/WHOIS recon, Sherlock for usernames." |
+| Missing capability  | Effect                                                                  | UI copy                                                                                                                |
+| ------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `listModules`       | module picker replaced by use-case picker                               | "This instance did not report its module list. Choose a scan profile instead."                                         |
+| `incrementalEvents` | results appear only at the end; live counter shows "collecting…"        | "Live results are unavailable on this instance; results will appear when the scan finishes."                           |
+| `correlations`      | no cluster nodes; grouping falls back to our own family grouping (§7.4) | "Correlations are unavailable; NEXUS grouped results by type."                                                         |
+| `cancel`            | see above                                                               | as above                                                                                                               |
+| `createScan`        | integration unusable for scanning; existing results remain browsable    | "This instance cannot start scans from NEXUS. Use fallback tools or run the scan in SpiderFoot and import the export." |
+| all                 | integration `unavailable`                                               | "SpiderFoot is not reachable — {reason}. Fallbacks: native DNS/WHOIS recon, Sherlock for usernames."                   |
 
 Manual export import is always available as the ultimate fallback: drag a SpiderFoot JSON/CSV
 export onto the canvas and the same parser/mapper/proposal path runs with
@@ -453,10 +484,18 @@ export onto the canvas and the same parser/mapper/proposal path runs with
 ### 5.1 Target type detection
 
 ```ts
-export type TargetType = 'DOMAIN_NAME' | 'INTERNET_NAME' | 'IP_ADDRESS' | 'NETBLOCK_OWNER'
-                       | 'EMAILADDR' | 'USERNAME' | 'HUMAN_NAME' | 'PHONE_NUMBER' | 'BITCOIN_ADDRESS';
+export type TargetType =
+  | 'DOMAIN_NAME'
+  | 'INTERNET_NAME'
+  | 'IP_ADDRESS'
+  | 'NETBLOCK_OWNER'
+  | 'EMAILADDR'
+  | 'USERNAME'
+  | 'HUMAN_NAME'
+  | 'PHONE_NUMBER'
+  | 'BITCOIN_ADDRESS';
 
-export function detectTargetType(input: string): { type: TargetType; confidence: number }[]
+export function detectTargetType(input: string): { type: TargetType; confidence: number }[];
 ```
 
 Detection order (first match wins, but all plausible types are offered as chips the user can
@@ -489,14 +528,14 @@ part of the consent record.
 
 ### 5.3 Scope and limits
 
-| Control | Default | Range | Effect |
-|---|---|---|---|
-| Max runtime | 30 min | 5 min – 4 h | hard timeout (§3.2) |
-| Max events imported | 5,000 | 500 – 50,000 | staging cap; excess is summarized (§7) |
-| Max requests (egress) | 20,000 | 1,000 – 100,000 | egress proxy cap |
-| Crawl depth (when the instance exposes it) | 2 | 0–4 | passed through as an option |
-| Rate limit | 5 req/s to any single target host | 1–20 | enforced by the egress proxy, not by trust in the tool |
-| Subdomain expansion | on | on/off | when off, `INTERNET_NAME` events are grouped rather than expanded |
+| Control                                    | Default                           | Range           | Effect                                                            |
+| ------------------------------------------ | --------------------------------- | --------------- | ----------------------------------------------------------------- |
+| Max runtime                                | 30 min                            | 5 min – 4 h     | hard timeout (§3.2)                                               |
+| Max events imported                        | 5,000                             | 500 – 50,000    | staging cap; excess is summarized (§7)                            |
+| Max requests (egress)                      | 20,000                            | 1,000 – 100,000 | egress proxy cap                                                  |
+| Crawl depth (when the instance exposes it) | 2                                 | 0–4             | passed through as an option                                       |
+| Rate limit                                 | 5 req/s to any single target host | 1–20            | enforced by the egress proxy, not by trust in the tool            |
+| Subdomain expansion                        | on                                | on/off          | when off, `INTERNET_NAME` events are grouped rather than expanded |
 
 ### 5.4 Estimated duration
 
@@ -545,19 +584,19 @@ is versioned by hash so an audit can reconstruct exactly what was agreed.
 
 ### 5.6 States
 
-| State | UI |
-|---|---|
-| initial | target field focused, profile `Passive`, "Start scan" disabled until target valid + consent checked |
-| validating | inline spinner in the target field, ≤ 300 ms, target-type chips resolve |
-| consent-required | "Start scan" disabled with the reason under it, consent block highlighted |
-| starting | button → "Starting…", cancel available immediately |
-| running | run drawer with elapsed time, event counter, family histogram, module progress if reported, "Cancel scan" |
-| partial | after cancel/timeout: "Partial results — 3,412 events collected before the scan stopped" + Import |
-| finished | "Scan finished in 11:42 · 38,204 events · 6 families" + "Review import" |
-| failed | error strip with code + reason + "Retry" and "Open run log" |
-| empty | "The scan finished without producing events. 14 requests were blocked by the egress policy; 3 modules needed API keys." |
-| importing | proposal sheet (§7.5) |
-| imported | canvas focus animation on the new cluster; undo toast "Undid: import 214 nodes from SpiderFoot scan" |
+| State            | UI                                                                                                                      |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| initial          | target field focused, profile `Passive`, "Start scan" disabled until target valid + consent checked                     |
+| validating       | inline spinner in the target field, ≤ 300 ms, target-type chips resolve                                                 |
+| consent-required | "Start scan" disabled with the reason under it, consent block highlighted                                               |
+| starting         | button → "Starting…", cancel available immediately                                                                      |
+| running          | run drawer with elapsed time, event counter, family histogram, module progress if reported, "Cancel scan"               |
+| partial          | after cancel/timeout: "Partial results — 3,412 events collected before the scan stopped" + Import                       |
+| finished         | "Scan finished in 11:42 · 38,204 events · 6 families" + "Review import"                                                 |
+| failed           | error strip with code + reason + "Retry" and "Open run log"                                                             |
+| empty            | "The scan finished without producing events. 14 requests were blocked by the egress policy; 3 modules needed API keys." |
+| importing        | proposal sheet (§7.5)                                                                                                   |
+| imported         | canvas focus animation on the new cluster; undo toast "Undid: import 214 nodes from SpiderFoot scan"                    |
 
 ---
 
@@ -575,31 +614,31 @@ is versioned by hash so an audit can reconstruct exactly what was agreed.
 
 ### 6.2 Mapping table (common families)
 
-| SpiderFoot event type (exact or prefix) | Family | NEXUS node kind | Edge from source node | Base confidence |
-|---|---|---|---|---|
-| `DOMAIN_NAME` | domain | `domain` | `resolves_to` / `related_to` | 0.9 |
-| `DOMAIN_NAME_PARENT` | domain | `domain` | `parent_of` (reversed) | 0.9 |
-| `SIMILARDOMAIN`, `CO_HOSTED_SITE_DOMAIN` | related domain | `domain` | `similar_to` / `co_hosted_with` | 0.45 |
-| `INTERNET_NAME`, `INTERNET_NAME_UNRESOLVED` | hostname | `hostname` | `subdomain_of` | 0.85 / 0.6 |
-| `IP_ADDRESS`, `IPV6_ADDRESS` | ip | `ip_address` | `resolves_to` | 0.9 |
-| `NETBLOCK_OWNER`, `NETBLOCK_MEMBER`, `BGP_AS_OWNER`, `BGP_AS_MEMBER` | netblock | `netblock` / `asn` | `announced_by` / `member_of` | 0.8 |
-| `EMAILADDR`, `EMAILADDR_GENERIC` | email | `email` | `associated_with` | 0.75 / 0.4 |
-| `EMAILADDR_COMPROMISED` | breach | `breach_record` | `exposed_in` | 0.7 |
-| `USERNAME` | username | `username` | `uses_handle` | 0.6 |
-| `ACCOUNT_EXTERNAL_OWNED`, `SOCIAL_MEDIA` | social profile | `profile` | `has_profile` | 0.55 |
-| `LINKED_URL_INTERNAL`, `LINKED_URL_EXTERNAL`, `URL_*` | url | `link` | `links_to` | 0.8 / 0.5 |
-| `WEBSERVER_BANNER`, `WEBSERVER_TECHNOLOGY`, `SOFTWARE_USED` | technology | `technology` | `runs` | 0.7 |
-| `VULNERABILITY_*`, `VULNERABILITY_CVE_*` | vulnerability | `vulnerability` | `affected_by` | 0.6 |
-| `TCP_PORT_OPEN`, `TCP_PORT_OPEN_BANNER`, `UDP_PORT_*` | service | `service` | `exposes` | 0.85 |
-| `SSL_CERTIFICATE_ISSUED`, `SSL_CERTIFICATE_*` | certificate | `certificate` | `secured_by` | 0.85 |
-| `PHYSICAL_ADDRESS`, `PHYSICAL_COORDINATES`, `GEOINFO` | location | `location` | `located_at` | 0.5 |
-| `HUMAN_NAME` | person | `person` | `mentions` | 0.4 |
-| `PHONE_NUMBER` | phone | `phone` | `associated_with` | 0.6 |
-| `COMPANY_NAME` | org | `organization` | `associated_with` | 0.5 |
-| `RAW_*`, `*_CONTENT`, `SEARCH_ENGINE_WEB_CONTENT` | raw | **not imported as nodes**; stored as run artifacts only | — | — |
-| `DARKNET_MENTION_*`, `LEAKSITE_*` | mention | `observation` | `mentioned_in` | 0.4 |
-| `MALICIOUS_*`, `BLACKLISTED_*` | reputation | attribute on the target node (`reputation[]`), not a node | — | 0.6 |
-| anything else | unknown | `observation` (Unmapped group) | `derived_from` | 0.3 |
+| SpiderFoot event type (exact or prefix)                              | Family         | NEXUS node kind                                           | Edge from source node           | Base confidence |
+| -------------------------------------------------------------------- | -------------- | --------------------------------------------------------- | ------------------------------- | --------------- |
+| `DOMAIN_NAME`                                                        | domain         | `domain`                                                  | `resolves_to` / `related_to`    | 0.9             |
+| `DOMAIN_NAME_PARENT`                                                 | domain         | `domain`                                                  | `parent_of` (reversed)          | 0.9             |
+| `SIMILARDOMAIN`, `CO_HOSTED_SITE_DOMAIN`                             | related domain | `domain`                                                  | `similar_to` / `co_hosted_with` | 0.45            |
+| `INTERNET_NAME`, `INTERNET_NAME_UNRESOLVED`                          | hostname       | `hostname`                                                | `subdomain_of`                  | 0.85 / 0.6      |
+| `IP_ADDRESS`, `IPV6_ADDRESS`                                         | ip             | `ip_address`                                              | `resolves_to`                   | 0.9             |
+| `NETBLOCK_OWNER`, `NETBLOCK_MEMBER`, `BGP_AS_OWNER`, `BGP_AS_MEMBER` | netblock       | `netblock` / `asn`                                        | `announced_by` / `member_of`    | 0.8             |
+| `EMAILADDR`, `EMAILADDR_GENERIC`                                     | email          | `email`                                                   | `associated_with`               | 0.75 / 0.4      |
+| `EMAILADDR_COMPROMISED`                                              | breach         | `breach_record`                                           | `exposed_in`                    | 0.7             |
+| `USERNAME`                                                           | username       | `username`                                                | `uses_handle`                   | 0.6             |
+| `ACCOUNT_EXTERNAL_OWNED`, `SOCIAL_MEDIA`                             | social profile | `profile`                                                 | `has_profile`                   | 0.55            |
+| `LINKED_URL_INTERNAL`, `LINKED_URL_EXTERNAL`, `URL_*`                | url            | `link`                                                    | `links_to`                      | 0.8 / 0.5       |
+| `WEBSERVER_BANNER`, `WEBSERVER_TECHNOLOGY`, `SOFTWARE_USED`          | technology     | `technology`                                              | `runs`                          | 0.7             |
+| `VULNERABILITY_*`, `VULNERABILITY_CVE_*`                             | vulnerability  | `vulnerability`                                           | `affected_by`                   | 0.6             |
+| `TCP_PORT_OPEN`, `TCP_PORT_OPEN_BANNER`, `UDP_PORT_*`                | service        | `service`                                                 | `exposes`                       | 0.85            |
+| `SSL_CERTIFICATE_ISSUED`, `SSL_CERTIFICATE_*`                        | certificate    | `certificate`                                             | `secured_by`                    | 0.85            |
+| `PHYSICAL_ADDRESS`, `PHYSICAL_COORDINATES`, `GEOINFO`                | location       | `location`                                                | `located_at`                    | 0.5             |
+| `HUMAN_NAME`                                                         | person         | `person`                                                  | `mentions`                      | 0.4             |
+| `PHONE_NUMBER`                                                       | phone          | `phone`                                                   | `associated_with`               | 0.6             |
+| `COMPANY_NAME`                                                       | org            | `organization`                                            | `associated_with`               | 0.5             |
+| `RAW_*`, `*_CONTENT`, `SEARCH_ENGINE_WEB_CONTENT`                    | raw            | **not imported as nodes**; stored as run artifacts only   | —                               | —               |
+| `DARKNET_MENTION_*`, `LEAKSITE_*`                                    | mention        | `observation`                                             | `mentioned_in`                  | 0.4             |
+| `MALICIOUS_*`, `BLACKLISTED_*`                                       | reputation     | attribute on the target node (`reputation[]`), not a node | —                               | 0.6             |
+| anything else                                                        | unknown        | `observation` (Unmapped group)                            | `derived_from`                  | 0.3             |
 
 Prefix rules applied before the fallback, in order:
 `VULNERABILITY_*` → vulnerability; `SSL_CERTIFICATE_*` → certificate; `MALICIOUS_*`/`BLACKLISTED_*`
@@ -640,27 +679,28 @@ Confidence is rendered as a 4-step band in the UI (`low < 0.4`, `medium < 0.65`,
 
 Canonical identity key per kind, computed before staging:
 
-| Kind | Key |
-|---|---|
-| `domain` / `hostname` | `dns:{lowercased, IDNA-normalized, trailing-dot-stripped name}` |
-| `ip_address` | `ip:{normalized: IPv6 compressed lowercase, IPv4 dotted}` |
-| `email` | `email:{lower(local)}@{lower(domain)}` (dots in gmail local parts are **not** collapsed — that is an assumption about a provider, not a fact about the address) |
-| `username` | `handle:{lower(handle)}` — note: same handle ≠ same person (§6.6) |
-| `link` | `url:{scheme://host/path?sortedQuery}` minus tracking params (`utm_*`, `fbclid`, `gclid`) |
-| `profile` | `profile:{service}:{lower(handle)}` |
-| `certificate` | `cert:{sha256 fingerprint}` when present, else `cert:{issuer}|{serial}` |
-| `vulnerability` | `vuln:{CVE-ID}` when present, else `vuln:{sha256(type+data)}` |
-| `service` | `svc:{ip}:{port}/{proto}` |
-| `location` | `loc:{normalized address string}` (never geocoded by us) |
-| `person` | never auto-deduped; see §6.6 |
-| `observation` | `obs:{sha256(type + data)}` |
+| Kind                  | Key                                                                                                                                                             |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| `domain` / `hostname` | `dns:{lowercased, IDNA-normalized, trailing-dot-stripped name}`                                                                                                 |
+| `ip_address`          | `ip:{normalized: IPv6 compressed lowercase, IPv4 dotted}`                                                                                                       |
+| `email`               | `email:{lower(local)}@{lower(domain)}` (dots in gmail local parts are **not** collapsed — that is an assumption about a provider, not a fact about the address) |
+| `username`            | `handle:{lower(handle)}` — note: same handle ≠ same person (§6.6)                                                                                               |
+| `link`                | `url:{scheme://host/path?sortedQuery}` minus tracking params (`utm_*`, `fbclid`, `gclid`)                                                                       |
+| `profile`             | `profile:{service}:{lower(handle)}`                                                                                                                             |
+| `certificate`         | `cert:{sha256 fingerprint}` when present, else `cert:{issuer}                                                                                                   | {serial}` |
+| `vulnerability`       | `vuln:{CVE-ID}` when present, else `vuln:{sha256(type+data)}`                                                                                                   |
+| `service`             | `svc:{ip}:{port}/{proto}`                                                                                                                                       |
+| `location`            | `loc:{normalized address string}` (never geocoded by us)                                                                                                        |
+| `person`              | never auto-deduped; see §6.6                                                                                                                                    |
+| `observation`         | `obs:{sha256(type + data)}`                                                                                                                                     |
 
 Dedupe happens in three places:
+
 1. **within the page** (hash set),
 2. **within the run** (staging table unique index on `(run_id, entity_key)` with a `hit_count`
    column and a `sources[]` array — this is what feeds `corroborationBoost`),
 3. **against the board** at proposal time (`nodes.external_key` lookup). An existing node is
-   *enriched* (new provenance entry, possibly higher confidence, new attributes) rather than
+   _enriched_ (new provenance entry, possibly higher confidence, new attributes) rather than
    duplicated, and the proposal shows it in an "Updates to 14 existing nodes" section separate from
    "New nodes".
 
@@ -687,7 +727,7 @@ the first edge and drops repeats — edges are a set keyed by `(from,to,kind)`.
   `11_GITHUB.md` §7.3 and `13_SHERLOCK.md` §4).
 - That a `HUMAN_NAME` event identifies a real individual — those arrive with confidence 0.4 and the
   label "name string observed", not "person identified".
-- That a `MALICIOUS_*` verdict is true; it is recorded as *"flagged by {source}"* with the source
+- That a `MALICIOUS_*` verdict is true; it is recorded as _"flagged by {source}"_ with the source
   named.
 
 ### 6.7 Correlations → clusters
@@ -697,12 +737,12 @@ When `supports.correlations` is true, each correlation record becomes a **cluste
 
 ```ts
 interface CorrelationCluster {
-  id: string;                     // corr:{runId}:{correlationId}
-  title: string;                  // the correlation's own headline, verbatim
+  id: string; // corr:{runId}:{correlationId}
+  title: string; // the correlation's own headline, verbatim
   ruleName: string | null;
   risk: 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'UNKNOWN';
   memberEntityKeys: string[];
-  rationale: string | null;       // instance-provided description, verbatim, sanitized
+  rationale: string | null; // instance-provided description, verbatim, sanitized
 }
 ```
 
@@ -778,18 +818,18 @@ The user can change everything; the algorithm only sets the initial checkbox sta
 ```ts
 interface SummaryNodeData {
   kind: 'summary';
-  family: string;              // 'hostname'
+  family: string; // 'hostname'
   runId: string;
-  totalCount: number;          // 4,812
-  importedCount: number;       // 50
-  topExamples: string[];       // 5 labels
+  totalCount: number; // 4,812
+  importedCount: number; // 50
+  topExamples: string[]; // 5 labels
   confidenceHistogram: [number, number, number, number];
   expandQuery: { runId: string; family: string };
 }
 ```
 
-Rendered as a stacked card ("4,812 hostnames · 50 on canvas") with actions: *Open in table*,
-*Import 50 more*, *Import all matching a filter*. Expanding is itself a Proposal, so it is undoable.
+Rendered as a stacked card ("4,812 hostnames · 50 on canvas") with actions: _Open in table_,
+_Import 50 more_, _Import all matching a filter_. Expanding is itself a Proposal, so it is undoable.
 A summary node is a first-class graph citizen: edges from the target point at it with kind
 `summarizes`, so the graph stays connected and exports stay honest.
 
@@ -826,20 +866,20 @@ codes) is retained indefinitely for audit.
 
 ## 8. Error copy
 
-| Code | Title | Body | Action |
-|---|---|---|---|
-| `SF_UNREACHABLE` | "SpiderFoot is not reachable" | "NEXUS could not connect to {baseUrl} (timeout after 10 s). Check the instance is running and the URL is correct." | "Test connection" |
-| `SF_AUTH` | "SpiderFoot rejected the credentials" | "The instance answered 401. Update the username/password or header token." | "Open settings" |
-| `SF_TLS` | "Certificate not trusted" | "The instance presented a certificate NEXUS does not trust (fingerprint {fp}). Pin this fingerprint if you recognize it." | "Pin fingerprint" |
-| `SF_PROBE_FAILED` | "Unsupported SpiderFoot build" | "NEXUS could not identify a usable API on this instance. Version detected: {version ?? 'unknown'}." | "See probe log" |
-| `SF_UNSUPPORTED_OPERATION` | "This instance cannot do that" | "The operation '{op}' is not available on this SpiderFoot build." | "See what works" |
-| `SF_SCAN_REJECTED` | "Scan was not started" | "The instance refused the scan: {reason}." | "Adjust and retry" |
-| `SF_SCAN_FAILED` | "Scan failed" | "The scan stopped after {elapsed}: {reason}. {n} results collected so far can still be imported." | "Import partial results" |
-| `SF_TIMEOUT` | "Scan exceeded its time limit" | "The scan hit your {limit} limit and was stopped. {n} results were collected." | "Import partial results" |
-| `SF_PARSE` | "Unreadable results" | "NEXUS could not read {n} records from this instance. The raw data was saved." | "Download raw" |
-| `SF_LIMIT_EXCEEDED` | "Too many results" | "This scan produced more than {limit} events. NEXUS kept the first {n}; narrow the scan for complete coverage." | "Open results table" |
-| `SF_IMAGE_NOT_PINNED` | "Managed SpiderFoot is not configured" | "No pinned image digest is configured, so NEXUS will not start a SpiderFoot container." | "Read setup docs" |
-| `SF_CANCELED` | "Scan canceled" | "{n} results collected before cancellation are available." | "Import partial results" |
+| Code                       | Title                                  | Body                                                                                                                      | Action                   |
+| -------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `SF_UNREACHABLE`           | "SpiderFoot is not reachable"          | "NEXUS could not connect to {baseUrl} (timeout after 10 s). Check the instance is running and the URL is correct."        | "Test connection"        |
+| `SF_AUTH`                  | "SpiderFoot rejected the credentials"  | "The instance answered 401. Update the username/password or header token."                                                | "Open settings"          |
+| `SF_TLS`                   | "Certificate not trusted"              | "The instance presented a certificate NEXUS does not trust (fingerprint {fp}). Pin this fingerprint if you recognize it." | "Pin fingerprint"        |
+| `SF_PROBE_FAILED`          | "Unsupported SpiderFoot build"         | "NEXUS could not identify a usable API on this instance. Version detected: {version ?? 'unknown'}."                       | "See probe log"          |
+| `SF_UNSUPPORTED_OPERATION` | "This instance cannot do that"         | "The operation '{op}' is not available on this SpiderFoot build."                                                         | "See what works"         |
+| `SF_SCAN_REJECTED`         | "Scan was not started"                 | "The instance refused the scan: {reason}."                                                                                | "Adjust and retry"       |
+| `SF_SCAN_FAILED`           | "Scan failed"                          | "The scan stopped after {elapsed}: {reason}. {n} results collected so far can still be imported."                         | "Import partial results" |
+| `SF_TIMEOUT`               | "Scan exceeded its time limit"         | "The scan hit your {limit} limit and was stopped. {n} results were collected."                                            | "Import partial results" |
+| `SF_PARSE`                 | "Unreadable results"                   | "NEXUS could not read {n} records from this instance. The raw data was saved."                                            | "Download raw"           |
+| `SF_LIMIT_EXCEEDED`        | "Too many results"                     | "This scan produced more than {limit} events. NEXUS kept the first {n}; narrow the scan for complete coverage."           | "Open results table"     |
+| `SF_IMAGE_NOT_PINNED`      | "Managed SpiderFoot is not configured" | "No pinned image digest is configured, so NEXUS will not start a SpiderFoot container."                                   | "Read setup docs"        |
+| `SF_CANCELED`              | "Scan canceled"                        | "{n} results collected before cancellation are available."                                                                | "Import partial results" |
 
 ---
 

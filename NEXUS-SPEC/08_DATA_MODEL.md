@@ -32,7 +32,7 @@ specified in `06_NODE_SYSTEM.md`, edge payloads in `07_EDGE_SYSTEM.md`, query/AP
 - **The projection is never written by application code**, only by the projector. A DB trigger is
   not used; a code-level rule (`no-direct-projection-write` lint) plus a `projector` DB role with
   the only INSERT/UPDATE grants on `nodes`/`edges`/`groups` enforce it.
-- Everything that is *not* board content (users, orgs, ACL, runs, files, audit) lives only in
+- Everything that is _not_ board content (users, orgs, ACL, runs, files, audit) lives only in
   Postgres and is never in a `Y.Doc`.
 
 ---
@@ -52,14 +52,14 @@ of the performance budget. A project-level document would force every client to 
 ```ts
 // packages/domain/src/doc/schema.ts
 export function initBoardDoc(doc: Y.Doc) {
-  doc.getMap('meta');        // Y.Map<unknown>   board metadata (see 2.2.1)
-  doc.getMap('nodes');       // Y.Map<Y.Map>     nodeId  -> node map
-  doc.getMap('edges');       // Y.Map<Y.Map>     edgeId  -> edge map
-  doc.getMap('groups');      // Y.Map<Y.Map>     groupId -> group map (frames/clusters)
-  doc.getMap('richtext');    // Y.Map<Y.XmlFragment>  fragmentKey -> fragment
-  doc.getMap('comments');    // Y.Map<Y.Map>     commentId -> comment map (thread head + replies)
-  doc.getArray('order');     // Y.Array<string>  explicit z-order of node ids (see 2.2.4)
-  doc.getMap('assets');      // Y.Map<Y.Map>     fileId -> {name, mime, size, sha256, state}
+  doc.getMap('meta'); // Y.Map<unknown>   board metadata (see 2.2.1)
+  doc.getMap('nodes'); // Y.Map<Y.Map>     nodeId  -> node map
+  doc.getMap('edges'); // Y.Map<Y.Map>     edgeId  -> edge map
+  doc.getMap('groups'); // Y.Map<Y.Map>     groupId -> group map (frames/clusters)
+  doc.getMap('richtext'); // Y.Map<Y.XmlFragment>  fragmentKey -> fragment
+  doc.getMap('comments'); // Y.Map<Y.Map>     commentId -> comment map (thread head + replies)
+  doc.getArray('order'); // Y.Array<string>  explicit z-order of node ids (see 2.2.4)
+  doc.getMap('assets'); // Y.Map<Y.Map>     fileId -> {name, mime, size, sha256, state}
 }
 ```
 
@@ -67,19 +67,19 @@ There are exactly eight top-level keys. Adding a ninth is a document-format migr
 
 #### 2.2.1 `meta`
 
-| key | type | notes |
-|---|---|---|
-| `schemaVersion` | number | current `1`; gates migrations (§8.6) |
-| `boardId` | string (ULID) | mirrors Postgres `boards.id` |
-| `projectId` | string (ULID) | |
-| `title` | string | board title; also mirrored to Postgres by the projector |
-| `description` | string | |
-| `createdAt` / `updatedAt` | ISO string | `updatedAt` written at most once per 5 s |
-| `background` | `'grid' \| 'dots' \| 'plain'` | |
-| `defaultEdgeRouting` | `'smart' \| …` | board default for `07_EDGE_SYSTEM.md` §7 |
-| `tagPalette` | `Record<tag, colorToken>` | board-scoped tag colors |
-| `savedViews` | `Array<{id,name,camera,filters}>` | named camera+filter bookmarks |
-| `lastMigratedAt` | ISO string | |
+| key                       | type                              | notes                                                   |
+| ------------------------- | --------------------------------- | ------------------------------------------------------- |
+| `schemaVersion`           | number                            | current `1`; gates migrations (§8.6)                    |
+| `boardId`                 | string (ULID)                     | mirrors Postgres `boards.id`                            |
+| `projectId`               | string (ULID)                     |                                                         |
+| `title`                   | string                            | board title; also mirrored to Postgres by the projector |
+| `description`             | string                            |                                                         |
+| `createdAt` / `updatedAt` | ISO string                        | `updatedAt` written at most once per 5 s                |
+| `background`              | `'grid' \| 'dots' \| 'plain'`     |                                                         |
+| `defaultEdgeRouting`      | `'smart' \| …`                    | board default for `07_EDGE_SYSTEM.md` §7                |
+| `tagPalette`              | `Record<tag, colorToken>`         | board-scoped tag colors                                 |
+| `savedViews`              | `Array<{id,name,camera,filters}>` | named camera+filter bookmarks                           |
+| `lastMigratedAt`          | ISO string                        |                                                         |
 
 #### 2.2.2 node maps
 
@@ -93,7 +93,7 @@ Rules:
 - `tags` is a plain JS array (not `Y.Array`). Tag edits are whole-array replacements; concurrent
   tag edits therefore last-writer-wins per node. This is deliberate: tag arrays are ≤ 64 short
   strings and merge-by-union at the array level would produce surprising resurrection of removed
-  tags. Set-union semantics are provided at the *action* level instead (`addTag` reads-modifies-
+  tags. Set-union semantics are provided at the _action_ level instead (`addTag` reads-modifies-
   writes inside a transaction).
 - `data` is a nested `Y.Map` **only** for types with independently editable subfields
   (`website`, `person`, `organization`, `repository`, `domain`, `ip`, `evidence`); for the rest it
@@ -141,19 +141,19 @@ correct names/sizes before the Postgres `files` row is reachable.
 
 ### 2.3 What is NOT in the CRDT
 
-| Data | Where it lives | Why not in the doc |
-|---|---|---|
-| Camera (x, y, zoom) | Zustand + `localStorage` per `(boardId, userId)` | per-user, high frequency; would spam updates |
-| Selection, hover, focus | Zustand (ephemeral) | per-user |
-| Awareness: cursor, viewport rect, selection preview, name/color | Yjs **awareness** protocol (not the doc) | ephemeral by design, not persisted |
-| Panel layout, inspector tab, sidebar width | `localStorage` | UI state |
-| Filters, search query, view mode | Zustand; nameable into `meta.savedViews` when the user opts in | ephemeral until named |
-| Routing geometry, label boxes, spatial index | in-memory caches (`07_EDGE_SYSTEM.md` §11.3) | derived |
-| Undo stack | `Y.UndoManager` in memory | per-session |
-| Trash contents | in-doc via `deletedAt` (soft), not a separate list | one source of truth |
-| Presence typing indicators, comments "seen" | awareness / Postgres | ephemeral / server-owned |
-| Files bytes | OPFS + S3 | binary bloat |
-| Tool run logs, raw payloads | Postgres + S3 | append-only, large |
+| Data                                                            | Where it lives                                                 | Why not in the doc                           |
+| --------------------------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------- |
+| Camera (x, y, zoom)                                             | Zustand + `localStorage` per `(boardId, userId)`               | per-user, high frequency; would spam updates |
+| Selection, hover, focus                                         | Zustand (ephemeral)                                            | per-user                                     |
+| Awareness: cursor, viewport rect, selection preview, name/color | Yjs **awareness** protocol (not the doc)                       | ephemeral by design, not persisted           |
+| Panel layout, inspector tab, sidebar width                      | `localStorage`                                                 | UI state                                     |
+| Filters, search query, view mode                                | Zustand; nameable into `meta.savedViews` when the user opts in | ephemeral until named                        |
+| Routing geometry, label boxes, spatial index                    | in-memory caches (`07_EDGE_SYSTEM.md` §11.3)                   | derived                                      |
+| Undo stack                                                      | `Y.UndoManager` in memory                                      | per-session                                  |
+| Trash contents                                                  | in-doc via `deletedAt` (soft), not a separate list             | one source of truth                          |
+| Presence typing indicators, comments "seen"                     | awareness / Postgres                                           | ephemeral / server-owned                     |
+| Files bytes                                                     | OPFS + S3                                                      | binary bloat                                 |
+| Tool run logs, raw payloads                                     | Postgres + S3                                                  | append-only, large                           |
 
 Rule of thumb enforced in review: **if two users editing it concurrently do not need a merge, it is
 not in the document.**
@@ -164,10 +164,21 @@ Every mutation goes through one helper:
 
 ```ts
 export type Origin =
-  | 'local:create' | 'local:edit' | 'local:move' | 'local:delete' | 'local:action'
-  | 'local:paste' | 'local:layout' | 'local:merge' | 'local:proposal-apply'
-  | 'remote:sync'  | 'remote:enrich' | 'remote:projection-repair'
-  | 'system:migration' | 'system:gc' | 'system:import';
+  | 'local:create'
+  | 'local:edit'
+  | 'local:move'
+  | 'local:delete'
+  | 'local:action'
+  | 'local:paste'
+  | 'local:layout'
+  | 'local:merge'
+  | 'local:proposal-apply'
+  | 'remote:sync'
+  | 'remote:enrich'
+  | 'remote:projection-repair'
+  | 'system:migration'
+  | 'system:gc'
+  | 'system:import';
 
 export function tx<T>(doc: Y.Doc, origin: Origin, fn: (t: Y.Transaction) => T): T {
   return doc.transact(fn, origin);
@@ -175,6 +186,7 @@ export function tx<T>(doc: Y.Doc, origin: Origin, fn: (t: Y.Transaction) => T): 
 ```
 
 Rules:
+
 1. No code calls `doc.transact` directly; the lint rule `require-tx-helper` enforces it.
 2. One user gesture = one transaction. A paste of 40 nodes + 60 edges is a single transaction, so it
    is a single undo step and a single projection batch.
@@ -188,19 +200,34 @@ Rules:
 
 ```ts
 new Y.UndoManager(
-  [doc.getMap('nodes'), doc.getMap('edges'), doc.getMap('groups'),
-   doc.getMap('richtext'), doc.getArray('order'), doc.getMap('meta')],
+  [
+    doc.getMap('nodes'),
+    doc.getMap('edges'),
+    doc.getMap('groups'),
+    doc.getMap('richtext'),
+    doc.getArray('order'),
+    doc.getMap('meta'),
+  ],
   {
-    trackedOrigins: new Set(['local:create','local:edit','local:move','local:delete',
-      'local:action','local:paste','local:layout','local:merge','local:proposal-apply']),
+    trackedOrigins: new Set([
+      'local:create',
+      'local:edit',
+      'local:move',
+      'local:delete',
+      'local:action',
+      'local:paste',
+      'local:layout',
+      'local:merge',
+      'local:proposal-apply',
+    ]),
     captureTimeout: 500,
     ignoreRemoteMapChanges: true,
-  }
+  },
 );
 ```
 
 - Undo is **local-origin scoped**: Ctrl+Z never reverts a collaborator's edit (N3 requires undo to
-  work for every mutation *the user made*, including tool imports and AI actions — those arrive as
+  work for every mutation _the user made_, including tool imports and AI actions — those arrive as
   `local:proposal-apply` because the user accepted them, which is exactly why they are undoable).
 - Background enrichment (`remote:enrich`) is not undoable by design; the user-facing equivalent is
   the explicit, undoable `Clear enrichment` action (`06_NODE_SYSTEM.md` §9.4).
@@ -213,15 +240,15 @@ new Y.UndoManager(
 
 ### 2.6 Update volume and document size
 
-| Control | Value |
-|---|---|
-| Scalar field debounce | 180 ms (`06_NODE_SYSTEM.md` §9.5) |
-| Drag position commit | on pointer-up + every 250 ms |
-| `meta.updatedAt` write | at most 1 per 5 s |
-| Awareness update rate | ≤ 20 Hz, cursor quantized to 2 canvas units |
+| Control                    | Value                                                                             |
+| -------------------------- | --------------------------------------------------------------------------------- |
+| Scalar field debounce      | 180 ms (`06_NODE_SYSTEM.md` §9.5)                                                 |
+| Drag position commit       | on pointer-up + every 250 ms                                                      |
+| `meta.updatedAt` write     | at most 1 per 5 s                                                                 |
+| Awareness update rate      | ≤ 20 Hz, cursor quantized to 2 canvas units                                       |
 | Max nodes per board (soft) | 5,000 — warning banner at 4,500, hard cap 20,000 with a "split this board" prompt |
-| Max edges per board (soft) | 10,000 — same pattern, hard cap 40,000 |
-| Target doc size at 5k/10k | ≤ 9 MB encoded (measured in `bench/doc-size.bench.ts`) |
+| Max edges per board (soft) | 10,000 — same pattern, hard cap 40,000                                            |
+| Target doc size at 5k/10k  | ≤ 9 MB encoded (measured in `bench/doc-size.bench.ts`)                            |
 
 ### 2.7 Subdocuments
 
@@ -243,7 +270,7 @@ through tRPC. Only the canvas needs CRDT semantics.
   history is provided by **stored snapshots + HistoryEvents** (§6), not by CRDT time travel. This
   is a deliberate trade: unbounded document growth is a worse failure mode than coarser history.
 - Snapshot cadence (`board_snapshots`, §4.7): on every `onStoreDocument` debounce (2 s idle or
-  10 s max) the *current state* is written to the `current` row (one per board, upserted); a
+  10 s max) the _current state_ is written to the `current` row (one per board, upserted); a
   **durable** snapshot is additionally appended when any of: 200 update-transactions since the last
   durable snapshot, 15 minutes elapsed with changes, a named checkpoint created by the user, before
   a schema migration, or before an import/merge/AI proposal application ≥ 50 nodes.
@@ -251,7 +278,7 @@ through tRPC. Only the canvas needs CRDT semantics.
   180 days; named checkpoints forever. Purge runs nightly (`19_DEPLOYMENT.md` §7).
 - Each durable snapshot stores `Y.encodeStateAsUpdateV2` bytes (zstd level 6 in object storage when
   > 256 KB, inline `bytea` otherwise), plus `state_vector`, `node_count`, `edge_count`, `checksum`
-  (sha256 of the update bytes).
+  > (sha256 of the update bytes).
 
 ---
 
@@ -287,14 +314,14 @@ Every table has: `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`,
 
 Soft-delete policy:
 
-| Class | Policy |
-|---|---|
-| Board content (`nodes`, `edges`, `groups`, `comments`) | soft delete, purged 30 days after `deleted_at` |
-| `boards`, `projects` | soft delete, purged 60 days after `deleted_at` |
-| `files` | soft delete + reference counting; bytes purged 24 h after the last reference disappears |
-| `users` | soft delete (anonymize PII, keep audit references) |
-| `audit_logs`, `history_events`, `integration_runs` | **never** deleted; retention by partition drop only |
-| Everything else | hard delete with FK cascade |
+| Class                                                  | Policy                                                                                  |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| Board content (`nodes`, `edges`, `groups`, `comments`) | soft delete, purged 30 days after `deleted_at`                                          |
+| `boards`, `projects`                                   | soft delete, purged 60 days after `deleted_at`                                          |
+| `files`                                                | soft delete + reference counting; bytes purged 24 h after the last reference disappears |
+| `users`                                                | soft delete (anonymize PII, keep audit references)                                      |
+| `audit_logs`, `history_events`, `integration_runs`     | **never** deleted; retention by partition drop only                                     |
+| Everything else                                        | hard delete with FK cascade                                                             |
 
 ### 3.3 Tenancy and row-level isolation
 
@@ -577,7 +604,7 @@ ALTER TABLE edges ADD CONSTRAINT edges_selfloop_ck
          OR type IN ('references','mentions','communicates_with','knows'));
 ```
 
-`ON DELETE CASCADE` from nodes is correct here because a *hard* node delete only happens at purge
+`ON DELETE CASCADE` from nodes is correct here because a _hard_ node delete only happens at purge
 time, when the edge is meaningless. Soft deletes never cascade (the projector sets `deleted_at` on
 orphaned edges explicitly, §5.4).
 
@@ -922,12 +949,26 @@ model AIProposal {
 
 ```ts
 type ProposalOperation =
-  | { op: 'add-node';    tempId: string; node: Omit<EntityBase,'id'> & { id?: string } }
-  | { op: 'update-node'; nodeId: string; patch: Record<string, unknown>; before: Record<string, unknown> }
-  | { op: 'add-edge';    tempId: string; edge: Omit<Edge,'id'> & { source: {ref: string}; target: {ref: string} } }
-  | { op: 'update-edge'; edgeId: string; patch: Record<string, unknown>; before: Record<string, unknown> }
+  | { op: 'add-node'; tempId: string; node: Omit<EntityBase, 'id'> & { id?: string } }
+  | {
+      op: 'update-node';
+      nodeId: string;
+      patch: Record<string, unknown>;
+      before: Record<string, unknown>;
+    }
+  | {
+      op: 'add-edge';
+      tempId: string;
+      edge: Omit<Edge, 'id'> & { source: { ref: string }; target: { ref: string } };
+    }
+  | {
+      op: 'update-edge';
+      edgeId: string;
+      patch: Record<string, unknown>;
+      before: Record<string, unknown>;
+    }
   | { op: 'merge-nodes'; plan: MergePlan }
-  | { op: 'add-tag';     nodeId: string; tag: string }
+  | { op: 'add-tag'; nodeId: string; tag: string }
   | { op: 'archive-node'; nodeId: string };
 ```
 
@@ -1115,26 +1156,26 @@ table (`embeddings_<dim>`) rather than a nullable union column — HNSW indexes 
 
 ### 4.18 Foreign key / on-delete summary
 
-| From | To | On delete |
-|---|---|---|
-| memberships → organizations, users | | CASCADE |
-| projects → organizations | | CASCADE |
-| project_members → projects, users | | CASCADE |
-| boards → projects | | CASCADE |
-| nodes/edges/groups → boards | | CASCADE |
-| edges → nodes (source/target) | | CASCADE |
-| nodes.parent_id → groups | | SET NULL |
-| node_tags → nodes, tags | | CASCADE |
-| board_snapshots → boards | | CASCADE |
-| files → projects | | RESTRICT (purge job must run first) |
-| integration_installs → integrations | | RESTRICT |
-| integration_runs → integration_installs | | SET NULL (runs outlive uninstalls) |
-| tool_results → integration_runs | | CASCADE |
-| ai_proposals → ai_actions | | SET NULL |
-| repository_analyses → repositories | | CASCADE |
-| comments → boards | | CASCADE |
-| history_events, audit_logs → anything | | **no FK** (append-only, must survive purges) |
-| embeddings → owner | | no FK; orphans removed by the nightly sweep |
+| From                                    | To  | On delete                                    |
+| --------------------------------------- | --- | -------------------------------------------- |
+| memberships → organizations, users      |     | CASCADE                                      |
+| projects → organizations                |     | CASCADE                                      |
+| project_members → projects, users       |     | CASCADE                                      |
+| boards → projects                       |     | CASCADE                                      |
+| nodes/edges/groups → boards             |     | CASCADE                                      |
+| edges → nodes (source/target)           |     | CASCADE                                      |
+| nodes.parent_id → groups                |     | SET NULL                                     |
+| node_tags → nodes, tags                 |     | CASCADE                                      |
+| board_snapshots → boards                |     | CASCADE                                      |
+| files → projects                        |     | RESTRICT (purge job must run first)          |
+| integration_installs → integrations     |     | RESTRICT                                     |
+| integration_runs → integration_installs |     | SET NULL (runs outlive uninstalls)           |
+| tool_results → integration_runs         |     | CASCADE                                      |
+| ai_proposals → ai_actions               |     | SET NULL                                     |
+| repository_analyses → repositories      |     | CASCADE                                      |
+| comments → boards                       |     | CASCADE                                      |
+| history_events, audit_logs → anything   |     | **no FK** (append-only, must survive purges) |
+| embeddings → owner                      |     | no FK; orphans removed by the nightly sweep  |
 
 ---
 
@@ -1201,7 +1242,8 @@ WHERE nodes.version < EXCLUDED.version
    OR (nodes.version = EXCLUDED.version AND nodes.doc_updated_at < EXCLUDED.doc_updated_at);
 ```
 
-  So an out-of-order projection (a retry landing after a newer one) can never move a row backwards.
+So an out-of-order projection (a retry landing after a newer one) can never move a row backwards.
+
 - Geometry-only changes do not bump `version` (`06_NODE_SYSTEM.md` §9.6); for those the guard uses
   `doc_updated_at` alone, and geometry writes are coalesced — at most one geometry upsert per node
   per projection cycle.
@@ -1213,15 +1255,15 @@ WHERE nodes.version < EXCLUDED.version
 
 ### 5.4 Conflict and anomaly handling
 
-| Anomaly | Handling |
-|---|---|
-| Edge references a node absent from the doc | edge is projected with `deleted_at = now()` and a `edge.orphaned` history event; the client's invariant checker removes it from the doc on next load |
-| Node references a `parent_id` group that does not exist | `parent_id` set to NULL, `node.reparented` event |
+| Anomaly                                                          | Handling                                                                                                                                                                       |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Edge references a node absent from the doc                       | edge is projected with `deleted_at = now()` and a `edge.orphaned` history event; the client's invariant checker removes it from the doc on next load                           |
+| Node references a `parent_id` group that does not exist          | `parent_id` set to NULL, `node.reparented` event                                                                                                                               |
 | Duplicate `(source,target,type)` from a concurrent offline merge | unique index rejects; the projector soft-deletes the lower-`created_at` loser and records `edge.deduped`. The doc is repaired on the next client load by the invariant checker |
-| Node fails zod validation | projected into `nodes` with `type` unchanged and a `validation_error` key in `data._meta`; never dropped (data loss is worse than a bad row) |
-| `deleted_at` set in DB but entry present in the doc | doc wins: `deleted_at` cleared (undo of a delete is exactly this case) |
-| Row present in DB, entry absent in doc, no delete evidence | left untouched, counted in the consistency check (§5.7); a repeated occurrence triggers a full rebuild for that board |
-| Board schema version newer than the server understands | projection is skipped, snapshot is still stored, an alert is raised. Never partially project an unknown schema |
+| Node fails zod validation                                        | projected into `nodes` with `type` unchanged and a `validation_error` key in `data._meta`; never dropped (data loss is worse than a bad row)                                   |
+| `deleted_at` set in DB but entry present in the doc              | doc wins: `deleted_at` cleared (undo of a delete is exactly this case)                                                                                                         |
+| Row present in DB, entry absent in doc, no delete evidence       | left untouched, counted in the consistency check (§5.7); a repeated occurrence triggers a full rebuild for that board                                                          |
+| Board schema version newer than the server understands           | projection is skipped, snapshot is still stored, an alert is raised. Never partially project an unknown schema                                                                 |
 
 ### 5.5 Backfill and replay
 
@@ -1255,16 +1297,16 @@ construction: it is rebuilt from snapshots, and no user data exists only in `nod
 
 A nightly job (and an on-demand admin action) per board:
 
-| Check | Assertion | Action on failure |
-|---|---|---|
-| C1 count | `boards.node_count` = live `nodes` rows = doc map size | re-project the board |
-| C2 orphan edges | no active edge whose endpoint is missing/deleted | soft-delete + event |
-| C3 parent integrity | every `parent_id` exists and is a group | NULL it + event |
-| C4 group membership | `group.childIds` ↔ `node.parentId` symmetric | repair in the doc (origin `system:gc`) |
-| C5 tag sync | `node_tags` matches `nodes.data`-level tags | rebuild node_tags for the board |
-| C6 file refs | `files.ref_count` = actual references | recompute |
+| Check                 | Assertion                                                 | Action on failure                                                   |
+| --------------------- | --------------------------------------------------------- | ------------------------------------------------------------------- |
+| C1 count              | `boards.node_count` = live `nodes` rows = doc map size    | re-project the board                                                |
+| C2 orphan edges       | no active edge whose endpoint is missing/deleted          | soft-delete + event                                                 |
+| C3 parent integrity   | every `parent_id` exists and is a group                   | NULL it + event                                                     |
+| C4 group membership   | `group.childIds` ↔ `node.parentId` symmetric             | repair in the doc (origin `system:gc`)                              |
+| C5 tag sync           | `node_tags` matches `nodes.data`-level tags               | rebuild node_tags for the board                                     |
+| C6 file refs          | `files.ref_count` = actual references                     | recompute                                                           |
 | C7 snapshot integrity | `checksum` matches stored bytes; `applyUpdateV2` succeeds | mark snapshot corrupt, fall back to the previous durable one, alert |
-| C8 seq monotonic | `history_events.seq` has no gaps > 1 per board | log only (gaps are legal when a projection produced no events) |
+| C8 seq monotonic      | `history_events.seq` has no gaps > 1 per board            | log only (gaps are legal when a projection produced no events)      |
 
 Results are written to `audit_logs` with `action = 'consistency.check'`.
 
@@ -1274,28 +1316,28 @@ Results are written to `audit_logs` with `action = 'consistency.check'`.
 
 ### 6.1 HistoryEvent taxonomy
 
-| kind | entity | emitted when | diff content |
-|---|---|---|---|
-| `node.created` | node | node added | full initial payload (capped) |
-| `node.updated` | node | any version-bumping field change | JSON-pointer diff |
-| `node.moved` | node | geometry change (coalesced per 60 s per node per actor) | before/after box |
-| `node.retyped` | node | type conversion (`06 §11`) | from/to |
-| `node.archived` / `node.restored` | node | status change | – |
-| `node.deleted` / `node.purged` | node | soft/hard delete | last payload on purge |
-| `node.enriched` | node | enrichment reached ready/partial | changed fields + tool |
-| `node.merged` | node | merge applied | MergePlan summary + member ids |
-| `node.unmerged` | node | unmerge | restored ids |
-| `edge.created` / `edge.updated` / `edge.deleted` | edge | – | endpoints, type, diff |
-| `edge.rerouted` | edge | manual waypoints changed | waypoint count before/after |
-| `group.created` / `group.updated` / `group.deleted` | group | – | – |
-| `tag.added` / `tag.removed` | node | – | tag name |
-| `comment.created` / `comment.resolved` | board | – | comment id |
-| `board.created` / `board.renamed` / `board.imported` / `board.exported` | board | – | counts, format |
-| `board.snapshot` / `board.restored` | board | durable snapshot / restore | snapshot id |
-| `proposal.created` / `proposal.accepted` / `proposal.rejected` | board | AI or integration proposal | proposal id + stats |
-| `run.started` / `run.finished` | board | integration run touching this board | run id, status, counts |
-| `ai.action` | board | AI call issued | kind, model, tokens |
-| `share.created` / `share.revoked` | board | – | mode, expiry |
+| kind                                                                    | entity | emitted when                                            | diff content                   |
+| ----------------------------------------------------------------------- | ------ | ------------------------------------------------------- | ------------------------------ |
+| `node.created`                                                          | node   | node added                                              | full initial payload (capped)  |
+| `node.updated`                                                          | node   | any version-bumping field change                        | JSON-pointer diff              |
+| `node.moved`                                                            | node   | geometry change (coalesced per 60 s per node per actor) | before/after box               |
+| `node.retyped`                                                          | node   | type conversion (`06 §11`)                              | from/to                        |
+| `node.archived` / `node.restored`                                       | node   | status change                                           | –                              |
+| `node.deleted` / `node.purged`                                          | node   | soft/hard delete                                        | last payload on purge          |
+| `node.enriched`                                                         | node   | enrichment reached ready/partial                        | changed fields + tool          |
+| `node.merged`                                                           | node   | merge applied                                           | MergePlan summary + member ids |
+| `node.unmerged`                                                         | node   | unmerge                                                 | restored ids                   |
+| `edge.created` / `edge.updated` / `edge.deleted`                        | edge   | –                                                       | endpoints, type, diff          |
+| `edge.rerouted`                                                         | edge   | manual waypoints changed                                | waypoint count before/after    |
+| `group.created` / `group.updated` / `group.deleted`                     | group  | –                                                       | –                              |
+| `tag.added` / `tag.removed`                                             | node   | –                                                       | tag name                       |
+| `comment.created` / `comment.resolved`                                  | board  | –                                                       | comment id                     |
+| `board.created` / `board.renamed` / `board.imported` / `board.exported` | board  | –                                                       | counts, format                 |
+| `board.snapshot` / `board.restored`                                     | board  | durable snapshot / restore                              | snapshot id                    |
+| `proposal.created` / `proposal.accepted` / `proposal.rejected`          | board  | AI or integration proposal                              | proposal id + stats            |
+| `run.started` / `run.finished`                                          | board  | integration run touching this board                     | run id, status, counts         |
+| `ai.action`                                                             | board  | AI call issued                                          | kind, model, tokens            |
+| `share.created` / `share.revoked`                                       | board  | –                                                       | mode, expiry                   |
 
 `actorKind` distinguishes `user` / `tool` / `ai` / `system`, so "what did the machine do to my
 board" is a single indexed query.
@@ -1322,7 +1364,7 @@ excerpt), never character-by-character — full text history is served by snapsh
 1. User opens History → picks a snapshot (list shows time, actor mix, node/edge counts, label).
 2. **Preview**: a read-only board is rendered from the snapshot bytes in a detached `Y.Doc`, with a
    diff overlay: added (green outline), removed (red, ghosted), changed (amber) versus current.
-3. Options: `Restore whole board` (creates a checkpoint of the *current* state first, then applies
+3. Options: `Restore whole board` (creates a checkpoint of the _current_ state first, then applies
    the difference as a single transaction with origin `local:action` ⇒ undoable), or
    `Restore selected nodes` (applies only the chosen entities), or `Open as a new board` (copy).
 4. Restoring never deletes snapshots and never rewrites history; it appends `board.restored`.
@@ -1338,15 +1380,15 @@ equals `after`; otherwise it warns about intervening edits).
 
 Replay animates how the board came to be. Data requirements, all already present:
 
-| Need | Source |
-|---|---|
-| ordered event stream | `history_events` by `(board_id, seq, created_at)` |
-| entity geometry at time T | nearest preceding snapshot + forward-applied `node.moved`/`created` events |
-| actor attribution and color | `actor_id`, `actor_kind` |
-| tool context | `run_id` → `integration_runs` (target, tool, duration) |
-| proposal context | `proposal_id` → `ai_proposals.stats` |
-| time compression | events bucketed into 200 frames; buckets with no events are skipped |
-| narration | `summary` field of each event, concatenated per bucket |
+| Need                        | Source                                                                     |
+| --------------------------- | -------------------------------------------------------------------------- |
+| ordered event stream        | `history_events` by `(board_id, seq, created_at)`                          |
+| entity geometry at time T   | nearest preceding snapshot + forward-applied `node.moved`/`created` events |
+| actor attribution and color | `actor_id`, `actor_kind`                                                   |
+| tool context                | `run_id` → `integration_runs` (target, tool, duration)                     |
+| proposal context            | `proposal_id` → `ai_proposals.stats`                                       |
+| time compression            | events bucketed into 200 frames; buckets with no events are skipped        |
+| narration                   | `summary` field of each event, concatenated per bucket                     |
 
 Replay is read-only and never mutates the doc. It requires at least one durable snapshot older than
 the replay start; if none exists (board older than retention), replay starts from the oldest
@@ -1393,89 +1435,172 @@ was repaired.
     "tagPalette": { "case/2026-04": "--tag-blue" },
     "savedViews": [],
     "createdAt": "2026-04-02T09:11:00.000Z",
-    "updatedAt": "2026-08-17T11:58:12.000Z"
+    "updatedAt": "2026-08-17T11:58:12.000Z",
   },
   "nodes": [
     {
       "id": "01J9ZCA0000000000000000001",
       "type": "website",
-      "x": 120, "y": -40, "w": 320, "h": 188, "z": 3,
-      "rotation": 0, "parentId": null, "locked": false, "hidden": false,
+      "x": 120,
+      "y": -40,
+      "w": 320,
+      "h": 188,
+      "z": 3,
+      "rotation": 0,
+      "parentId": null,
+      "locked": false,
+      "hidden": false,
       "title": "Example — About",
       "tags": ["case/2026-04"],
       "confidence": "high",
-      "color": null, "starred": false, "status": "active",
+      "color": null,
+      "starred": false,
+      "status": "active",
       "provenance": {
-        "kind": "paste", "source": "https://example.com/about", "tool": null,
-        "runId": null, "proposalId": null, "rawRef": "raw/01J9.../page.html",
+        "kind": "paste",
+        "source": "https://example.com/about",
+        "tool": null,
+        "runId": null,
+        "proposalId": null,
+        "rawRef": "raw/01J9.../page.html",
         "observedAt": "2026-04-02T09:12:00.000Z",
         "importedAt": "2026-04-02T09:12:01.000Z",
-        "actorId": "01J9ZC8Q9WQK3M0S9M8J8T1A2A"
+        "actorId": "01J9ZC8Q9WQK3M0S9M8J8T1A2A",
       },
-      "enrichment": { "state": "ready", "jobId": null, "attempts": 1, "lastError": null,
-                      "updatedAt": "2026-04-02T09:12:09.000Z" },
+      "enrichment": {
+        "state": "ready",
+        "jobId": null,
+        "attempts": 1,
+        "lastError": null,
+        "updatedAt": "2026-04-02T09:12:09.000Z",
+      },
       "version": 4,
       "createdAt": "2026-04-02T09:12:00.000Z",
       "updatedAt": "2026-04-02T09:12:09.000Z",
       "data": {
         "url": "https://example.com/about",
         "canonicalUrl": "https://example.com/about",
-        "siteName": "Example", "description": "About the company",
+        "siteName": "Example",
+        "description": "About the company",
         "faviconFileId": "01J9ZCF0000000000000000009",
-        "screenshotFileId": null, "ogImageFileId": null,
-        "httpStatus": 200, "finalUrl": "https://example.com/about",
-        "contentType": "text/html", "lang": "en",
-        "publishedAt": null, "author": null,
-        "excerpt": "Example is a company…", "archiveUrl": null, "notes": null
-      }
-    }
+        "screenshotFileId": null,
+        "ogImageFileId": null,
+        "httpStatus": 200,
+        "finalUrl": "https://example.com/about",
+        "contentType": "text/html",
+        "lang": "en",
+        "publishedAt": null,
+        "author": null,
+        "excerpt": "Example is a company…",
+        "archiveUrl": null,
+        "notes": null,
+      },
+    },
   ],
   "edges": [
     {
       "id": "01J9ZCB0000000000000000001",
       "type": "hosted_on",
-      "source": { "nodeId": "01J9ZCA0000000000000000001", "port": "auto", "offset": 0.5, "anchorKey": null },
-      "target": { "nodeId": "01J9ZCA0000000000000000002", "port": "auto", "offset": 0.5, "anchorKey": null },
-      "directed": true, "label": "", "description": null,
-      "confidence": "medium", "weight": 0.5,
-      "observedAt": "2026-04-02T09:20:00.000Z", "validFrom": null, "validTo": null,
-      "tags": [], "waypoints": [], "manualRoute": false,
-      "style": { "routing": null, "stroke": null, "width": null, "dash": null,
-                 "arrowSource": null, "arrowTarget": null, "animated": null,
-                 "labelPosition": 0.5, "labelOffset": { "dx": 0, "dy": 0 },
-                 "curvature": null, "cornerRadius": null, "zBias": 0 },
-      "locked": false, "hidden": false, "status": "active",
-      "provenance": { "kind": "manual", "source": null, "tool": null, "runId": null,
-                      "proposalId": null, "rawRef": null,
-                      "observedAt": "2026-04-02T09:20:00.000Z",
-                      "importedAt": "2026-04-02T09:20:00.000Z",
-                      "actorId": "01J9ZC8Q9WQK3M0S9M8J8T1A2A" },
-      "version": 1, "createdAt": "2026-04-02T09:20:00.000Z", "updatedAt": "2026-04-02T09:20:00.000Z",
-      "data": {}
-    }
+      "source": {
+        "nodeId": "01J9ZCA0000000000000000001",
+        "port": "auto",
+        "offset": 0.5,
+        "anchorKey": null,
+      },
+      "target": {
+        "nodeId": "01J9ZCA0000000000000000002",
+        "port": "auto",
+        "offset": 0.5,
+        "anchorKey": null,
+      },
+      "directed": true,
+      "label": "",
+      "description": null,
+      "confidence": "medium",
+      "weight": 0.5,
+      "observedAt": "2026-04-02T09:20:00.000Z",
+      "validFrom": null,
+      "validTo": null,
+      "tags": [],
+      "waypoints": [],
+      "manualRoute": false,
+      "style": {
+        "routing": null,
+        "stroke": null,
+        "width": null,
+        "dash": null,
+        "arrowSource": null,
+        "arrowTarget": null,
+        "animated": null,
+        "labelPosition": 0.5,
+        "labelOffset": { "dx": 0, "dy": 0 },
+        "curvature": null,
+        "cornerRadius": null,
+        "zBias": 0,
+      },
+      "locked": false,
+      "hidden": false,
+      "status": "active",
+      "provenance": {
+        "kind": "manual",
+        "source": null,
+        "tool": null,
+        "runId": null,
+        "proposalId": null,
+        "rawRef": null,
+        "observedAt": "2026-04-02T09:20:00.000Z",
+        "importedAt": "2026-04-02T09:20:00.000Z",
+        "actorId": "01J9ZC8Q9WQK3M0S9M8J8T1A2A",
+      },
+      "version": 1,
+      "createdAt": "2026-04-02T09:20:00.000Z",
+      "updatedAt": "2026-04-02T09:20:00.000Z",
+      "data": {},
+    },
   ],
   "groups": [
-    { "id": "01J9ZCC0000000000000000001", "kind": "frame", "label": "Infrastructure",
-      "x": 0, "y": -120, "w": 900, "h": 640, "collapsed": false, "parentId": null,
-      "padding": 24, "background": null, "childIds": ["01J9ZCA0000000000000000001"],
-      "autoLayout": "none", "version": 1,
-      "createdAt": "2026-04-02T09:10:00.000Z", "updatedAt": "2026-04-02T09:10:00.000Z" }
+    {
+      "id": "01J9ZCC0000000000000000001",
+      "kind": "frame",
+      "label": "Infrastructure",
+      "x": 0,
+      "y": -120,
+      "w": 900,
+      "h": 640,
+      "collapsed": false,
+      "parentId": null,
+      "padding": 24,
+      "background": null,
+      "childIds": ["01J9ZCA0000000000000000001"],
+      "autoLayout": "none",
+      "version": 1,
+      "createdAt": "2026-04-02T09:10:00.000Z",
+      "updatedAt": "2026-04-02T09:10:00.000Z",
+    },
   ],
   "richtext": {
     "fk_01J9ZCD0000000000000000001": {
       "encoding": "prosemirror-json",
-      "doc": { "type": "doc", "content": [ { "type": "paragraph",
-               "content": [ { "type": "text", "text": "Notes." } ] } ] }
-    }
+      "doc": {
+        "type": "doc",
+        "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Notes." }] }],
+      },
+    },
   },
   "order": ["01J9ZCC0000000000000000001", "01J9ZCA0000000000000000001"],
   "files": [
-    { "id": "01J9ZCF0000000000000000009", "name": "favicon.ico", "mime": "image/x-icon",
-      "size": 4286, "sha256": "e3b0c442…", "path": "files/01J9ZCF0000000000000000009/original.ico",
-      "metadata": { "width": 32, "height": 32 } }
+    {
+      "id": "01J9ZCF0000000000000000009",
+      "name": "favicon.ico",
+      "mime": "image/x-icon",
+      "size": 4286,
+      "sha256": "e3b0c442…",
+      "path": "files/01J9ZCF0000000000000000009/original.ico",
+      "metadata": { "width": 32, "height": 32 },
+    },
   ],
   "comments": [],
-  "extensions": {}
+  "extensions": {},
 }
 ```
 
@@ -1501,10 +1626,10 @@ text with every supported mark/block, and unknown/plugin node types.
 
 Import modes:
 
-| Mode | Ids | Use |
-|---|---|---|
-| `restore` | keep original ids | re-importing a board that no longer exists |
-| `copy` | remap all ids (ULID regenerated, references rewritten via a temp-id map) | duplicating a board |
+| Mode         | Ids                                                                                                          | Use                                            |
+| ------------ | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
+| `restore`    | keep original ids                                                                                            | re-importing a board that no longer exists     |
+| `copy`       | remap all ids (ULID regenerated, references rewritten via a temp-id map)                                     | duplicating a board                            |
 | `merge-into` | remap, unless a node with the same `identityKeys` exists in the target and the user chose "merge duplicates" | adding an investigation into an existing board |
 
 Import is a single transaction with origin `system:import`, preceded by an automatic checkpoint
@@ -1538,38 +1663,49 @@ Per board, one file plus an assets folder:
 
 ```markdown
 # Case 2026-04 — infrastructure
+
 > Exported 2026-08-17 12:00 UTC · 128 nodes · 214 edges · NEXUS 1.4.2
 
 ## Summary
+
 <board description>
 
 ## Entities
+
 ### Websites
-#### Example — About  `high`
+
+#### Example — About `high`
+
 - URL: https://example.com/about
 - Tags: `case/2026-04`
 - Source: pasted by A. Analyst on 2026-04-02 09:12 UTC
 - Notes: …
 
 ### Identities
+
 …
 
 ## Relationships
-| From | Relationship | To | Confidence | Observed |
-|---|---|---|---|---|
-| Example — About | hosted on | 203.0.113.10 | medium | 2026-04-02 |
+
+| From            | Relationship | To           | Confidence | Observed   |
+| --------------- | ------------ | ------------ | ---------- | ---------- |
+| Example — About | hosted on    | 203.0.113.10 | medium     | 2026-04-02 |
 
 ## Evidence
+
 …
 
 ## Hypotheses
+
 - **[open]** The two accounts belong to one operator — supported by 3, contradicted by 1
 
 ## Timeline
+
 - 2026-04-02 09:12 — website captured
-…
+  …
 
 ## Appendix: provenance
+
 | Node | Tool | Run | Observed |
 ```
 
