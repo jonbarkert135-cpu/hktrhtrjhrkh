@@ -109,3 +109,16 @@ have permission to run. Every tool run records a consent scope and is written to
 audit log; all outbound traffic leaves through an allowlist-only egress proxy. Using it to profile
 people or systems you have no permission to investigate is outside the product's intended use and
 may be illegal in your jurisdiction. See [`NEXUS-SPEC/15_SECURITY.md`](NEXUS-SPEC/15_SECURITY.md) §9.
+
+
+## CI workflow file
+
+The CI pipeline lives at `.github/ci-workflow.yml`. It is byte-identical to what belongs at
+`.github/workflows/ci.yml`, but the GitHub App used for automated PRs has no `workflows` permission,
+so it cannot push that path. To activate CI, a repo admin runs once:
+
+```bash
+git mv .github/ci-workflow.yml .github/workflows/ci.yml && git commit -m "ci: activate pipeline" && git push
+```
+
+(or grants the App the `workflows` permission, after which the file moves back automatically in the next PR).
