@@ -2,9 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@nexus/db', () => ({ prisma: {}, recordAudit: vi.fn() }));
 
-const { appRouter } = await import('../src/trpc/router.js');
-const { createCallerFactory } = await import('../src/trpc/trpc.js');
-import type { Context } from '../src/trpc/context.js';
+const { appRouter } = await import('../src/trpc/router.ts');
+const { createCallerFactory } = await import('../src/trpc/trpc.ts');
+import type { Context } from '../src/trpc/context.ts';
 
 const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 const anonymous: Context = {

@@ -72,12 +72,17 @@ export const SECRET_ENV_KEYS = [
 export type SecretEnvKey = (typeof SECRET_ENV_KEYS)[number];
 
 export class EnvValidationError extends Error {
-  constructor(public readonly issues: readonly string[]) {
+  // Plain field + assignment: parameter properties are not erasable and therefore unsupported by
+  // `node --experimental-strip-types` (see infra/docker/api.Dockerfile).
+  readonly issues: readonly string[];
+
+  constructor(issues: readonly string[]) {
     super(
       ['Invalid environment configuration:', ...issues.map((i) => `  - ${i}`)].join('\n') +
         '\nFix the variables above (see .env.example) and restart.',
     );
     this.name = 'EnvValidationError';
+    this.issues = issues;
   }
 }
 

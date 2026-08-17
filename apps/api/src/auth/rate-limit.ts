@@ -32,8 +32,14 @@ interface Window {
 
 export class FixedWindowLimiter {
   readonly #windows = new Map<string, Window>();
+  // Declared as a field instead of a TypeScript parameter property: the production image runs the
+  // sources through `node --experimental-strip-types`, which rejects parameter properties
+  // (ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX) because they emit code rather than erase types.
+  private readonly now: () => number;
 
-  constructor(private readonly now: () => number = Date.now) {}
+  constructor(now: () => number = Date.now) {
+    this.now = now;
+  }
 
   hit(key: string, rule: RateLimitRule): RateLimitResult {
     const t = this.now();

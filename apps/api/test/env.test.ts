@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadServerEnv, loadServerEnvFromProcess } from '../src/env.js';
+import { loadServerEnv, loadServerEnvFromProcess } from '../src/env.ts';
 
 // `apps/api/src/env.ts` is a re-export seam: the schema lives in `@nexus/config` (19_DEPLOYMENT.md
 // §1.1) and the file exists so the app has a single import site. The obligation here is that the

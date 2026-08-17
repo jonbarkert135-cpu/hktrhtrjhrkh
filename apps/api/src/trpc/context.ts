@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { prisma } from '@nexus/db';
-import type { Auth } from '../auth/index.js';
+import type { Auth } from '../auth/index.ts';
 
 export const ORG_ROLES = ['viewer', 'editor', 'admin', 'owner'] as const;
 export type OrgRole = (typeof ORG_ROLES)[number];

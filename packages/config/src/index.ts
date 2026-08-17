@@ -1,3 +1,3 @@
-export * from './env';
-export * from './flags';
-export * from './log';
+export * from './env.ts';
+export * from './flags.ts';
+export * from './log.ts';

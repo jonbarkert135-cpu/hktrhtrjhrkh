@@ -119,6 +119,27 @@ build cache key. A new runtime variable is added to `packages/config/src/env.ts`
 | `minio`          | minio (self-host only)             | 9000/9001 | vertical                          | S3 in cloud                               |
 | `otel-collector` | otel/opentelemetry-collector       | 4317      | 2 replicas                        | traces/metrics/logs pipeline              |
 
+### 2.1 How the api image runs TypeScript
+
+`apps/api`, `packages/config`, `packages/db` and `packages/domain` are source-only packages (no
+build step). The production image therefore ships the sources and starts them with
+`node --experimental-strip-types apps/api/src/server.ts` instead of vendoring a bundler or `tsx`
+into the runtime — which also keeps `esbuild` out of the image (15_SECURITY.md §9.4).
+
+Node only _erases_ types there, which constrains what that code may contain:
+
+- **Relative imports must name the file that exists on disk** (`./env.ts`). Node does not remap
+  `./env.js` or extensionless specifiers to `.ts` files; `tsconfig.base.json` enables
+  `allowImportingTsExtensions` for this reason.
+- **Non-erasable TypeScript is forbidden**: parameter properties (`constructor(private x: T)`),
+  `enum`, `namespace` and decorators all fail with `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`. Use a field
+  plus an assignment, and `as const` objects instead of enums.
+
+Neither rule is enforced by `typecheck` or by Vitest (both resolve and transpile differently), so
+`scripts/check-runtime-sources.mjs` re-validates every runtime source in `pnpm check:gates`: it
+strips each file with `node:module`'s `stripTypeScriptTypes` and resolves every relative specifier
+against the filesystem.
+
 ---
 
 ## 3. Self-hosting reference: `infra/docker-compose.yml`

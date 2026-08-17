@@ -473,6 +473,14 @@ Additional mandatory component assertions:
 
 ### 7.1 Configuration
 
+The Playwright version is **pinned exactly** (`"@playwright/test": "1.49.1"`, plus a matching
+`playwright-core` entry so `@axe-core/playwright` does not resolve a second copy) because the `e2e`
+and `visual` jobs run inside `mcr.microsoft.com/playwright:v1.49.1-jammy`, whose pre-installed
+browsers live under `/ms-playwright` and are keyed by browser revision. A caret range silently
+resolving to a newer Playwright makes every spec fail with
+`browserType.launch: Executable doesn't exist`. Upgrading means changing the pin and the container
+tag in `.github/workflows/ci.yml` in the same commit.
+
 `e2e/playwright.config.ts`:
 
 ```ts

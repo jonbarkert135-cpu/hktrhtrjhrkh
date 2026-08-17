@@ -1,15 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 import { TRPCError } from '@trpc/server';
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { logger, prismaMock, recordAuditMock } from './prisma-mock.js';
+import { logger, prismaMock, recordAuditMock } from './prisma-mock.ts';
 
 vi.mock('@nexus/db', () => ({ prisma: prismaMock, recordAudit: recordAuditMock }));
 
-const { createContextFactory, toHeaders } = await import('../src/trpc/context.js');
-const { appRouter } = await import('../src/trpc/router.js');
-const { createCallerFactory, hasRole } = await import('../src/trpc/trpc.js');
-const { audit } = await import('../src/audit.js');
-import type { Auth } from '../src/auth/index.js';
+const { createContextFactory, toHeaders } = await import('../src/trpc/context.ts');
+const { appRouter } = await import('../src/trpc/router.ts');
+const { createCallerFactory, hasRole } = await import('../src/trpc/trpc.ts');
+const { audit } = await import('../src/audit.ts');
+import type { Auth } from '../src/auth/index.ts';
 
 const req = (headers: Record<string, string | string[] | undefined> = {}) =>
   ({ headers, id: 'req-1', ip: '127.0.0.1', log: logger }) as unknown as FastifyRequest;

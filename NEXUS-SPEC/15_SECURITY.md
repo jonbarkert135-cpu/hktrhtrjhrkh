@@ -1128,6 +1128,15 @@ version>`), so the CLI never enters the image.
      `sigstore`, `ip-address` and `brace-expansion`.
    - Both runtime stages run `apk upgrade --no-cache` to pick up Alpine security updates published
      after the base image was tagged.
+   - `.npmrc` sets `auto-install-peers=true`, so even a `--prod` install materialises the _optional_
+     peers of the runtime dependencies — `@prisma/client` peers on the Prisma CLI, `better-auth` on
+     every adapter it supports, and those chains pull in `vite`, `vitest`, `jsdom` and the `esbuild`
+     Go binary (1 CRITICAL + 11 HIGH Go-stdlib findings on their own). pnpm cannot express "prod
+     dependencies without their optional peers" (`auto-install-peers=false` is recorded in the
+     lockfile and breaks `--frozen-lockfile`), so `scripts/prune-runtime-store.mjs` deletes them
+     from the virtual store after the install, from an explicit deny list of bundlers, test runners
+     and their platform binaries. Adding a runtime dependency that legitimately needs one of those
+     names requires editing that deny list.
 2. **Everything else is suppressed explicitly, never silently.** `.trivyignore` at the repository
    root holds bare CVE IDs with a comment block per component: the affected binary, why the code
    path is unreachable in our deployment, and a dated re-check obligation. Only findings that can

@@ -1,5 +1,5 @@
 import { systemClock } from '@nexus/domain';
-import { publicProcedure, router } from '../trpc.js';
+import { publicProcedure, router } from '../trpc.ts';
 
 export const authRouter = router({
   /**

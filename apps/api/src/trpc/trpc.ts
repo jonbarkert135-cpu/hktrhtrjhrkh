@@ -1,7 +1,7 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import superjson from 'superjson';
-import { ORG_ROLES } from './context.js';
-import type { Context, OrgRole } from './context.js';
+import { ORG_ROLES } from './context.ts';
+import type { Context, OrgRole } from './context.ts';
 
 /**
  * Every procedure declares how it is authorized. `test/authz.matrix.test.ts` enumerates the

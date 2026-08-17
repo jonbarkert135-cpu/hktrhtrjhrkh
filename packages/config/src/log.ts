@@ -1,6 +1,6 @@
 import { pino } from 'pino';
 import type { DestinationStream, Logger, LoggerOptions } from 'pino';
-import { SECRET_ENV_KEYS } from './env';
+import { SECRET_ENV_KEYS } from './env.ts';
 
 export const REDACT_CENSOR = '[redacted]';
 

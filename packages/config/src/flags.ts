@@ -17,9 +17,14 @@ export type FlagName = (typeof FLAG_NAMES)[number];
 const isFlagName = (v: string): v is FlagName => (FLAG_NAMES as readonly string[]).includes(v);
 
 export class UnknownFlagError extends Error {
-  constructor(public readonly unknown: readonly string[]) {
+  // Plain field + assignment: parameter properties are not erasable and therefore unsupported by
+  // `node --experimental-strip-types` (see infra/docker/api.Dockerfile).
+  readonly unknown: readonly string[];
+
+  constructor(unknown: readonly string[]) {
     super(`Unknown feature flag(s): ${unknown.join(', ')}. Known flags: ${FLAG_NAMES.join(', ')}`);
     this.name = 'UnknownFlagError';
+    this.unknown = unknown;
   }
 }
 

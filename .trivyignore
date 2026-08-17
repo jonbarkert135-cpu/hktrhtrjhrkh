@@ -28,3 +28,9 @@ CVE-2026-56858
 CVE-2026-56859
 CVE-2026-56860
 CVE-2026-56862
+# google.golang.org/grpc v1.81.0, also linked into the upstream `caddy:2-alpine` release binary.
+# GHSA-hrxh-6v49-42gf covers the xDS RBAC filter and HTTP/2 handling of gRPC-Go; the web image
+# runs Caddy as a static file server with neither gRPC nor xDS enabled, and the fix requires an
+# upstream rebuild against grpc-go >= 1.82.1.
+# RE-CHECK BY 2026-10-01 together with the CVEs above.
+GHSA-hrxh-6v49-42gf

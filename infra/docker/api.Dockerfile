@@ -36,6 +36,11 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 # The Prisma CLI is a dev dependency, so it is fetched for this single command instead of being
 # installed into the tree. The version is pinned to the one in pnpm-lock.yaml (@prisma/client).
 RUN pnpm dlx prisma@6.19.3 generate --schema=packages/db/prisma/schema.prisma
+# `auto-install-peers=true` (.npmrc) materialises the optional peers of the runtime dependencies,
+# which drags bundlers and test runners (vite -> esbuild, vitest, jsdom, …) into the --prod tree.
+# The server never loads them, so they are removed; see scripts/prune-runtime-store.mjs.
+COPY scripts/prune-runtime-store.mjs scripts/prune-runtime-store.mjs
+RUN node scripts/prune-runtime-store.mjs
 # A workspace package without production dependencies gets no node_modules directory; the runtime
 # stage copies these paths unconditionally, so make sure they exist.
 RUN mkdir -p apps/api/node_modules packages/config/node_modules packages/db/node_modules \

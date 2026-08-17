@@ -8,18 +8,18 @@ import { createLogger } from '@nexus/config/log';
 import { prisma } from '@nexus/db';
 import Redis from 'ioredis';
 import type { FastifyBaseLogger, FastifyInstance } from 'fastify';
-import { loadServerEnvFromProcess } from './env.js';
-import type { ServerEnv } from './env.js';
-import { createAuth, auditAuthEvent } from './auth/index.js';
-import { USER_API_RULE } from './auth/rate-limit.js';
-import { metricsPlugin, startMetricsServer } from './plugins/metrics.js';
-import { requestContextPlugin, REQ_ID_HEADER } from './plugins/request-context.js';
-import { createContextFactory, toHeaders } from './trpc/context.js';
-import type { Context } from './trpc/context.js';
-import { appRouter } from './trpc/router.js';
-import { registerTestEndpoints } from './test-endpoints.js';
+import { loadServerEnvFromProcess } from './env.ts';
+import type { ServerEnv } from './env.ts';
+import { createAuth, auditAuthEvent } from './auth/index.ts';
+import { USER_API_RULE } from './auth/rate-limit.ts';
+import { metricsPlugin, startMetricsServer } from './plugins/metrics.ts';
+import { requestContextPlugin, REQ_ID_HEADER } from './plugins/request-context.ts';
+import { createContextFactory, toHeaders } from './trpc/context.ts';
+import type { Context } from './trpc/context.ts';
+import { appRouter } from './trpc/router.ts';
+import { registerTestEndpoints } from './test-endpoints.ts';
 
-export type { AppRouter } from './trpc/router.js';
+export type { AppRouter } from './trpc/router.ts';
 
 export async function buildServer(env: ServerEnv): Promise<FastifyInstance> {
   const logger: FastifyBaseLogger = createLogger({

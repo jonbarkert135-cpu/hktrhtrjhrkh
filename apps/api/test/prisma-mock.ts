@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import type { Context } from '../src/trpc/context.js';
+import type { Context } from '../src/trpc/context.ts';
 
 /** The slice of prisma the routers touch, all mocked. */
 export const prismaMock = {

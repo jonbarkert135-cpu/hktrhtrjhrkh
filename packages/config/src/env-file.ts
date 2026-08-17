@@ -17,7 +17,7 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { loadServerEnv, type ServerEnv } from './env';
+import { loadServerEnv, type ServerEnv } from './env.ts';
 
 /** Parse a dotenv-style file. Supports `export ` prefixes, quotes and trailing `# comments`. */
 export function parseEnvFile(text: string): Record<string, string> {

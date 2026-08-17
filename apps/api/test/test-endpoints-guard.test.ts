@@ -1,6 +1,6 @@
 import Fastify from 'fastify';
 import { describe, expect, it } from 'vitest';
-import { registerTestEndpoints, testEndpointsAllowed } from '../src/test-endpoints.js';
+import { registerTestEndpoints, testEndpointsAllowed } from '../src/test-endpoints.ts';
 
 describe('test-only endpoints', () => {
   it('refuses to register in production even when the flag is on', () => {
