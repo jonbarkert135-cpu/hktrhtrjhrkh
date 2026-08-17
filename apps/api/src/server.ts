@@ -105,14 +105,29 @@ export async function buildServer(env: ServerEnv): Promise<FastifyInstance> {
   let draining = false;
   app.get('/readyz', async (_req, reply) => {
     if (draining) return reply.status(503).send({ status: 'draining' });
-    try {
-      await prisma.$queryRaw`SELECT 1`;
-      await redis.ping();
-      return { status: 'ready' };
-    } catch (error) {
-      app.log.error({ event: 'readyz.failed', err: error }, 'dependency unreachable');
-      return reply.status(503).send({ status: 'not-ready' });
-    }
+    // Each dependency is probed separately and named in the body: a bare 503 says "something is
+    // down" and costs a CI round trip to identify, which is exactly what happened in P1.
+    const checks: Record<string, string> = {};
+    const probe = async (name: string, run: () => Promise<unknown>): Promise<boolean> => {
+      try {
+        await run();
+        checks[name] = 'ok';
+        return true;
+      } catch (error) {
+        checks[name] = error instanceof Error ? error.message : String(error);
+        app.log.error(
+          { event: 'readyz.failed', dependency: name, err: error },
+          'dependency unreachable',
+        );
+        return false;
+      }
+    };
+    const results = await Promise.all([
+      probe('db', () => prisma.$queryRaw`SELECT 1`),
+      probe('redis', () => redis.ping()),
+    ]);
+    if (results.every(Boolean)) return { status: 'ready', checks };
+    return reply.status(503).send({ status: 'not-ready', checks });
   });
 
   registerTestEndpoints(app, env);

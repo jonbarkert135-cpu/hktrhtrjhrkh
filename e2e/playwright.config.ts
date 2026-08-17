@@ -34,6 +34,10 @@ export default defineConfig({
           url: baseURL,
           reuseExistingServer: true,
           timeout: 120_000,
+          // Without piping, api/web startup errors are swallowed and a failing globalSetup gives
+          // no clue about why the stack never came up.
+          stdout: 'pipe' as const,
+          stderr: 'pipe' as const,
         },
       }),
 });
