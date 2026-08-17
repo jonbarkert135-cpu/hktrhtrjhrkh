@@ -17,6 +17,19 @@ const SOURCE = /^(apps|packages)\/.+\.(ts|tsx)$/;
 // test helpers are not shipped code, so they cannot carry a coverage obligation.
 const NOT_SOURCE = /\.(test|spec|bench)\.(ts|tsx)$|\/test\/|\.d\.ts$|\.config\.(ts|tsx)$|\/seed\//;
 
+// Explicit, reviewable exclusions (see .coverageignore). Vitest applies its own `coverage.exclude`
+// lists, but those live in TypeScript configs this script cannot evaluate, so the exclusions are
+// restated here in a plain-text file that shows up in every diff.
+const ignoreFile = path.join(repoRoot, '.coverageignore');
+const ignored = new Set(
+  exists(ignoreFile)
+    ? readFileSync(ignoreFile, 'utf8')
+        .split('\n')
+        .map((line) => line.replace(/#.*$/, '').trim())
+        .filter((line) => line !== '')
+    : [],
+);
+
 let changed;
 try {
   changed = execFileSync('git', ['diff', '--name-only', `${base}...HEAD`], {
@@ -25,7 +38,7 @@ try {
   })
     .split('\n')
     .map((s) => s.trim())
-    .filter((f) => SOURCE.test(f) && !NOT_SOURCE.test(f));
+    .filter((f) => SOURCE.test(f) && !NOT_SOURCE.test(f) && !ignored.has(f));
 } catch (err) {
   console.error(`diff-coverage: cannot diff against "${base}" — ${err.message}`);
   process.exit(1);

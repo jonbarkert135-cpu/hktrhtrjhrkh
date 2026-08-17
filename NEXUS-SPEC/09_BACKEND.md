@@ -16,7 +16,7 @@ All request/response shapes below are zod schemas that exist verbatim in the cod
 
 | Service       | Entry                       | Port                | Public?              | Replicas (prod)     | Health                                         |
 | ------------- | --------------------------- | ------------------- | -------------------- | ------------------- | ---------------------------------------------- |
-| `apps/api`    | `src/main.ts`               | 3000                | yes (behind ingress) | ≥ 3                 | `/healthz` (liveness), `/readyz` (db+redis+s3) |
+| `apps/api`    | `src/main.ts`               | 3001                | yes (behind ingress) | ≥ 3                 | `/healthz` (liveness), `/readyz` (db+redis+s3) |
 | `apps/sync`   | `src/main.ts`               | 1234                | yes (WSS only)       | ≥ 3                 | `/healthz`, `/readyz` (db+redis)               |
 | `apps/worker` | `src/main.ts`               | 3100 (metrics only) | no                   | ≥ 2 per queue group | `/healthz`, `/metrics`                         |
 | `apps/runner` | see `10_INTEGRATIONS.md` §5 | 3200 (mTLS)         | no                   | ≥ 2                 | `/healthz`                                     |

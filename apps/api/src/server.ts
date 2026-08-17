@@ -162,7 +162,10 @@ async function main(): Promise<void> {
 
   const app = await buildServer(env);
   const metrics = await startMetricsServer();
-  await app.listen({ port: 3000, host: '0.0.0.0' });
+  // 19_DEPLOYMENT.md §7 and infra/docker/api.Dockerfile pin the API to 3001; `API_PORT`
+  // (02_ARCHITECTURE.md §12 env table) overrides it for local multi-instance runs.
+  const port = Number(process.env['API_PORT'] ?? 3001);
+  await app.listen({ port, host: '0.0.0.0' });
 
   const shutdown = (signal: string) => {
     void (async () => {
