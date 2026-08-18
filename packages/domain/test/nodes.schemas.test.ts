@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import { makeNode, type BoardNode } from '../src/entities/node.ts';
 import { clean, hostOf, isPrivateHost, keywords, urlIssues } from '../src/nodes/define.ts';
-import { builtinNodeTypes } from '../src/nodes/index.ts';
+import { builtinNodeTypes } from '../src/nodes/builtins.ts';
 import { fileType } from '../src/nodes/types/file.ts';
 import { imageType } from '../src/nodes/types/image.ts';
 import { personType } from '../src/nodes/types/person.ts';

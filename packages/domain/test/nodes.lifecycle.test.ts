@@ -11,7 +11,7 @@ import { createBoardDoc } from '../src/doc/createBoardDoc.ts';
 import { getNode, listNodes } from '../src/doc/mutations.ts';
 import { boardRoots } from '../src/doc/schema.ts';
 import { createBoardHistory } from '../src/history/undoManager.ts';
-import { builtinNodeTypes } from '../src/nodes/index.ts';
+import { builtinNodeTypes } from '../src/nodes/builtins.ts';
 import {
   DUPLICATE_OFFSET,
   bodyFragmentKey,

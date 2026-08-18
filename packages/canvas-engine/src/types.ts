@@ -251,6 +251,12 @@ export interface EngineEvents {
   selectionChanged: (ids: readonly EntityId[]) => void;
   cameraChanged: (camera: Readonly<CameraState>, cause: CameraCause) => void;
   hoverChanged: (target: HitTarget) => void;
+  /**
+   * The set of DOM-promoted nodes changed (mounted or unmounted). The host renders its own cards
+   * into `overlay.slotOf(id)`; the engine still knows nothing about node types (05 §6.11).
+   * Only emitted when the set actually changes, so a pan at DOM zoom does not fire per frame.
+   */
+  hostsChanged: (ids: readonly NodeId[]) => void;
   /** Emitted once per painted frame with timing, for the bench harness. */
   frame: (stats: FrameStats) => void;
 }

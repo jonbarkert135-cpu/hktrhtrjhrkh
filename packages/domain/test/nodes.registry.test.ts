@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { NodeTypeRegistry } from '../src/nodes/registry.ts';
-import { builtinNodeTypes, registerBuiltins } from '../src/nodes/index.ts';
+import { builtinNodeTypes, registerBuiltins } from '../src/nodes/builtins.ts';
 import { linkType } from '../src/nodes/types/link.ts';
 import { UNKNOWN_NODE_TYPE, makeNode } from '../src/entities/node.ts';
 import type { TypedNode } from '../src/nodes/types.ts';

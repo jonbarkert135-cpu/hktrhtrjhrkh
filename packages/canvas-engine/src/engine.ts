@@ -179,8 +179,12 @@ export function createEngine(options: EngineOptions): Engine {
     selectionChanged: new Set(),
     cameraChanged: new Set(),
     hoverChanged: new Set(),
+    hostsChanged: new Set(),
     frame: new Set(),
   };
+
+  /** Last promoted set, compared as a list because promotion order is stable and meaningful. */
+  let hostIds: NodeId[] = [];
 
   const selection = createSelection(graph.query, (ids: readonly EntityId[]) => {
     for (const l of listeners.selectionChanged) l(ids);
@@ -339,6 +343,10 @@ export function createEngine(options: EngineOptions): Engine {
       overlay.setTransform({ x: cam.x, y: cam.y, scale: cam.zoom });
       overlay.sync(promoted);
       mountedHosts = promoted.length;
+      if (hostSetChanged(promoted)) {
+        hostIds = promoted.map((node) => node.id);
+        for (const l of listeners.hostsChanged) l(hostIds);
+      }
     }
 
     graph.clearDirty();
@@ -364,6 +372,13 @@ export function createEngine(options: EngineOptions): Engine {
   let fsm: FsmState = initialState;
   let hover: HitTarget = { t: 'canvas' };
   let cursor: Cursor = cursorFor(fsm, hover);
+
+  /** Allocation-free comparison against the previous promoted set (requirement 15). */
+  function hostSetChanged(next: readonly NodeView[]): boolean {
+    if (next.length !== hostIds.length) return true;
+    for (let i = 0; i < next.length; i += 1) if (next[i]?.id !== hostIds[i]) return true;
+    return false;
+  }
 
   function emitIntent(intent: Parameters<EngineEvents['intent']>[0]): void {
     for (const l of listeners.intent) l(intent);

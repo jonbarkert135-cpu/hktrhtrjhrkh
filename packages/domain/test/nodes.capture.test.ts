@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 import { NodeTypeRegistry } from '../src/nodes/registry.ts';
 import { decideCapture } from '../src/nodes/capture.ts';
-import { registerBuiltins } from '../src/nodes/index.ts';
+import { registerBuiltins } from '../src/nodes/builtins.ts';
 import { unknownType } from '../src/nodes/types/unknown.ts';
 
 const registry = registerBuiltins(new NodeTypeRegistry());
