@@ -11,7 +11,7 @@ import type { Origin } from '../doc/transactions.ts';
 import { makeNode, type BoardNode } from '../entities/node.ts';
 import { newId } from '../ids.ts';
 import type { Provenance } from '../entities/provenance.ts';
-import { nodeTypes } from './registry.ts';
+import { builtinNodeTypes } from './builtins.ts';
 import { normalizeTags, type TagRejection } from './tags.ts';
 import type { TypedNode } from './types.ts';
 
@@ -56,7 +56,7 @@ export function createNode(
   input: CreateNodeInput,
   options: LifecycleOptions,
 ): CreatedNode {
-  const def = nodeTypes.get(input.type);
+  const def = builtinNodeTypes().get(input.type);
   const id = mintId(options);
   const parsedData = def.schema.parse({
     ...(def.defaults.data as Record<string, unknown>),
@@ -110,7 +110,7 @@ export function updateNodeData(
 ): boolean {
   const node = getNode(doc, id);
   if (node === undefined) return false;
-  const def = nodeTypes.get(node.type);
+  const def = builtinNodeTypes().get(node.type);
   const merged = def.schema.parse({ ...node.data, ...patch }) as Record<string, unknown>;
   return updateNode(
     doc,
@@ -151,7 +151,7 @@ export function duplicateNode(
 ): BoardNode | undefined {
   const source = getNode(doc, id);
   if (source === undefined) return undefined;
-  const def = nodeTypes.get(source.type);
+  const def = builtinNodeTypes().get(source.type);
   if (!def.capabilities.duplicatable) return undefined;
 
   const newNodeId = mintId(options);
@@ -208,7 +208,7 @@ export function planConversion(
   node: TypedNode<Record<string, unknown>>,
   toType: string,
 ): ConversionPlan {
-  const target = nodeTypes.get(toType);
+  const target = builtinNodeTypes().get(toType);
   const defaults = target.defaults.data as Record<string, unknown>;
   const carried: Record<string, unknown> = { ...defaults };
   const dropped: string[] = [];
@@ -232,7 +232,7 @@ export function convertNode(
 ): boolean {
   const node = getNode(doc, id);
   if (node === undefined) return false;
-  const target = nodeTypes.get(toType);
+  const target = builtinNodeTypes().get(toType);
   const plan = planConversion(node, toType);
   const data = target.schema.parse(plan.data) as Record<string, unknown>;
   if (target.capabilities.editableText && data['fragmentKey'] === '') {

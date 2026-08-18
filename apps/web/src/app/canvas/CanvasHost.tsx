@@ -14,14 +14,18 @@ const ZOOM_STOPS = [0.25, 0.5, 1, 2] as const;
 
 export interface CanvasHostProps {
   scene?: SceneSnapshot;
+  /** Rendered above the canvas; receives the overlay slot lookup for the node card portals. */
+  children?:
+    | ((api: { slotOf: (id: string) => HTMLElement | undefined }) => React.ReactNode)
+    | undefined;
   /** Engine intents, forwarded to the document binding (P3 §5.14). */
   onIntent?: ((intent: Intent) => void) | undefined;
   /** Called once the engine exists, so the page can push scene patches into it. */
   onEngine?: ((engine: Engine | null) => void) | undefined;
 }
 
-export function CanvasHost({ scene, onIntent, onEngine }: CanvasHostProps) {
-  const { canvasRef, overlayRef, engineRef, zoom, nodeCount } = useCanvasEngine({
+export function CanvasHost({ scene, onIntent, onEngine, children }: CanvasHostProps) {
+  const { canvasRef, overlayRef, engineRef, zoom, nodeCount, slotOf } = useCanvasEngine({
     ...(scene === undefined ? {} : { scene }),
     ...(onIntent === undefined ? {} : { onIntent }),
   });
@@ -60,6 +64,7 @@ export function CanvasHost({ scene, onIntent, onEngine }: CanvasHostProps) {
         />
         {/* Node hosts are mounted here by the engine's overlay; React never touches its children. */}
         <div ref={overlayRef} data-testid="canvas-overlay" className="nx-canvas-overlay" />
+        {children?.({ slotOf })}
         {nodeCount === 0 ? (
           <p className="nx-canvas-empty" data-testid="canvas-empty">
             Paste a link, drop a file, or press N for a note

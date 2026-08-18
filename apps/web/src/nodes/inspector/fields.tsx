@@ -27,7 +27,13 @@ const asText = (value: unknown): string => {
 const asLines = (value: unknown): string =>
   Array.isArray(value) ? value.map((item) => asText(item)).join('\n') : asText(value);
 
-export function FieldControl({ field, value, disabled = false, error, onCommit }: FieldControlProps) {
+export function FieldControl({
+  field,
+  value,
+  disabled = false,
+  error,
+  onCommit,
+}: FieldControlProps) {
   const initial = field.control === 'multiselect' ? asLines(value) : asText(value);
   const [draft, setDraft] = useState(initial);
 
@@ -37,7 +43,10 @@ export function FieldControl({ field, value, disabled = false, error, onCommit }
   }, [initial]);
 
   const id = `inspector-${field.key.replace(/\./g, '-')}`;
-  const describedBy = [field.help === undefined ? null : `${id}-help`, error === undefined ? null : `${id}-error`]
+  const describedBy = [
+    field.help === undefined ? null : `${id}-help`,
+    error === undefined ? null : `${id}-error`,
+  ]
     .filter((entry): entry is string => entry !== null)
     .join(' ');
 

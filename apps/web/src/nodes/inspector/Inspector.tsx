@@ -111,13 +111,18 @@ export function Inspector({
 
   if (selectedIds.length === 0) {
     return (
-      <aside className="nx-inspector" style={panelStyle} aria-label="Details" data-testid="inspector">
+      <aside
+        className="nx-inspector"
+        style={panelStyle}
+        aria-label="Details"
+        data-testid="inspector"
+      >
         <header className="nx-inspector-head">
           <h2>Board</h2>
         </header>
         <p className="nx-inspector-empty">
-          Select a node to see its details. Shift-click or drag a box to select several and edit what
-          they share.
+          Select a node to see its details. Shift-click or drag a box to select several and edit
+          what they share.
         </p>
         <p className="nx-card-meta">
           {String(listNodes(doc).length)} nodes · {String(listEdges(doc).length)} connections
@@ -136,7 +141,12 @@ export function Inspector({
       nodes[0]?.tags ?? [],
     );
     return (
-      <aside className="nx-inspector" style={panelStyle} aria-label="Details" data-testid="inspector">
+      <aside
+        className="nx-inspector"
+        style={panelStyle}
+        aria-label="Details"
+        data-testid="inspector"
+      >
         <header className="nx-inspector-head">
           <h2>{String(selectedIds.length)} nodes selected</h2>
           {onClose === undefined ? null : (
@@ -168,7 +178,12 @@ export function Inspector({
 
   if (node === undefined) {
     return (
-      <aside className="nx-inspector" style={panelStyle} aria-label="Details" data-testid="inspector">
+      <aside
+        className="nx-inspector"
+        style={panelStyle}
+        aria-label="Details"
+        data-testid="inspector"
+      >
         <header className="nx-inspector-head">
           <h2>Node deleted</h2>
         </header>
@@ -199,7 +214,8 @@ export function Inspector({
     delete validation[key];
     if (updated !== undefined) {
       for (const issue of def.validate?.(updated) ?? []) {
-        if (issue.severity === 'error' || issue.field === key) validation[issue.field] = issue.message;
+        if (issue.severity === 'error' || issue.field === key)
+          validation[issue.field] = issue.message;
       }
     }
     setIssues(validation);
@@ -271,7 +287,9 @@ export function Inspector({
       <section className="nx-inspector-section" data-testid="inspector-connections">
         <h3>Connections</h3>
         {connections.length === 0 ? (
-          <p className="nx-card-meta">No connections yet. Press E with a node selected to draw one.</p>
+          <p className="nx-card-meta">
+            No connections yet. Press E with a node selected to draw one.
+          </p>
         ) : (
           <ul className="nx-inspector-list">
             {connections.map((connection) => (

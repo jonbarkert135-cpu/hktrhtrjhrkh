@@ -15,7 +15,7 @@ import {
   type RawPointer,
   type SceneSnapshot,
 } from '@nexus/canvas-engine';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { resolveEngineTheme } from './engine-theme';
 
@@ -53,6 +53,8 @@ export interface CanvasEngineHandles {
   zoom: number;
   /** Node count, so the empty state can disappear on the first node. */
   nodeCount: number;
+  /** The overlay slot the engine mounted for a node, for the React card portals (P4 §7). */
+  slotOf: (id: string) => HTMLElement | undefined;
 }
 
 export interface UseCanvasEngineOptions {
@@ -63,6 +65,8 @@ export interface UseCanvasEngineOptions {
 export function useCanvasEngine(options: UseCanvasEngineOptions = {}): CanvasEngineHandles {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
+  // The overlay is created inside the effect; the ref lets the card layer look slots up after it.
+  const overlayApiRef = useRef<{ slotOf: (id: string) => HTMLElement | undefined } | null>(null);
   // A ref, not state: the engine must not trigger a React render when it is created or torn down.
   const engineRef = useRef<Engine | null>(null);
   const intentRef = useRef(options.onIntent);
@@ -95,6 +99,7 @@ export function useCanvasEngine(options: UseCanvasEngineOptions = {}): CanvasEng
       document: canvas.ownerDocument,
       container: overlayEl,
     });
+    overlayApiRef.current = overlay;
 
     const created = createEngine({
       target,
@@ -216,10 +221,13 @@ export function useCanvasEngine(options: UseCanvasEngineOptions = {}): CanvasEng
       canvas.ownerDocument.removeEventListener('visibilitychange', onVisibility);
       created.dispose();
       engineRef.current = null;
+      overlayApiRef.current = null;
     };
     // The engine is created once per mount; scene updates go through `applyScenePatch`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { canvasRef, overlayRef, engineRef, zoom, nodeCount };
+  const slotOf = useCallback((id: string) => overlayApiRef.current?.slotOf(id), []);
+
+  return { canvasRef, overlayRef, engineRef, zoom, nodeCount, slotOf };
 }

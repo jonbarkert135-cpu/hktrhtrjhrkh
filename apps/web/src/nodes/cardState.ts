@@ -57,7 +57,11 @@ export function cardStateOf(node: BoardNode, context: CardContext = {}): CardSta
   const enrichment = node.enrichment;
   const state = typeof enrichment['state'] === 'string' ? enrichment['state'] : 'idle';
   if (state === 'queued' || state === 'running') return 'loading';
-  if (state === 'error' || node.data['uploadState'] === 'failed' || node.data['status'] === 'failed')
+  if (
+    state === 'error' ||
+    node.data['uploadState'] === 'failed' ||
+    node.data['status'] === 'failed'
+  )
     return 'error';
   if (requiredFieldMissing(node)) return 'empty';
   if (isStale(node, context.now ?? Date.now())) return 'stale';

@@ -46,23 +46,12 @@ function HostedCard({
   );
   if (node === undefined) return null;
   return createPortal(
-    <NodeCard
-      node={node}
-      detailed={detailed}
-      context={{ selected, multiSelected }}
-      {...actions}
-    />,
+    <NodeCard node={node} detailed={detailed} context={{ selected, multiSelected }} {...actions} />,
     slot,
   );
 }
 
-export function NodeHosts({
-  engine,
-  store,
-  slotOf,
-  selectedIds = [],
-  ...actions
-}: NodeHostsProps) {
+export function NodeHosts({ engine, store, slotOf, selectedIds = [], ...actions }: NodeHostsProps) {
   const [ids, setIds] = useState<readonly string[]>([]);
   const [zoom, setZoom] = useState(engine?.camera.state.zoom ?? 1);
 

@@ -101,7 +101,9 @@ function NoteBody({ node, detailed }: NodeBodyProps) {
           {plain}
         </p>
       )}
-      {detailed && sourceRef !== '' ? <span className="nx-card-foot">Refers to {sourceRef}</span> : null}
+      {detailed && sourceRef !== '' ? (
+        <span className="nx-card-foot">Refers to {sourceRef}</span>
+      ) : null}
     </div>
   );
 }

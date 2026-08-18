@@ -20,7 +20,10 @@ export function TagEditor({ tags, boardTags, onChange, disabled = false }: TagEd
   const listId = useId();
 
   const suggestions = useMemo(
-    () => suggestTags(boardTags, draft).filter((tag) => !tags.some((t) => t.toLowerCase() === tag.toLowerCase())),
+    () =>
+      suggestTags(boardTags, draft).filter(
+        (tag) => !tags.some((t) => t.toLowerCase() === tag.toLowerCase()),
+      ),
     [boardTags, draft, tags],
   );
 
