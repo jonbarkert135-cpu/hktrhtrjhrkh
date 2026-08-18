@@ -962,7 +962,60 @@ These drive the index choices in `08_DATA_MODEL.md` §4.10 and the query shapes 
 organization` ranked `alias_of` above `works_at` purely on alphabetical tie-breaking; grading
    keeps the narrow, more informative relationship on top. Weights are unchanged.
 
-### 15.3 Not yet implemented
+### 15.3 Shipped (P5 part 2 — routing, caching, hit-testing, labels)
 
-Routing (§7), invalidation and caching (§8), labels (§9), hit-testing and interaction (§10),
-bundling and the worker (§11) — P5 parts 2 and 3.
+| Section     | Where it lives                                                                                  |
+| ----------- | ----------------------------------------------------------------------------------------------- |
+| §4.3        | `EdgeGeometry` and the flattener in `packages/domain/src/edges/routing/types.ts`, `geometry.ts` |
+| §7.1        | `packages/domain/src/edges/routing/ports.ts` (side choice, offset, drag hysteresis)             |
+| §7.2, §7.3  | `routing/straight.ts`, `routing/curved.ts` (endpoint normals, Catmull-Rom through waypoints)    |
+| §7.4        | `routing/clip.ts` (rounded-rect containment, bisected crossing, `trimPolyline`)                 |
+| §7.5        | `routing/selfloop.ts`                                                                           |
+| §7.6        | `routing/separation.ts` (`siblingOffset`, bundling thresholds)                                  |
+| §7.7        | `routing/orthogonal.ts` (Hanan grid, A\* with a turn penalty, Z-fallback, post-processing)      |
+| §7.8        | `routing/smart.ts`                                                                              |
+| §8.1, §8.2  | `routing/cache.ts` (`routeKey`, LRU `RouteCache`, per-node adjacency, obstacle epoch)           |
+| §9.1, §9.2  | `routing/labels.ts` (`labelAnchor`, `placeLabels`, uniform hash)                                |
+| §10.1       | `routing/hit-test.ts` (`hitTolerance`, `distanceToEdge`, `nearestPointOnEdge`, `pickEdge`)      |
+| engine seam | `createRoutedEdgePath` in `packages/canvas-engine/src/render/routed-edge-path.ts`               |
+| bench       | `route-smart-2000-edges` in `bench/routing.bench.ts`                                            |
+
+### 15.4 Deviations in part 2, and why
+
+1. **Routing lives in `packages/domain`, not in the engine.** §7 already asks for pure functions;
+   putting them in the domain package keeps the engine free of graph semantics and lets the same
+   code run inside the routing worker without a build-time split.
+2. **Sibling offset on curves.** §7.6 asks for control points shifted by `offset` _and_ a mid-curve
+   shifted by `2 · offset`. A cubic moves its midpoint by ¾ of a shift applied to both controls, so
+   the implementation shifts the controls by `8/3 · offset`, which produces exactly the mid-curve
+   displacement the spec asks for with one operation instead of two conflicting ones.
+3. **A\* cost terms.** `TURN_PENALTY` is implemented; `LANE_PENALTY` and `CROSS_PENALTY` are not,
+   because both need board-wide state (which lanes and which other edges are already routed) that
+   only exists once the renderer drives routing for a whole frame. Lane _alignment_ is still
+   achieved by the `snapToLanes` post-process. The two penalties return with the worker batch in
+   part 3.
+4. **Blocked lattice points.** In a Hanan grid the obstacle borders _are_ lattice coordinates, so a
+   point-in-box test alone would never block anything for a single obstacle. Blocking is therefore
+   decided per _segment_ (`segmentBlocked`), with axis-aligned degenerate segments handled
+   explicitly: grazing a border is allowed, crossing an interior is not.
+5. **Staircase simplification.** §7.7's post-process 2 ("remove a point if the path stays clear")
+   cannot remove a single point from a rectilinear path without making it diagonal. The
+   implementation removes a _pair_ of corners instead — turning early or turning late, whichever
+   stays clear — which is the same intent expressed correctly.
+6. **Manual waypoints** arrive at the router already materialized in canvas units; the relative
+   frame bookkeeping of §8.3 belongs to the document layer and lands with the inspector UI in part 3.
+
+7. **Bounded work per edge.** The `route-smart-2000-edges` budget (900 ms, 18_TESTING.md §9.1) does
+   not survive an unbounded Hanan lattice: the lattice grows quadratically with the obstacle count
+   and the search cubically. Four measures keep it affordable, in the order they pay off:
+   a cheap-candidate probe (the two L- and two Z-shapes) that skips A\* and the lattice entirely
+   whenever one of them is clear; a hard cap of `MAX_REGION_OBSTACLES = 16` nearest cards per route,
+   selected in one pass instead of a sort; per-obstacle range marking of blocked lattice points
+   (O(cells) instead of O(cells · obstacles)); and reused A\* scratch buffers. Measured headlessly:
+   6,067 ms → 520 ms for 2,000 smart edges over the 5,000-node scene, with 8 degraded routes.
+
+### 15.5 Not yet implemented
+
+Creation UX (§5.1, §5.2, §5.4), editing (§6), waypoint `rel` materialization (§8.3), label content
+toggles (§9.3), hover/selection states and animated flow (§10.2–§10.4), bundling render and the
+worker offload (§11.1–§11.2), graph queries (§12) and accessibility (§13) — P5 part 3.

@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runCanvasBenches } from './canvas.bench.ts';
 import { runEngineBenches } from './engine.bench.ts';
+import { runRoutingBenches } from './routing.bench.ts';
 
 /** The nine metric keys of 18_TESTING.md §9.1, in table order. */
 export const METRIC_KEYS = [
@@ -74,7 +75,7 @@ export function percentile(values: readonly number[], p: number): number {
 export async function main(): Promise<void> {
   // The headless engine numbers are always available; the browser run may add or override them
   // when a dev server is reachable (BENCH_URL). Browser values win: they include the real paint.
-  const engineMetrics = runEngineBenches();
+  const engineMetrics = { ...runEngineBenches(), ...runRoutingBenches() };
   const browserMetrics = process.env.BENCH_SKIP_BROWSER === '1' ? {} : await runCanvasBenches();
   const measured: Partial<Record<MetricKey, Metric>> = { ...engineMetrics };
   for (const [key, metric] of Object.entries(browserMetrics)) {
