@@ -9,6 +9,7 @@ import {
 } from 'react-router-dom';
 import { Skeleton, VisuallyHidden } from '@nexus/ui';
 import { useSession } from '../lib/auth';
+import { capabilities } from '../mode/appMode';
 import { Shell } from './shell/Shell';
 import { ShellContainer } from './shell/ShellContainer';
 
@@ -39,8 +40,19 @@ function RouteFallback() {
   );
 }
 
-/** Renders the shell skeleton while the session resolves: no flash of unauthenticated UI. */
+/**
+ * Renders the shell skeleton while the session resolves: no flash of unauthenticated UI.
+ *
+ * With `auth` disabled (APP_MODE=local) there is no session to resolve and no server to ask, so the
+ * guard is not merely bypassed — `useSession()` is never called, which is what lets the local bundle
+ * boot with the API unreachable.
+ */
 function RequireAuth({ children }: { children: ReactElement }) {
+  if (!capabilities.auth) return children;
+  return <RequireSession>{children}</RequireSession>;
+}
+
+function RequireSession({ children }: { children: ReactElement }) {
   const session = useSession();
   const location = useLocation();
 
@@ -52,7 +64,10 @@ function RequireAuth({ children }: { children: ReactElement }) {
   return children;
 }
 
-/** Already signed in on an auth route → go where the user was headed. */
+/**
+ * Already signed in on an auth route → go where the user was headed. With auth disabled the auth
+ * routes do not exist at all; `/login` becomes a normal unknown path and lands on the board.
+ */
 function RedirectIfAuthed({ children }: { children: ReactElement }) {
   const session = useSession();
   const [params] = useSearchParams();
@@ -70,22 +85,26 @@ export function AppRoutes() {
     <BrowserRouter>
       <Suspense fallback={<RouteFallback />}>
         <Routes>
-          <Route
-            path="/login"
-            element={
-              <RedirectIfAuthed>
-                <LoginPage />
-              </RedirectIfAuthed>
-            }
-          />
-          <Route
-            path="/signup"
-            element={
-              <RedirectIfAuthed>
-                <SignupPage />
-              </RedirectIfAuthed>
-            }
-          />
+          {capabilities.auth ? (
+            <>
+              <Route
+                path="/login"
+                element={
+                  <RedirectIfAuthed>
+                    <LoginPage />
+                  </RedirectIfAuthed>
+                }
+              />
+              <Route
+                path="/signup"
+                element={
+                  <RedirectIfAuthed>
+                    <SignupPage />
+                  </RedirectIfAuthed>
+                }
+              />
+            </>
+          ) : null}
           <Route
             path="/"
             element={

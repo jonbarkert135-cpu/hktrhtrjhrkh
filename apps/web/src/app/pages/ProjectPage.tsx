@@ -1,26 +1,23 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Banner, Button, Skeleton } from '@nexus/ui';
-import { errorMessage, trpc } from '../../lib/trpc';
+import { useBoards, useCreateBoard, useProjects } from '../../data/workspace/context';
+import { workspaceErrorMessage } from '../../data/workspace/errors';
 import { CreateDialog } from '../shell/CreateDialog';
 
 /** Boards of one project, plus the only way to make a new one. */
 export default function ProjectPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const utils = trpc.useUtils();
   const [open, setOpen] = useState(false);
 
   const id = projectId ?? '';
-  const projects = trpc.project.list.useQuery({});
+  const projects = useProjects();
   const project = projects.data?.find((candidate) => candidate.id === id);
-  const boards = trpc.board.list.useQuery({ projectId: id }, { enabled: id !== '' });
-  const create = trpc.board.create.useMutation({
-    onSuccess: async (board) => {
-      setOpen(false);
-      await utils.board.list.invalidate({ projectId: id });
-      await navigate(`/b/${board.id}`);
-    },
+  const boards = useBoards(id);
+  const create = useCreateBoard(id, async (board) => {
+    setOpen(false);
+    await navigate(`/b/${board.id}`);
   });
 
   if (projects.isPending || boards.isPending) {
@@ -35,7 +32,7 @@ export default function ProjectPage() {
   if (projects.error || boards.error) {
     return (
       <Banner kind="danger" title="Couldn't load this project">
-        {errorMessage(projects.error ?? boards.error)}
+        {workspaceErrorMessage(projects.error ?? boards.error)}
       </Banner>
     );
   }
@@ -80,8 +77,8 @@ export default function ProjectPage() {
         title="New board"
         description="Boards are where the canvas lives. You can rename it later."
         submitting={create.isPending}
-        {...(create.error ? { error: errorMessage(create.error) } : {})}
-        onSubmit={(title) => create.mutate({ projectId: id, title })}
+        {...(create.error ? { error: workspaceErrorMessage(create.error) } : {})}
+        onSubmit={(title) => create.mutate({ title })}
       />
     </section>
   );

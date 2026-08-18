@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Banner, Button, Menu, MenuItem, Skeleton, SkipToContent } from '@nexus/ui';
 import { CommandPalette } from '../commands/palette';
+import { capabilities } from '../../mode/appMode';
 
 export type ShellProject = { id: string; name: string };
 
@@ -18,6 +19,11 @@ export type ShellProps = {
   boardTitle?: string | undefined;
   orgName?: string | undefined;
   userName?: string | undefined;
+  /**
+   * Account UI (sign out, org switcher) only makes sense where accounts exist. Defaults to the
+   * deployment's `auth` capability; passed explicitly by the visual tests.
+   */
+  authEnabled?: boolean | undefined;
 };
 
 function ProjectRail({
@@ -87,6 +93,7 @@ export function Shell({
   boardTitle = 'Untitled board',
   orgName = 'Personal',
   userName = 'Account',
+  authEnabled = capabilities.auth,
 }: ShellProps) {
   return (
     <div className="nx-app">
@@ -101,7 +108,7 @@ export function Shell({
         </span>
         <Menu trigger={<Button variant="ghost">{userName}</Button>} align="end">
           <MenuItem>Settings</MenuItem>
-          <MenuItem>Sign out</MenuItem>
+          {authEnabled ? <MenuItem>Sign out</MenuItem> : null}
         </Menu>
       </header>
 

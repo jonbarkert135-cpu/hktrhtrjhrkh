@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { APP_MODES, CAPABILITY_ENV, readAppModeConfig, type AppModeConfig } from './appMode.ts';
+
 /**
  * Server configuration. Reproduced from RAVEN-SPEC/19_DEPLOYMENT.md §1.1.
  * The process refuses to start on an invalid or missing required variable.
@@ -36,6 +38,16 @@ export const serverEnv = z
     NEXUS_TEST_ENDPOINTS: z.coerce.boolean().default(false),
     NEXUS_INTEGRATIONS_MODE: z.enum(['real', 'stub']).default('real'),
     FEATURE_FLAGS: z.string().default(''), // csv of enabled flags, see §9
+    // Mode registry (docs/adr/ADR-001-local-first.md). The API process only exists in a deployment
+    // that has a backend, so its default is `server`; the flags below are the same names the browser
+    // bundle reads, so one deployment describes itself once.
+    APP_MODE: z.enum(APP_MODES).default('server'),
+    BACKEND_ENABLED: z.string().optional(),
+    AUTH_ENABLED: z.string().optional(),
+    GOOGLE_AUTH_ENABLED: z.string().optional(),
+    CLOUD_SYNC_ENABLED: z.string().optional(),
+    REMOTE_DATABASE_ENABLED: z.string().optional(),
+    COLLABORATION_ENABLED: z.string().optional(),
   })
   .superRefine((v, ctx) => {
     if (v.NODE_ENV === 'production' && v.NEXUS_TEST_ENDPOINTS)
@@ -47,12 +59,29 @@ export const serverEnv = z
 export type ServerEnv = z.infer<typeof serverEnv>;
 
 /** Client configuration: VITE_ prefixed, never a secret — this ends up in the bundle. */
-export const clientEnv = z.object({
-  VITE_APP_URL: z.string().url(),
-  VITE_SYNC_URL: z.string().url(),
+/** The client fields themselves. Exported so tooling can enumerate them (see env.test.ts). */
+export const clientEnvShape = z.object({
+  // Optional because a local-mode bundle talks to nothing: there is no app origin to call and no
+  // sync server to reach. The refinement below makes them required again as soon as the bundle is
+  // built for a deployment with a backend.
+  VITE_APP_URL: z.string().url().optional(),
+  VITE_SYNC_URL: z.string().url().optional(),
   VITE_SENTRY_DSN: z.string().url().optional(),
   VITE_NEXUS_ENV: z.enum(['local', 'preview', 'staging', 'production']),
   VITE_FEATURE_FLAGS: z.string().default(''),
+  VITE_APP_MODE: z.enum(APP_MODES).default('local'),
+  VITE_BACKEND_ENABLED: z.string().optional(),
+  VITE_AUTH_ENABLED: z.string().optional(),
+  VITE_GOOGLE_AUTH_ENABLED: z.string().optional(),
+  VITE_CLOUD_SYNC_ENABLED: z.string().optional(),
+  VITE_REMOTE_DATABASE_ENABLED: z.string().optional(),
+  VITE_COLLABORATION_ENABLED: z.string().optional(),
+});
+
+export const clientEnv = clientEnvShape.superRefine((v, ctx) => {
+  if (v.VITE_APP_MODE === 'local') return;
+  if (v.VITE_APP_URL === undefined)
+    ctx.addIssue({ code: 'custom', message: 'VITE_APP_URL is required when VITE_APP_MODE=server' });
 });
 
 export type ClientEnv = z.infer<typeof clientEnv>;
@@ -109,4 +138,16 @@ export function loadClientEnv(raw: Record<string, unknown>): ClientEnv {
   const parsed = clientEnv.safeParse(raw);
   if (!parsed.success) throw new EnvValidationError(formatIssues(parsed.error));
   return parsed.data;
+}
+
+/**
+ * The mode registry as the API process sees it. Kept next to the env loader so a process that
+ * refuses to boot on a bad variable also refuses to boot on a contradictory capability set.
+ */
+export function serverAppModeConfig(env: ServerEnv): AppModeConfig {
+  const raw: Record<string, string | undefined> = { APP_MODE: env.APP_MODE };
+  for (const name of Object.values(CAPABILITY_ENV)) {
+    raw[name] = (env as unknown as Record<string, string | undefined>)[name];
+  }
+  return readAppModeConfig(raw);
 }

@@ -11,6 +11,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "dev": "turbo run dev --parallel",
+    "dev:local": "pnpm --filter @nexus/web dev",
     "db:migrate": "pnpm --filter @nexus/db exec prisma migrate deploy",
     "db:push": "pnpm --filter @nexus/db exec prisma db push",
     "db:seed": "pnpm --filter @nexus/db run seed",

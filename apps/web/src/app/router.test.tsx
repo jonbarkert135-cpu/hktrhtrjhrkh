@@ -8,21 +8,39 @@ vi.mock('../lib/auth', () => ({
   useSession: (): unknown => session(),
 }));
 
-// The shell fetches the project rail; the guard tests care about routing, not about data.
-vi.mock('../lib/trpc', () => ({
-  errorMessage: () => 'The server took too long to answer.',
-  trpc: {
-    useUtils: () => ({ project: { list: { invalidate: vi.fn() } } }),
-    project: {
-      list: {
-        useQuery: (): unknown => ({ isPending: false, error: null, data: [], refetch: vi.fn() }),
-      },
-      create: { useMutation: (): unknown => ({ mutate: vi.fn(), isPending: false, error: null }) },
-    },
+// This suite is about the auth guard, which only exists in a deployment that has accounts.
+vi.mock('../mode/appMode', () => ({
+  appMode: 'server',
+  capabilities: {
+    backend: true,
+    auth: true,
+    googleAuth: false,
+    cloudSync: false,
+    remoteDatabase: true,
+    collaboration: false,
   },
+  localOnly: false,
+  resolveAppModeConfig: () => ({ mode: 'server', capabilities: {} }),
 }));
 
 const { AppRoutes } = await import('./router');
+const { AppProviders } = await import('./providers');
+const { WorkspaceError } = await import('../data/workspace/types');
+
+/** The rail's data is irrelevant here; the guard is what is under test. */
+const repository = {
+  kind: 'local' as const,
+  listProjects: () => Promise.resolve([]),
+  createProject: () => Promise.reject(new WorkspaceError('not used')),
+  listBoards: () => Promise.resolve([]),
+  createBoard: () => Promise.reject(new WorkspaceError('not used')),
+};
+
+const app = () => (
+  <AppProviders repository={repository} backendEnabled={false}>
+    <AppRoutes />
+  </AppProviders>
+);
 
 function go(url: string) {
   window.history.pushState({}, '', url);
@@ -38,7 +56,7 @@ describe('AppRoutes auth guard', () => {
   it('sends an unauthenticated visitor to /login with a next param', async () => {
     session.mockReturnValue({ data: null, isPending: false });
     go('/settings');
-    render(<AppRoutes />);
+    render(app());
     expect(await screen.findByRole('button', { name: 'Sign in' })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/login');
     expect(window.location.search).toBe('?next=%2Fsettings');
@@ -47,14 +65,14 @@ describe('AppRoutes auth guard', () => {
   it('shows the shell skeleton while the session resolves', () => {
     session.mockReturnValue({ data: null, isPending: true });
     go('/');
-    render(<AppRoutes />);
+    render(app());
     expect(screen.getByLabelText('Loading board')).toBeInTheDocument();
   });
 
   it('lets an authenticated user reach the board', async () => {
     session.mockReturnValue({ data: { user: { name: 'Ana' } }, isPending: false });
     go('/');
-    render(<AppRoutes />);
+    render(app());
     // Lazy route chunks plus jsdom under parallel load occasionally exceed the 1s default.
     expect(
       await screen.findByTestId('canvas-surface', {}, { timeout: 10_000 }),
@@ -64,7 +82,7 @@ describe('AppRoutes auth guard', () => {
   it('bounces an authenticated user off /login to the next param', async () => {
     session.mockReturnValue({ data: { user: { name: 'Ana' } }, isPending: false });
     go('/login?next=%2Fsettings');
-    render(<AppRoutes />);
+    render(app());
     expect(await screen.findByRole('heading', { name: 'Settings' })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/settings');
   });
@@ -72,7 +90,7 @@ describe('AppRoutes auth guard', () => {
   it('redirects an unknown path to the board', async () => {
     session.mockReturnValue({ data: { user: { name: 'Ana' } }, isPending: false });
     go('/nope');
-    render(<AppRoutes />);
+    render(app());
     // Lazy route chunks plus jsdom under parallel load occasionally exceed the 1s default.
     expect(
       await screen.findByTestId('canvas-surface', {}, { timeout: 10_000 }),

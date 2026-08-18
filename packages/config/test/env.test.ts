@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { EnvValidationError, loadServerEnv, SECRET_ENV_KEYS, clientEnv } from '../src/env';
+import {
+  EnvValidationError,
+  loadServerEnv,
+  SECRET_ENV_KEYS,
+  clientEnv,
+  clientEnvShape,
+} from '../src/env';
 
 const SECRET = 'x'.repeat(32);
 
@@ -91,8 +97,14 @@ describe('loadServerEnv', () => {
 });
 
 describe('clientEnv', () => {
+  it('accepts a local bundle with no urls at all, and demands them for a server build', () => {
+    expect(clientEnv.safeParse({ VITE_NEXUS_ENV: 'local' }).success).toBe(true);
+    const server = clientEnv.safeParse({ VITE_NEXUS_ENV: 'staging', VITE_APP_MODE: 'server' });
+    expect(server.success).toBe(false);
+  });
+
   it('contains no server secret names', () => {
-    const keys = Object.keys(clientEnv.shape);
+    const keys = Object.keys(clientEnvShape.shape);
     for (const secret of SECRET_ENV_KEYS) expect(keys).not.toContain(secret);
     expect(keys.every((k) => k.startsWith('VITE_'))).toBe(true);
   });

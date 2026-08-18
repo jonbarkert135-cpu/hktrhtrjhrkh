@@ -33,7 +33,11 @@ export default defineConfig({
           cwd: '..',
           // Every board spec signs a fresh user up; the production budget is 5 signups/hour/IP,
           // which the suite legitimately exceeds. Honoured only outside NEXUS_ENV=production.
-          env: { AUTH_SIGNUP_LIMIT: '500' },
+          // The journeys cover the *server* shape (accounts, API, database). The local shape has
+          // its own acceptance suite in apps/web (src/app/localMode.test.tsx), which asserts the
+          // app boots with fetch/XHR/WebSocket sabotaged — something a stack-backed browser test
+          // cannot assert.
+          env: { AUTH_SIGNUP_LIMIT: '500', VITE_APP_MODE: 'server', APP_MODE: 'server' },
           url: baseURL,
           reuseExistingServer: true,
           timeout: 120_000,
