@@ -1494,3 +1494,34 @@ make editing the copy edit the original) and records `provenance.derivedFrom`. `
 returns the payload keys a conversion would drop so the UI can confirm before `convertNode` writes.
 `decideCapture` scores a pasted/dropped payload across every type and takes the highest score,
 falling back to `text` — a payload nobody claims still becomes a node rather than being discarded.
+
+### 13.5 Rich text as implemented (P4, part 2 of 3)
+
+The editor is TipTap over the `Y.XmlFragment` a node already owns (`<nodeId>:body` in the `richtext`
+root), mounted in two places that share that one fragment: in place on the card (double-click, or
+Enter on a single selection) and in the inspector's `richtext` field. Both are views; neither owns
+the content, so having both open at once is not a conflict.
+
+- `apps/web/src/nodes/richtext/fragmentSync.ts` — the binding. `ySyncPlugin` only; **no `y-undo`**.
+  Undo is board-wide, so the binding's transaction origin (`RICH_TEXT_ORIGIN`) is passed to
+  `createBoardHistory({ extraTrackedOrigins })` in `data/docProvider.tsx` instead. Without that, a
+  keystroke would reach the document but not the undo stack.
+- `extensions.ts` — the whole schema: bold, italic, strike, inline code, H2/H3, bullet/ordered/task
+  lists, blockquote, code block, http(s) links, mentions. Nothing else can exist in a note, which is
+  also the sanitiser: pasted HTML is parsed against this schema, so a `<script>` or an `onerror`
+  has nowhere to land. Images are excluded on purpose — an image is a node, not a character.
+- `mention.ts` — `@` opens a plain-DOM popup over the board's nodes; accepting one inserts the
+  mention **and** writes a `references` edge (`local:edit`), so the connection lives in the graph
+  and shows up in the inspector's connections list. A mention whose target was deleted renders as
+  “deleted node” rather than as a dangling name.
+- `projection.ts` — `data.plain` is written from exactly one place, only when it actually changed,
+  debounced 400 ms and flushed on blur/Escape. `richTextToPlainText` (in `export/richtext.ts`) is
+  deterministic: one line per block, task markers kept, so search (P7) and the L1 painter always
+  agree with the editor.
+- Size guard: `richTextSizeIssue` warns at 150 KB and blocks at 200 KB by refusing text input and
+  paste while still allowing deletion — a note can never become uneditable.
+- `LazyRichTextEditor.tsx` code-splits the editor: most board sessions never open it, and the board
+  route's first paint stays inside the P1 §7 bundle budget.
+
+Still open in P4 (part 3): the file/image upload pipeline (presign, sniffing, thumbnails) and the
+`e2e/journeys/J03-drop-file.spec.ts` / `J06-rich-text-reload.spec.ts` journeys.

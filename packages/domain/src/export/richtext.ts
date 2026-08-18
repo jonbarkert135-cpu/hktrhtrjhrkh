@@ -130,3 +130,90 @@ export function applyJsonToFragment(fragment: Y.XmlFragment, json: RichTextDocJs
   const children = json.doc.content.map(jsonToChild);
   if (children.length > 0) fragment.insert(0, children);
 }
+
+/* ------------------------------------------------------- plain-text projection */
+
+/**
+ * Node names that hold other blocks. They contribute no line of their own; their children do.
+ * Anything not listed here and not inline is treated as a leaf block, so an unknown node from a
+ * future schema still produces its text instead of disappearing.
+ */
+const CONTAINER_NODES: ReadonlySet<string> = new Set([
+  'blockquote',
+  'bulletList',
+  'bullet_list',
+  'orderedList',
+  'ordered_list',
+  'taskList',
+  'task_list',
+  'listItem',
+  'list_item',
+  'taskItem',
+  'task_item',
+]);
+
+/** Nodes that carry no readable text at all. */
+const VOID_NODES: ReadonlySet<string> = new Set(['horizontalRule', 'horizontal_rule', 'image']);
+
+const isTaskItem = (type: string): boolean => type === 'taskItem' || type === 'task_item';
+
+/** Concatenates every text descendant of an inline subtree, marks included, order preserved. */
+function inlineText(nodes: readonly RichTextNodeJson[]): string {
+  let out = '';
+  for (const node of nodes) {
+    // ProseMirror JSON node names, not board node types — the lint rule targets the latter.
+    // eslint-disable-next-line nexus/no-node-type-switch
+    if (node.type === 'text') out += node.text ?? '';
+    else if (!VOID_NODES.has(node.type)) out += inlineText(node.content ?? []);
+  }
+  return out;
+}
+
+function blockLines(node: RichTextNodeJson): string[] {
+  if (VOID_NODES.has(node.type)) return [];
+  if (CONTAINER_NODES.has(node.type)) {
+    const lines = (node.content ?? []).flatMap(blockLines);
+    if (!isTaskItem(node.type)) return lines;
+    const checked = node.attrs?.['checked'];
+    const marker = checked === true || checked === 'true' ? '[x] ' : '[ ] ';
+    return lines.length === 0
+      ? [marker.trimEnd()]
+      : [`${marker}${lines[0] ?? ''}`, ...lines.slice(1)];
+  }
+  // A bare text node at block level is its own line; ProseMirror JSON names, not board types.
+  // eslint-disable-next-line nexus/no-node-type-switch
+  const isBareText = node.type === 'text';
+  return [inlineText(isBareText ? [node] : (node.content ?? []))];
+}
+
+/**
+ * Deterministic plain-text view of a rich-text document (P4 §7): one line per block, task markers
+ * preserved, no trailing whitespace. It feeds `data.plain` (card preview, L1 painter) and the P7
+ * search index, so two identical documents must always produce the same string.
+ */
+export function richTextToPlainText(json: RichTextDocJson): string {
+  return json.doc.content
+    .flatMap(blockLines)
+    .map((line) => line.replace(/[ \t]+$/, ''))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/**
+ * Size of the document as it is stored, in bytes. The editor's guard rail (`richTextSizeIssue`)
+ * compares against this number, so the warning the user sees matches what persistence carries.
+ */
+export function richTextByteSize(json: RichTextDocJson): number {
+  return new TextEncoder().encode(JSON.stringify(json)).length;
+}
+
+/** Convenience for callers holding a fragment: JSON, plain text and byte size in one pass. */
+export function richTextProjection(fragment: Y.XmlFragment): {
+  json: RichTextDocJson;
+  plain: string;
+  bytes: number;
+} {
+  const json = fragmentToJson(fragment);
+  return { json, plain: richTextToPlainText(json), bytes: richTextByteSize(json) };
+}

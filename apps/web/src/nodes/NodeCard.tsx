@@ -13,6 +13,8 @@ import { bodyFor } from './renderers/bodies.tsx';
 
 export interface NodeCardActions {
   onOpenInspector?: ((id: string) => void) | undefined;
+  /** Enter in-place editing (double-click, or Enter on the selection) — text types only. */
+  onBeginEdit?: ((id: string) => void) | undefined;
   onDuplicate?: ((id: string) => void) | undefined;
   onDelete?: ((id: string) => void) | undefined;
   onRetry?: ((id: string) => void) | undefined;
@@ -24,6 +26,11 @@ export interface NodeCardProps extends NodeCardActions {
   detailed?: boolean;
   context?: CardContext;
   now?: number;
+  /**
+   * The live editor, supplied by the binding layer while this card is being edited. The card stays
+   * presentational: it decides *where* the editor sits, never *what* it edits (§7).
+   */
+  editorSlot?: React.ReactNode;
 }
 
 /** Tag chips appear from zoom ≥ 0.8, i.e. whenever the card is a DOM card at all (P4 §5.7). */
@@ -34,7 +41,9 @@ function NodeCardImpl({
   detailed = false,
   context,
   now,
+  editorSlot,
   onOpenInspector,
+  onBeginEdit,
   onDuplicate,
   onDelete,
   onRetry,
@@ -43,6 +52,8 @@ function NodeCardImpl({
   const Body = bodyFor(def.componentId);
   const state = cardStateOf(node, { ...context, ...(now === undefined ? {} : { now }) });
   const error = state === 'error' ? cardErrorMessage(node) : null;
+  const editing = editorSlot !== undefined && editorSlot !== null;
+  const canEdit = def.capabilities.editableText && !node.locked && onBeginEdit !== undefined;
   const visibleTags = node.tags.slice(0, MAX_VISIBLE_TAGS);
   const overflow = node.tags.length - visibleTags.length;
 
@@ -51,10 +62,11 @@ function NodeCardImpl({
       className="nx-node-card"
       data-testid={`node-card-${node.id}`}
       data-node-type={node.type}
-      data-state={state}
+      data-state={editing ? 'editing' : state}
       data-locked={node.locked ? 'true' : undefined}
       style={{ borderInlineStartColor: `var(${def.glyph.colorToken})` }}
       aria-label={`${def.label}: ${node.title === '' ? 'Untitled' : node.title}`}
+      onDoubleClick={canEdit && !editing ? () => onBeginEdit(node.id) : undefined}
     >
       <header className="nx-card-head">
         <span className="nx-card-type" style={{ color: `var(${def.glyph.colorToken})` }}>
@@ -79,7 +91,11 @@ function NodeCardImpl({
         ) : null}
       </header>
 
-      {state === 'loading' ? (
+      {editing ? (
+        <div className="nx-card-editor" data-testid={`card-editor-${node.id}`}>
+          {editorSlot}
+        </div>
+      ) : state === 'loading' ? (
         <div className="nx-card-skeleton" data-testid="card-skeleton" aria-label="Loading" />
       ) : (
         <Body node={node} detailed={detailed} {...(now === undefined ? {} : { now })} />
@@ -112,6 +128,11 @@ function NodeCardImpl({
         {onOpenInspector === undefined ? null : (
           <button type="button" onClick={() => onOpenInspector(node.id)} aria-label="Open details">
             Details
+          </button>
+        )}
+        {!canEdit || editing ? null : (
+          <button type="button" onClick={() => onBeginEdit(node.id)} aria-label="Edit text">
+            Edit
           </button>
         )}
         {onDuplicate === undefined || !def.capabilities.duplicatable ? null : (

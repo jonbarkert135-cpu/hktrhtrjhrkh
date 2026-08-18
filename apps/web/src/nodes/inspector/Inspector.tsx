@@ -22,6 +22,7 @@ import type * as Y from 'yjs';
 import { cardStateOf } from '../cardState.ts';
 import { NodeIcon } from '../icons.tsx';
 import type { NodeStore } from '../nodeStore.ts';
+import { RichTextEditor } from '../richtext/RichTextEditor.tsx';
 import { FieldControl, readPath } from './fields.tsx';
 import { TagEditor } from './TagEditor.tsx';
 
@@ -270,16 +271,31 @@ export function Inspector({
         return (
           <section className="nx-inspector-section" key={section.id}>
             <h3>{section.title}</h3>
-            {fields.map((field) => (
-              <FieldControl
-                key={field.key}
-                field={field}
-                value={readPath(node as unknown as Record<string, unknown>, field.key)}
-                disabled={node.locked}
-                {...(issues[field.key] === undefined ? {} : { error: issues[field.key] })}
-                onCommit={(value) => commitField(field.key, value)}
-              />
-            ))}
+            {fields.map((field) =>
+              // The rich-text body is not a form control: it is a live view of the node's
+              // `Y.XmlFragment`, bound to the same fragment the card edits in place (§5.5).
+              field.control === 'richtext' ? (
+                <div className="nx-field" key={field.key}>
+                  <span className="nx-field-label">{field.label}</span>
+                  <RichTextEditor
+                    doc={doc}
+                    node={node}
+                    readOnly={node.locked}
+                    label={`${field.label} of ${node.title === '' ? 'this node' : node.title}`}
+                    now={now}
+                  />
+                </div>
+              ) : (
+                <FieldControl
+                  key={field.key}
+                  field={field}
+                  value={readPath(node as unknown as Record<string, unknown>, field.key)}
+                  disabled={node.locked}
+                  {...(issues[field.key] === undefined ? {} : { error: issues[field.key] })}
+                  onCommit={(value) => commitField(field.key, value)}
+                />
+              ),
+            )}
           </section>
         );
       })}

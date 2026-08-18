@@ -16,6 +16,7 @@ import {
   listGroups,
   listNodes,
   moveNodes,
+  ensureFragment,
   removeNodes,
   reorder,
   updateNode,
@@ -152,6 +153,30 @@ describe('undo/redo', () => {
       addNodes(doc, [makeNode({ id: `n${String(i)}`, x: i, y: 0 }, T0)], local);
     }
     expect(h.state.undoDepth).toBe(UNDO_STACK_LIMIT);
+    h.destroy();
+  });
+});
+
+describe('extra tracked origins', () => {
+  it('tracks an editor origin that is not one of our own transaction tags', () => {
+    // y-prosemirror transacts under its plugin key; without opting it in, typing in the rich-text
+    // editor would be invisible to ⌘Z (P4 §5.5).
+    const board = createBoardDoc({ boardId: 'b_undo_extra', now: T0 });
+    const editorOrigin = { plugin: 'y-sync' };
+    const h = createBoardHistory(board, { captureTimeout: 0, extraTrackedOrigins: [editorOrigin] });
+
+    const fragment = ensureFragment(board, 'fk_editor', 'local:create');
+    const before = h.state.undoDepth;
+    board.transact(() => fragment.insert(0, [new Y.XmlText('typed by the editor')]), editorOrigin);
+    expect(h.state.undoDepth).toBe(before + 1);
+
+    h.undo();
+    expect(fragment.length).toBe(0);
+    expect(h.state.undoDepth).toBe(before);
+
+    // An untracked origin still stays out of the stack.
+    board.transact(() => fragment.insert(0, [new Y.XmlText('from a peer')]), 'remote:sync');
+    expect(h.state.undoDepth).toBe(before);
     h.destroy();
   });
 });

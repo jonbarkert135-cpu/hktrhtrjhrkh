@@ -15,6 +15,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import type { ReactNode } from 'react';
 import type * as Y from 'yjs';
 
+import { RICH_TEXT_ORIGIN } from '../nodes/richtext/fragmentSync.ts';
 import { createBlobStore, type BlobStore } from './opfs.ts';
 import { createPersistence, type PersistenceHandle } from './persistence.ts';
 import {
@@ -79,7 +80,9 @@ export function BoardDocProvider({
 
   useEffect(() => {
     const doc = createBoardDoc({ boardId, now: new Date().toISOString() });
-    const history = createBoardHistory(doc);
+    // The rich-text binding transacts under its own origin; opting it in keeps ⌘Z one board-wide
+    // history instead of one per text box (P4 §5.5).
+    const history = createBoardHistory(doc, { extraTrackedOrigins: [RICH_TEXT_ORIGIN] });
     const snapshotStore =
       snapshotStoreImpl ??
       // A browser without IndexedDB gets a store that fails loudly rather than silently.

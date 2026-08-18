@@ -220,3 +220,52 @@ describe('NodeCard states', () => {
     expect(screen.getByRole('heading', { name: 'Untitled person' })).toBeInTheDocument();
   });
 });
+
+describe('NodeCard in-place editing', () => {
+  it('offers Edit for text types and starts editing on double-click', async () => {
+    const onBeginEdit = vi.fn();
+    render(<NodeCard node={node('note', { plain: 'x' })} onBeginEdit={onBeginEdit} now={NOW} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit text' }));
+    expect(onBeginEdit).toHaveBeenCalledWith('n1');
+
+    await userEvent.dblClick(screen.getByRole('article'));
+    expect(onBeginEdit).toHaveBeenCalledTimes(2);
+  });
+
+  it('offers no editing on a type without a text body, nor on a locked node', async () => {
+    const onBeginEdit = vi.fn();
+    const { rerender } = render(
+      <NodeCard node={node('image', { alt: 'a' })} onBeginEdit={onBeginEdit} now={NOW} />,
+    );
+    expect(screen.queryByRole('button', { name: 'Edit text' })).not.toBeInTheDocument();
+
+    rerender(
+      <NodeCard
+        node={node('note', { plain: 'x' }, { locked: true })}
+        onBeginEdit={onBeginEdit}
+        now={NOW}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: 'Edit text' })).not.toBeInTheDocument();
+    await userEvent.dblClick(screen.getByRole('article'));
+    expect(onBeginEdit).not.toHaveBeenCalled();
+  });
+
+  it('shows the editor slot instead of the preview while editing', () => {
+    render(
+      <NodeCard
+        node={node('note', { plain: 'preview text' })}
+        onBeginEdit={vi.fn()}
+        editorSlot={<div>editor here</div>}
+        now={NOW}
+      />,
+    );
+    expect(screen.getByTestId('card-editor-n1')).toBeInTheDocument();
+    expect(screen.getByText('editor here')).toBeInTheDocument();
+    expect(screen.queryByText('preview text')).not.toBeInTheDocument();
+    expect(screen.getByRole('article')).toHaveAttribute('data-state', 'editing');
+    // The rail must not offer a second way into a state the card is already in.
+    expect(screen.queryByRole('button', { name: 'Edit text' })).not.toBeInTheDocument();
+  });
+});

@@ -67,12 +67,20 @@ function labelOf(item: { meta: StackItemMeta } | undefined): string | null {
 export interface CreateHistoryOptions {
   captureTimeout?: number;
   stackLimit?: number;
+  /**
+   * Origins produced by an embedded editor rather than by our own `tx()` calls. The rich-text
+   * binding (y-prosemirror) transacts under its own plugin key, so without this the editor's
+   * keystrokes would land in the document but not on the undo stack — and ⌘Z would silently skip
+   * them. Everything passed here is still a *local* gesture; remote and system origins are never
+   * tracked (08_DATA_MODEL.md §2.5).
+   */
+  extraTrackedOrigins?: readonly unknown[];
 }
 
 export function createBoardHistory(doc: Y.Doc, options: CreateHistoryOptions = {}): BoardHistory {
   const stackLimit = options.stackLimit ?? UNDO_STACK_LIMIT;
   const manager = new Y.UndoManager(undoScope(doc), {
-    trackedOrigins: new Set(TRACKED_ORIGINS),
+    trackedOrigins: new Set<unknown>([...TRACKED_ORIGINS, ...(options.extraTrackedOrigins ?? [])]),
     captureTimeout: options.captureTimeout ?? UNDO_CAPTURE_TIMEOUT_MS,
     ignoreRemoteMapChanges: true,
   });

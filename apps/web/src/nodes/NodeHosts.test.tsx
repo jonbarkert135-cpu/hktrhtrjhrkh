@@ -7,7 +7,7 @@
 import { createBoardDoc, createNode, updateNode } from '@nexus/domain';
 import { createOverlay } from '@nexus/canvas-engine';
 import type { Engine, EngineEvents, NodeView } from '@nexus/canvas-engine';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { NodeHosts } from './NodeHosts.tsx';
@@ -70,9 +70,9 @@ function setup() {
 
 describe('NodeHosts', () => {
   it('renders a card into each promoted slot and drops it when the engine unmounts it', () => {
-    const { ids, slots, store } = setup();
+    const { doc, ids, slots, store } = setup();
     const { engine, emitHosts } = fakeEngine();
-    render(<NodeHosts engine={engine} store={store} slotOf={(id) => slots.get(id)} />);
+    render(<NodeHosts engine={engine} doc={doc} store={store} slotOf={(id) => slots.get(id)} />);
 
     expect(screen.queryByText('First')).not.toBeInTheDocument();
 
@@ -85,17 +85,17 @@ describe('NodeHosts', () => {
   });
 
   it('skips ids the overlay has no slot for', () => {
-    const { ids, slots, store } = setup();
+    const { doc, ids, slots, store } = setup();
     const { engine, emitHosts } = fakeEngine();
-    render(<NodeHosts engine={engine} store={store} slotOf={(id) => slots.get(id)} />);
+    render(<NodeHosts engine={engine} doc={doc} store={store} slotOf={(id) => slots.get(id)} />);
     act(() => emitHosts([...ids, 'n_missing']));
     expect(screen.getAllByRole('article')).toHaveLength(2);
   });
 
   it('switches to detailed cards above the L3 zoom threshold', () => {
-    const { ids, slots, store } = setup();
+    const { doc, ids, slots, store } = setup();
     const { engine, emitHosts, emitZoom } = fakeEngine();
-    render(<NodeHosts engine={engine} store={store} slotOf={(id) => slots.get(id)} />);
+    render(<NodeHosts engine={engine} doc={doc} store={store} slotOf={(id) => slots.get(id)} />);
     act(() => emitHosts([ids[0] ?? '']));
     expect(screen.queryByText('Detail text')).not.toBeInTheDocument();
 
@@ -104,11 +104,12 @@ describe('NodeHosts', () => {
   });
 
   it('marks the selected card, and multi-selection when several are selected', () => {
-    const { ids, slots, store } = setup();
+    const { doc, ids, slots, store } = setup();
     const { engine, emitHosts } = fakeEngine();
     const { rerender } = render(
       <NodeHosts
         engine={engine}
+        doc={doc}
         store={store}
         slotOf={(id) => slots.get(id)}
         selectedIds={[ids[0] ?? '']}
@@ -121,7 +122,13 @@ describe('NodeHosts', () => {
     );
 
     rerender(
-      <NodeHosts engine={engine} store={store} slotOf={(id) => slots.get(id)} selectedIds={ids} />,
+      <NodeHosts
+        engine={engine}
+        doc={doc}
+        store={store}
+        slotOf={(id) => slots.get(id)}
+        selectedIds={ids}
+      />,
     );
     expect(screen.getByTestId(`node-card-${ids[0] ?? ''}`)).toHaveAttribute(
       'data-state',
@@ -132,7 +139,7 @@ describe('NodeHosts', () => {
   it('re-renders a card when its own node changes', () => {
     const { doc, ids, slots, store } = setup();
     const { engine, emitHosts } = fakeEngine();
-    render(<NodeHosts engine={engine} store={store} slotOf={(id) => slots.get(id)} />);
+    render(<NodeHosts engine={engine} doc={doc} store={store} slotOf={(id) => slots.get(id)} />);
     act(() => emitHosts(ids));
 
     act(() => {
@@ -147,7 +154,7 @@ describe('NodeHosts', () => {
    * `removeChild: not a child of this node`, which took the whole board down in e2e.
    */
   it('survives the engine releasing a slot that still hosts a card', () => {
-    const { ids, store } = setup();
+    const { doc, ids, store } = setup();
     const container = document.createElement('div');
     document.body.appendChild(container);
     const overlay = createOverlay<HTMLElement>({ document, container });
@@ -183,7 +190,12 @@ describe('NodeHosts', () => {
 
     const { engine, emitHosts } = fakeEngine();
     const view2 = render(
-      <NodeHosts engine={engine} store={store} slotOf={(nodeId) => overlay.slotOf(nodeId)} />,
+      <NodeHosts
+        engine={engine}
+        doc={doc}
+        store={store}
+        slotOf={(nodeId) => overlay.slotOf(nodeId)}
+      />,
     );
     act(() => emitHosts([id]));
     expect(slot?.querySelector('article')).not.toBeNull();
@@ -204,8 +216,134 @@ describe('NodeHosts', () => {
   });
 
   it('renders nothing without an engine', () => {
-    const { slots, store } = setup();
-    render(<NodeHosts engine={null} store={store} slotOf={(id) => slots.get(id)} />);
+    const { doc, slots, store } = setup();
+    render(<NodeHosts engine={null} doc={doc} store={store} slotOf={(id) => slots.get(id)} />);
     expect(screen.queryAllByRole('article')).toHaveLength(0);
+  });
+});
+
+describe('NodeHosts in-place editing', () => {
+  it('starts editing on Enter with one node selected, and stops on Escape', async () => {
+    const { doc, ids, slots, store } = setup();
+    const { engine, emitHosts } = fakeEngine();
+    const id = ids[0] ?? '';
+    // A text node is the only kind that can be edited in place.
+    const note = createNode(
+      doc,
+      { type: 'note', x: 0, y: 0, title: 'Note' },
+      { now: T0, makeId: () => 'n_note' },
+    ).node;
+    const slot = document.createElement('div');
+    document.body.appendChild(slot);
+    slots.set(note.id, slot);
+
+    render(
+      <NodeHosts
+        engine={engine}
+        doc={doc}
+        store={store}
+        slotOf={(nodeId) => slots.get(nodeId)}
+        selectedIds={[note.id]}
+      />,
+    );
+    act(() => emitHosts([id, note.id]));
+    expect(screen.queryByTestId(`card-editor-${note.id}`)).not.toBeInTheDocument();
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    });
+    expect(await screen.findByTestId(`card-editor-${note.id}`)).toBeInTheDocument();
+    // The editor is code-split, so the card shows its slot first and the surface a tick later.
+    expect(await screen.findByTestId(`richtext-${note.id}`)).toBeInTheDocument();
+
+    act(() => {
+      screen
+        .getByRole('textbox')
+        .dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
+        );
+    });
+    await waitFor(() =>
+      expect(screen.queryByTestId(`card-editor-${note.id}`)).not.toBeInTheDocument(),
+    );
+  });
+
+  it('ignores Enter while a form field has focus, and with a multi-selection', () => {
+    const { doc, ids, slots, store } = setup();
+    const { engine, emitHosts } = fakeEngine();
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    input.focus();
+
+    render(
+      <NodeHosts
+        engine={engine}
+        doc={doc}
+        store={store}
+        slotOf={(nodeId) => slots.get(nodeId)}
+        selectedIds={ids}
+      />,
+    );
+    act(() => emitHosts(ids));
+    act(() => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    });
+    expect(document.querySelector('.nx-card-editor')).toBeNull();
+    input.remove();
+  });
+
+  it('never starts editing a type that has no text body', () => {
+    const { doc, ids, slots, store } = setup();
+    const { engine, emitHosts } = fakeEngine();
+    render(
+      <NodeHosts
+        engine={engine}
+        doc={doc}
+        store={store}
+        slotOf={(id) => slots.get(id)}
+        selectedIds={[ids[0] ?? '']}
+      />,
+    );
+    act(() => emitHosts(ids));
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    });
+    // The seeded nodes are websites: the Edit affordance is absent and Enter does nothing.
+    expect(document.querySelector('.nx-card-editor')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Edit text' })).not.toBeInTheDocument();
+  });
+
+  it('drops the editing state when the engine stops hosting the node', async () => {
+    const { doc, slots, store } = setup();
+    const { engine, emitHosts } = fakeEngine();
+    const note = createNode(
+      doc,
+      { type: 'note', x: 0, y: 0, title: 'Note' },
+      { now: T0, makeId: () => 'n_note2' },
+    ).node;
+    const slot = document.createElement('div');
+    document.body.appendChild(slot);
+    slots.set(note.id, slot);
+
+    render(
+      <NodeHosts
+        engine={engine}
+        doc={doc}
+        store={store}
+        slotOf={(nodeId) => slots.get(nodeId)}
+        selectedIds={[note.id]}
+      />,
+    );
+    act(() => emitHosts([note.id]));
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    });
+    expect(await screen.findByTestId(`card-editor-${note.id}`)).toBeInTheDocument();
+
+    act(() => emitHosts([]));
+    await waitFor(() =>
+      expect(screen.queryByTestId(`card-editor-${note.id}`)).not.toBeInTheDocument(),
+    );
   });
 });

@@ -549,6 +549,151 @@
     padding: 0 var(--nx-space-2);
   }
 
+  /* --------------------------------------------------------------- rich text */
+
+  .nx-richtext {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nx-space-2);
+    position: relative;
+  }
+
+  .nx-richtext-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--nx-space-1);
+  }
+
+  .nx-richtext-tool {
+    border: var(--nx-border-hairline) solid var(--border-subtle);
+    border-radius: var(--nx-radius-2);
+    background: var(--surface-2);
+    color: var(--fg-muted);
+    font: var(--text-body-sm);
+    padding: var(--nx-space-1) var(--nx-space-2);
+    cursor: pointer;
+  }
+
+  .nx-richtext-tool[aria-pressed='true'] {
+    background: var(--surface-3);
+    color: var(--fg-default);
+  }
+
+  .nx-richtext-surface {
+    font: var(--text-body);
+    color: var(--fg-default);
+    outline: none;
+    overflow-y: auto;
+    max-block-size: 40rem;
+  }
+
+  .nx-richtext-surface :where(h2, h3) {
+    font: var(--text-title);
+    margin: var(--nx-space-2) 0 var(--nx-space-1);
+  }
+
+  .nx-richtext-surface :where(p, ul, ol, blockquote, pre) {
+    margin: 0 0 var(--nx-space-2);
+  }
+
+  .nx-richtext-surface blockquote {
+    border-inline-start: var(--nx-border-thick) solid var(--border-subtle);
+    padding-inline-start: var(--nx-space-3);
+    color: var(--fg-muted);
+  }
+
+  .nx-richtext-surface :where(code, pre) {
+    font: var(--text-mono);
+  }
+
+  .nx-richtext-surface .nx-task-list {
+    list-style: none;
+    padding-inline-start: 0;
+  }
+
+  .nx-richtext-surface p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    color: var(--fg-muted);
+    float: inline-start;
+    block-size: 0;
+    pointer-events: none;
+  }
+
+  .nx-richtext-issue {
+    margin: 0;
+    font: var(--text-body-sm);
+    color: var(--fg-muted);
+  }
+
+  .nx-richtext-issue[data-level='block'] {
+    color: var(--status-danger-fg);
+  }
+
+  .nx-mention {
+    color: var(--fg-accent);
+    border-radius: var(--nx-radius-1);
+    padding: 0 var(--nx-space-1);
+    background: var(--surface-3);
+  }
+
+  .nx-mention[data-missing='true'] {
+    color: var(--fg-muted);
+    text-decoration: line-through;
+  }
+
+  .nx-mention-popup {
+    position: absolute;
+    inset-block-start: 100%;
+    inset-inline-start: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 14rem;
+    border: var(--nx-border-hairline) solid var(--border-subtle);
+    border-radius: var(--nx-radius-3);
+    background: var(--surface-2);
+    box-shadow: var(--nx-shadow-1);
+    overflow: hidden;
+  }
+
+  .nx-mention-option {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--nx-space-2);
+    border: 0;
+    background: none;
+    color: var(--fg-default);
+    font: var(--text-body-sm);
+    text-align: start;
+    padding: var(--nx-space-2) var(--nx-space-3);
+    cursor: pointer;
+  }
+
+  .nx-mention-option[aria-selected='true'] {
+    background: var(--surface-3);
+  }
+
+  .nx-mention-meta,
+  .nx-mention-empty {
+    color: var(--fg-muted);
+    font: var(--text-body-sm);
+  }
+
+  .nx-mention-empty {
+    margin: 0;
+    padding: var(--nx-space-2) var(--nx-space-3);
+  }
+
+  .nx-card-editor {
+    display: flex;
+    flex-direction: column;
+    min-block-size: 4rem;
+  }
+
+  .nx-node-card[data-state='editing'] {
+    box-shadow: var(--focus-ring-shadow);
+  }
+
   :where(a, button, input, [tabindex]):focus-visible {
     outline: none;
     box-shadow: var(--focus-ring-shadow);
