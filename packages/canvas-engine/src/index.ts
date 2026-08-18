@@ -92,6 +92,11 @@ export {
   type RenderMetrics,
 } from './render/layers';
 export {
+  createRoutedEdgePath,
+  type RoutedEdgePath,
+  type RoutedEdgePathOptions,
+} from './render/routed-edge-path';
+export {
   asOverlayDiff,
   createOverlay,
   type Overlay,
