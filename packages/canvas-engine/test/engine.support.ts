@@ -14,7 +14,6 @@ export interface FakeSlot extends OverlaySlot {
 function fakeSlot(): FakeSlot {
   return {
     style: { transform: '', willChange: '', width: '', height: '' },
-    textContent: null,
     removed: false,
     setAttribute(): void {
       // attributes are asserted in the overlay's own tests

@@ -24,7 +24,6 @@ export interface OverlaySlotStyle {
 /** The exact DOM surface the overlay uses. `HTMLElement` satisfies it structurally. */
 export interface OverlaySlot {
   style: OverlaySlotStyle;
-  textContent: string | null;
   setAttribute(name: string, value: string): void;
   removeAttribute(name: string): void;
   remove(): void;
@@ -123,9 +122,11 @@ export function createOverlay<E extends OverlaySlot>(options: OverlayOptions<E>)
     const el = entry.slot;
     el.style.transform = OFFSCREEN;
     el.style.willChange = '';
-    // Security (20_ROADMAP P2 §9): text only, never innerHTML — here and on mount.
-    el.textContent = '';
+    // The slot may host a React card portal (P4 §7); its children belong to the host, so the
+    // overlay never clears them — doing so detaches nodes React still owns and its next unmount
+    // throws `removeChild: not a child of this node`. Only overlay-owned attributes are reset.
     el.removeAttribute('data-node-id');
+    el.removeAttribute('data-title');
     const free = pool.get(entry.kind);
     if (free === undefined) {
       pool.set(entry.kind, [el]);
@@ -167,7 +168,9 @@ export function createOverlay<E extends OverlaySlot>(options: OverlayOptions<E>)
         if (existing === undefined) {
           const slot = acquire(node.kind);
           slot.setAttribute('data-node-id', node.id);
-          slot.textContent = truncateHard(node.glyph.title);
+          // Security (20_ROADMAP P2 §9): the title is written as a text attribute, never as HTML.
+          // CSS renders it (`content: attr(data-title)`) only while the slot has no hosted card.
+          slot.setAttribute('data-title', truncateHard(node.glyph.title));
           slot.style.willChange = dragging ? 'transform' : '';
           const entry: Entry<E> = {
             id: node.id,
@@ -192,7 +195,7 @@ export function createOverlay<E extends OverlaySlot>(options: OverlayOptions<E>)
         place(existing, node);
         if (restyled) {
           existing.version = node.visualVersion;
-          existing.slot.textContent = truncateHard(node.glyph.title);
+          existing.slot.setAttribute('data-title', truncateHard(node.glyph.title));
         }
         diff.update.push({ id: node.id, slot: existing.slot, rect: existing.rect });
       }

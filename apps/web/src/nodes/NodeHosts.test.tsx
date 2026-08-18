@@ -5,7 +5,8 @@
  */
 
 import { createBoardDoc, createNode, updateNode } from '@nexus/domain';
-import type { Engine, EngineEvents } from '@nexus/canvas-engine';
+import { createOverlay } from '@nexus/canvas-engine';
+import type { Engine, EngineEvents, NodeView } from '@nexus/canvas-engine';
 import { act, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
@@ -138,6 +139,68 @@ describe('NodeHosts', () => {
       updateNode(doc, ids[0] ?? '', { title: 'Renamed' }, { origin: 'local:edit', now: T0 });
     });
     expect(screen.getByText('Renamed')).toBeInTheDocument();
+  });
+
+  /**
+   * Regression (P4): the overlay recycles slots, and a slot that hosted a card must never have its
+   * children cleared by the engine — React still owns them and its next unmount would throw
+   * `removeChild: not a child of this node`, which took the whole board down in e2e.
+   */
+  it('survives the engine releasing a slot that still hosts a card', () => {
+    const { ids, store } = setup();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const overlay = createOverlay<HTMLElement>({ document, container });
+    const id = ids[0] ?? '';
+    const view: NodeView = {
+      id,
+      kind: 'website',
+      x: 0,
+      y: 0,
+      w: 240,
+      h: 120,
+      z: 1,
+      layerId: 'l_main',
+      groupId: null,
+      rotation: 0,
+      locked: false,
+      hidden: false,
+      glyph: {
+        accent: { r: 1, g: 1, b: 1, a: 1 },
+        fill: { r: 0, g: 0, b: 0, a: 1 },
+        icon: 'globe',
+        title: 'First',
+        badgeCount: 0,
+        thumbnailKey: null,
+        status: 'none',
+      },
+      domKey: `${id}:1`,
+      visualVersion: 1,
+    };
+    overlay.sync([view]);
+    const slot = overlay.slotOf(id);
+    expect(slot).toBeDefined();
+
+    const { engine, emitHosts } = fakeEngine();
+    const view2 = render(
+      <NodeHosts engine={engine} store={store} slotOf={(nodeId) => overlay.slotOf(nodeId)} />,
+    );
+    act(() => emitHosts([id]));
+    expect(slot?.querySelector('article')).not.toBeNull();
+
+    // The engine drops the node first (as undo does), React only learns about it afterwards.
+    act(() => {
+      overlay.sync([]);
+    });
+    expect(slot?.querySelector('article')).not.toBeNull();
+    expect(() => {
+      act(() => emitHosts([]));
+    }).not.toThrow();
+    expect(slot?.querySelector('article')).toBeNull();
+    expect(() => {
+      view2.unmount();
+    }).not.toThrow();
+    overlay.dispose();
   });
 
   it('renders nothing without an engine', () => {

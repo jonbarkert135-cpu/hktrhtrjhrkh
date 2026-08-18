@@ -185,6 +185,30 @@
     pointer-events: none;
   }
 
+  /* Slots are placed in world space by the engine's inline transform, so they must be taken out
+     of flow; the engine owns geometry, the hosted card owns everything inside. */
+  .nx-canvas-overlay > div {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    transform-origin: 0 0;
+  }
+
+  /* The engine writes each slot's title as a text attribute (never HTML). CSS shows it only while
+     the slot has no hosted React card — once a card is portaled in, the slot is no longer empty. */
+  .nx-canvas-overlay > div[data-title]:empty::after {
+    content: attr(data-title);
+    display: block;
+    padding: var(--nx-space-3) var(--nx-space-4);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--nx-radius-3);
+    background: var(--surface-1);
+    color: var(--fg-default);
+    font: var(--text-body-sm);
+    block-size: 100%;
+    overflow: hidden;
+  }
+
   .nx-canvas-empty {
     position: absolute;
     inset: 0;

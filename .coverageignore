@@ -16,3 +16,8 @@ packages/config/src/index.ts
 packages/db/src/index.ts
 packages/domain/src/index.ts
 packages/domain/src/nodes/index.ts
+
+# Browser-only engine boundary: the whole effect needs a real 2D canvas context, pointer capture
+# and ResizeObserver, so under jsdom it returns early by design (see the guard in the file). The
+# behaviour it wires up is covered by the e2e and visual jobs instead.
+apps/web/src/app/canvas/useCanvasEngine.ts
