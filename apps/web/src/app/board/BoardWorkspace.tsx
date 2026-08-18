@@ -8,6 +8,8 @@
 
 import {
   countEntities,
+  deleteNode,
+  duplicateNode,
   exportBoard,
   importBoard,
   newId,
@@ -18,13 +20,16 @@ import {
 } from '@nexus/domain';
 import { Banner, Button } from '@nexus/ui';
 import type { Engine, Intent } from '@nexus/canvas-engine';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useBoardDoc } from '../../data/docProvider.tsx';
 import { restoreSnapshot } from '../../data/snapshots.ts';
 import { CanvasHost } from '../canvas/CanvasHost';
 import { applyIntent, createNoteNode } from '../canvas/bindings/applyIntents.ts';
 import { patchesFromChange, sceneFromDoc } from '../canvas/bindings/sceneFromDoc.ts';
+import { Inspector } from '../../nodes/inspector/Inspector.tsx';
+import { NodeHosts } from '../../nodes/NodeHosts.tsx';
+import { createNodeStore } from '../../nodes/nodeStore.ts';
 import { SyncStatus } from '../shell/SyncStatus.tsx';
 import { ImportDialog, type ImportPreview } from './ImportDialog.tsx';
 import { VersionHistory } from './VersionHistory.tsx';
@@ -42,6 +47,12 @@ export function BoardWorkspace() {
   const [notice, setNotice] = useState<string | null>(null);
   const [budgetWarning, setBudgetWarning] = useState(false);
   const [counts, setCounts] = useState({ nodes: 0, edges: 0 });
+  const [selectedIds, setSelectedIds] = useState<readonly string[]>([]);
+  const [inspectorWidth, setInspectorWidth] = useState(360);
+
+  // One store per document: cards subscribe per node id, so an edit re-renders one card (P4 §7).
+  const store = useMemo(() => createNodeStore(doc), [doc]);
+  useEffect(() => () => store.destroy(), [store]);
 
   const now = useCallback(() => new Date().toISOString(), []);
   const context = { doc, history, now, makeId: (): string => newId.board() };
@@ -69,6 +80,12 @@ export function BoardWorkspace() {
       setCounts({ nodes: countEntities(doc).nodes, edges: countEntities(doc).edges });
     });
   }, [doc, ready, engine]);
+
+  // Selection lives in the engine (it is per-user state, never in the CRDT); the panel mirrors it.
+  useEffect(() => {
+    if (engine === null) return undefined;
+    return engine.on('selectionChanged', (ids) => setSelectedIds([...ids]));
+  }, [engine]);
 
   // Undo/redo shortcuts (P3 §5.5).
   useEffect(() => {
@@ -179,7 +196,34 @@ export function BoardWorkspace() {
         </Banner>
       ) : null}
 
-      <CanvasHost onIntent={onIntent} onEngine={onEngine} />
+      <div className="nx-board-main">
+        <CanvasHost onIntent={onIntent} onEngine={onEngine}>
+          {({ slotOf }) => (
+            <NodeHosts
+              engine={engine}
+              store={store}
+              slotOf={slotOf}
+              selectedIds={selectedIds}
+              onOpenInspector={(id) => setSelectedIds([id])}
+              onDuplicate={(id) => {
+                duplicateNode(doc, id, { now: new Date().toISOString() });
+              }}
+              onDelete={(id) => {
+                deleteNode(doc, id, { now: new Date().toISOString() });
+              }}
+            />
+          )}
+        </CanvasHost>
+
+        <Inspector
+          doc={doc}
+          store={store}
+          selectedIds={selectedIds}
+          width={inspectorWidth}
+          onWidthChange={setInspectorWidth}
+          onClose={() => setSelectedIds([])}
+        />
+      </div>
 
       <VersionHistory
         open={historyOpen}

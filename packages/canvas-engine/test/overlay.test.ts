@@ -17,7 +17,6 @@ interface FakeSlot extends OverlaySlot {
 function fakeSlot(): FakeSlot {
   return {
     style: { transform: '', willChange: '', width: '', height: '' },
-    textContent: null,
     attrs: new Map<string, string>(),
     removed: false,
     setAttribute(name: string, value: string): void {
@@ -96,14 +95,14 @@ describe('overlay diff', () => {
     const restyled = { ...a, visualVersion: 2, glyph: { ...a.glyph, title: 'Renamed' } };
     const diff = overlay.sync([restyled]);
     expect(diff.update.map((u) => u.id)).toEqual([a.id]);
-    expect(overlay.slotOf(a.id)?.textContent).toBe('Renamed');
+    expect(overlay.slotOf(a.id)?.attrs.get('data-title')).toBe('Renamed');
   });
 
-  it('writes titles with textContent only and hard-truncates them (P2 §9)', () => {
+  it('writes titles as a text attribute only and hard-truncates them (P2 §9)', () => {
     const overlay = createOverlay<FakeSlot>(fakeDom());
     const node = makeNode(0, { glyph: { ...makeNode(0).glyph, title: 'y'.repeat(5000) } });
     overlay.sync([node]);
-    expect(overlay.slotOf(node.id)?.textContent).toHaveLength(256);
+    expect(overlay.slotOf(node.id)?.attrs.get('data-title')).toHaveLength(256);
   });
 
   it('skips hidden nodes and honours the MAX_DOM_NODES budget (§6.10)', () => {
@@ -148,7 +147,7 @@ describe('slot pool', () => {
     expect(overlay.pooled('note')).toBe(1);
     expect(slot?.style.transform).toBe('translate3d(-99999px,-99999px,0)');
     expect(slot?.attrs.has('data-node-id')).toBe(false);
-    expect(slot?.textContent).toBe('');
+    expect(slot?.attrs.has('data-title')).toBe(false);
 
     const b = makeNode(2, { kind: 'note' });
     overlay.sync([b]);

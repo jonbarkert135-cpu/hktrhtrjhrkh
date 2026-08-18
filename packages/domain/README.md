@@ -59,3 +59,16 @@ skipped, remapped and warned about. Round-trip is lossless, including unknown ke
 mismatches and missing provenance; repairs run with origin `system:gc`.
 `migrateDocument(doc, now)` / `migrateExportJson(json)` apply the forward-only chain in
 `doc/migrations.ts` up to `CURRENT_SCHEMA_VERSION`.
+
+## Node types
+
+`packages/domain/src/nodes` holds the node type registry (`06_NODE_SYSTEM.md` §3). A type is data:
+`defineNodeType({ type, label, schema, glyph, defaults, capabilities, componentId, inspector,
+identityKeys, searchFields, validate?, capture?, io })`. Adding a type means adding one file under
+`nodes/types/` and one line in `registerBuiltins()`; the `nexus/no-node-type-switch` lint rule keeps
+every other package from branching on `node.type`.
+
+`builtinNodeTypes()` returns the populated registry. `createNode` / `updateNodeData` / `setNodeTags`
+/ `duplicateNode` / `convertNode` / `deleteNode` in `nodes/lifecycle.ts` are the write API — each is
+one transaction and therefore one undo step. `decideCapture(input)` routes a pasted or dropped
+payload to the type that claims it most strongly.

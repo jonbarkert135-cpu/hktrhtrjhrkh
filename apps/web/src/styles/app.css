@@ -185,6 +185,30 @@
     pointer-events: none;
   }
 
+  /* Slots are placed in world space by the engine's inline transform, so they must be taken out
+     of flow; the engine owns geometry, the hosted card owns everything inside. */
+  .nx-canvas-overlay > div {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    transform-origin: 0 0;
+  }
+
+  /* The engine writes each slot's title as a text attribute (never HTML). CSS shows it only while
+     the slot has no hosted React card — once a card is portaled in, the slot is no longer empty. */
+  .nx-canvas-overlay > div[data-title]:empty::after {
+    content: attr(data-title);
+    display: block;
+    padding: var(--nx-space-3) var(--nx-space-4);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--nx-radius-3);
+    background: var(--surface-1);
+    color: var(--fg-default);
+    font: var(--text-body-sm);
+    block-size: 100%;
+    overflow: hidden;
+  }
+
   .nx-canvas-empty {
     position: absolute;
     inset: 0;
@@ -207,6 +231,322 @@
     background: var(--surface-2);
     border: 1px solid var(--border-subtle);
     border-radius: var(--nx-radius-3);
+  }
+
+  /* ---------------------------------------------------------------- node cards (P4) */
+
+  .nx-board-main {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    min-height: 0;
+    height: 100%;
+  }
+
+  /* The card fills the slot the engine positions in world space; the slot owns geometry, the
+     card owns everything inside it. Pointer events stay off until the card is hovered so the
+     canvas keeps owning pan and marquee gestures. */
+  .nx-node-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nx-space-2);
+    block-size: 100%;
+    padding: var(--nx-space-3) var(--nx-space-4);
+    border: 1px solid var(--border-subtle);
+    border-inline-start-width: var(--nx-border-heavy);
+    border-radius: var(--nx-radius-3);
+    background: var(--surface-1);
+    color: var(--fg-default);
+    font-family: var(--nx-font-sans);
+    overflow: hidden;
+    pointer-events: auto;
+    position: relative;
+  }
+
+  .nx-node-card:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--nx-shadow-1);
+  }
+
+  .nx-node-card[data-state='selected'],
+  .nx-node-card[data-state='multi-selected'] {
+    border-color: var(--border-accent);
+  }
+
+  .nx-node-card[data-state='error'] {
+    border-inline-start-color: var(--status-danger-fg);
+  }
+
+  .nx-node-card[data-state='empty'] {
+    border-style: dashed;
+  }
+
+  .nx-card-head {
+    display: flex;
+    align-items: center;
+    gap: var(--nx-space-2);
+  }
+
+  .nx-card-title {
+    margin: 0;
+    font: var(--text-title);
+  }
+
+  .nx-node-icon {
+    inline-size: var(--nx-icon-1);
+    block-size: var(--nx-icon-1);
+    flex: none;
+  }
+
+  .nx-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nx-space-2);
+    min-block-size: 0;
+  }
+
+  .nx-card-person {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .nx-card-person-detail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nx-space-1);
+    min-inline-size: 0;
+  }
+
+  .nx-card-text,
+  .nx-card-title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .nx-card-text {
+    margin: 0;
+    font: var(--text-body);
+    color: var(--fg-default);
+  }
+
+  [data-clamp='1'] {
+    -webkit-line-clamp: 1;
+  }
+  [data-clamp='2'] {
+    -webkit-line-clamp: 2;
+  }
+  [data-clamp='3'] {
+    -webkit-line-clamp: 3;
+  }
+  [data-clamp='8'] {
+    -webkit-line-clamp: 8;
+  }
+
+  .nx-card-meta,
+  .nx-card-foot,
+  .nx-card-placeholder {
+    font: var(--text-body-sm);
+    color: var(--fg-muted);
+  }
+
+  .nx-card-error {
+    margin: 0;
+    font: var(--text-body-sm);
+    color: var(--status-danger-fg);
+  }
+
+  .nx-card-json {
+    margin: 0;
+    max-block-size: 8rem;
+    overflow: auto;
+    font: var(--text-mono);
+    color: var(--fg-muted);
+  }
+
+  .nx-card-thumb {
+    block-size: 6rem;
+    border-radius: var(--nx-radius-2);
+    background: var(--surface-3);
+  }
+
+  .nx-card-skeleton {
+    block-size: 3rem;
+    border-radius: var(--nx-radius-2);
+    background: var(--surface-3);
+  }
+
+  .nx-avatar {
+    display: grid;
+    place-items: center;
+    inline-size: 2.5rem;
+    block-size: 2.5rem;
+    border-radius: 50%;
+    background: var(--surface-3);
+    font: var(--text-body);
+    flex: none;
+  }
+
+  .nx-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--nx-space-2);
+  }
+
+  .nx-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--nx-space-1);
+    padding: 0 var(--nx-space-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--nx-radius-2);
+    font: var(--text-body-sm);
+    color: var(--fg-muted);
+  }
+
+  .nx-chip[data-severity='critical'] {
+    color: var(--status-danger-fg);
+  }
+
+  .nx-chip[data-severity='finding'] {
+    color: var(--status-warn-fg);
+  }
+
+  .nx-chip-remove {
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  /* Absolutely positioned: revealing the rail must never reflow the card (P4 §6). */
+  .nx-card-rail {
+    position: absolute;
+    inset-block-start: var(--nx-space-2);
+    inset-inline-end: var(--nx-space-2);
+    display: flex;
+    gap: var(--nx-space-1);
+    opacity: 0;
+    transition: opacity var(--nx-dur-2) var(--nx-ease-standard);
+  }
+
+  .nx-node-card:hover .nx-card-rail,
+  .nx-node-card:focus-within .nx-card-rail {
+    opacity: 1;
+  }
+
+  .nx-card-rail button {
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--nx-radius-2);
+    background: var(--surface-2);
+    color: var(--fg-muted);
+    font: var(--text-body-sm);
+    padding: 0 var(--nx-space-2);
+    cursor: pointer;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nx-card-rail {
+      transition: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------- inspector (P4) */
+
+  .nx-inspector {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nx-space-4);
+    padding: var(--nx-space-4);
+    border-inline-start: 1px solid var(--border-subtle);
+    background: var(--surface-1);
+    overflow-y: auto;
+  }
+
+  .nx-inspector-head {
+    display: flex;
+    align-items: center;
+    gap: var(--nx-space-2);
+  }
+
+  .nx-inspector-head h2 {
+    margin: 0;
+    font: var(--text-title);
+  }
+
+  .nx-inspector-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nx-space-3);
+  }
+
+  .nx-inspector-section h3 {
+    margin: 0;
+    font: var(--text-body-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--fg-muted);
+  }
+
+  .nx-inspector-empty,
+  .nx-field-help {
+    margin: 0;
+    font: var(--text-body-sm);
+    color: var(--fg-muted);
+  }
+
+  .nx-field-error {
+    margin: 0;
+    font: var(--text-body-sm);
+    color: var(--status-danger-fg);
+  }
+
+  .nx-field-readonly {
+    margin: 0;
+    padding: var(--nx-space-2);
+    border-radius: var(--nx-radius-2);
+    background: var(--surface-inset);
+    font: var(--text-mono);
+    color: var(--fg-muted);
+    overflow-x: auto;
+  }
+
+  .nx-inspector-list {
+    margin: 0;
+    padding-inline-start: var(--nx-space-4);
+    font: var(--text-body);
+  }
+
+  .nx-inspector-meta {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--nx-space-2) var(--nx-space-3);
+    margin: 0;
+    font: var(--text-body-sm);
+  }
+
+  .nx-inspector-meta dt {
+    color: var(--fg-muted);
+  }
+
+  .nx-inspector-meta dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .nx-tag-editor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nx-space-2);
+  }
+
+  .nx-link-button {
+    border: 0;
+    background: none;
+    color: var(--fg-accent);
+    cursor: pointer;
+    font: inherit;
+    padding: 0 var(--nx-space-2);
   }
 
   :where(a, button, input, [tabindex]):focus-visible {

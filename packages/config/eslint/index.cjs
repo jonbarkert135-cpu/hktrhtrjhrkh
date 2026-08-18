@@ -6,9 +6,12 @@ const reactHooks = require('eslint-plugin-react-hooks');
 const jsxA11y = require('eslint-plugin-jsx-a11y');
 const { plugin: designPlugin } = require('./rules/no-hardcoded-design-values.cjs');
 const { plugin: graphPlugin } = require('./rules/no-direct-graph-write.cjs');
+const { plugin: nodeTypePlugin } = require('./rules/no-node-type-switch.cjs');
 
 /** One `nexus/*` plugin namespace for every workspace rule. */
-const nexusPlugin = { rules: { ...designPlugin.rules, ...graphPlugin.rules } };
+const nexusPlugin = {
+  rules: { ...designPlugin.rules, ...graphPlugin.rules, ...nodeTypePlugin.rules },
+};
 
 const TS_FILES = ['**/*.ts', '**/*.tsx'];
 
@@ -44,6 +47,18 @@ const base = [
         {
           allowFiles: [
             'packages/domain/src/doc/',
+            'packages/domain/test/',
+            '\\.test\\.tsx?$',
+            'bench/',
+          ],
+        },
+      ],
+      // Node behaviour is looked up in the registry, never switched on (06_NODE_SYSTEM.md §1).
+      'nexus/no-node-type-switch': [
+        'error',
+        {
+          allowFiles: [
+            'packages/domain/src/nodes/',
             'packages/domain/test/',
             '\\.test\\.tsx?$',
             'bench/',

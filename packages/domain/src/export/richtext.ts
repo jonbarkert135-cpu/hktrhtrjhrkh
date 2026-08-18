@@ -105,6 +105,8 @@ export function fragmentToJson(fragment: Y.XmlFragment): RichTextDocJson {
 }
 
 function jsonToChild(node: RichTextNodeJson): Y.XmlElement | Y.XmlText {
+  // Not a board node: this is a ProseMirror JSON node, whose `type` is part of the document format.
+  // eslint-disable-next-line nexus/no-node-type-switch
   if (node.type === 'text') {
     const text = new Y.XmlText();
     const attributes: Record<string, unknown> = {};

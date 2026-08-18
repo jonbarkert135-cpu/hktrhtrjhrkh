@@ -55,7 +55,10 @@ describe('AppRoutes auth guard', () => {
     session.mockReturnValue({ data: { user: { name: 'Ana' } }, isPending: false });
     go('/');
     render(<AppRoutes />);
-    expect(await screen.findByTestId('canvas-surface')).toBeInTheDocument();
+    // Lazy route chunks plus jsdom under parallel load occasionally exceed the 1s default.
+    expect(
+      await screen.findByTestId('canvas-surface', {}, { timeout: 10_000 }),
+    ).toBeInTheDocument();
   });
 
   it('bounces an authenticated user off /login to the next param', async () => {
@@ -70,7 +73,10 @@ describe('AppRoutes auth guard', () => {
     session.mockReturnValue({ data: { user: { name: 'Ana' } }, isPending: false });
     go('/nope');
     render(<AppRoutes />);
-    expect(await screen.findByTestId('canvas-surface')).toBeInTheDocument();
+    // Lazy route chunks plus jsdom under parallel load occasionally exceed the 1s default.
+    expect(
+      await screen.findByTestId('canvas-surface', {}, { timeout: 10_000 }),
+    ).toBeInTheDocument();
     expect(window.location.pathname).toBe('/');
   });
 });

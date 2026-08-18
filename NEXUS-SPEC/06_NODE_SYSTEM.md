@@ -1430,3 +1430,67 @@ for 30 days or until the survivor is purged.
 7. **Rotation is deliberately unsupported.** If product later demands it, hit-testing, the DOM
    overlay transform and edge clipping (`07_EDGE_SYSTEM.md` §7.4) all need rework; the `rotation`
    field is reserved now so the schema does not have to change then.
+
+---
+
+## 13. Shipped implementation — P4a (node registry)
+
+This section records what actually shipped, where it differs from the design above, and why. The
+code is the source of truth; this section is updated with every P4 slice.
+
+### 13.1 What shipped
+
+`packages/domain/src/nodes/` — `types.ts` (the `NodeTypeDefinition` contract), `registry.ts`
+(`NodeTypeRegistry` with `register` / `override` / `get` / `list` / `assertComplete`), `define.ts`
+(shared helpers: `hostOf`, `clean`, `keywords`, `urlIssues`, `isPrivateHost`, `jsonIo`), `tags.ts`,
+`lifecycle.ts`, `capture.ts`, `types/*.ts` and `index.ts` (`registerBuiltins`,
+`builtinNodeTypes`).
+
+Nine types, matching the P4 scope in `20_ROADMAP.md` §5.2: `website`, `link`, `text`, `note`,
+`image`, `file`, `person`, `repo`, `unknown`. The remaining twelve types of §4 (`username`,
+`email`, `domain`, `ip`, `organization`, `tool-result`, `hypothesis`, `sticky`, `embed`,
+`location`, `timeline-event`, `evidence`) arrive with the phases that produce them — P6
+(integrations) and P9 (tool runs) — because a type with no producer is a card nobody can create.
+
+### 13.2 Deliberate differences from §2 and §3
+
+- **Ids are cuid2, not ULID.** The whole codebase mints cuid2 (`packages/domain/src/ids.ts`,
+  `08_DATA_MODEL.md` §3.1 as implemented in P1). Introducing a second id format for nodes alone
+  would mean translating ids at every boundary.
+- **`schema` is typed as a `DataParser<TData>` (`{ parse(value: unknown): TData }`)** rather than
+  `z.ZodType<TData>`. Zod's input type parameter is invariant, so a `.passthrough()` object — which
+  every payload schema is, for forward compatibility — cannot satisfy `z.ZodType<TData>`. The
+  structural type keeps the guarantee that matters (unknown in, `TData` out) and keeps the registry
+  independent of the validation library.
+- **`schema` validates `data` only.** `EntityBase` is already validated once, centrally, by
+  `NodeSchema` (P3). Re-declaring the base fields per type would let the two definitions drift.
+- **Colour tokens are the shipped `--entity-*-fg` tokens** of `04_DESIGN_SYSTEM.md`, not a new
+  `--node-*` scale: `website → page`, `link → url`, `text → text` (added in this phase), `note →
+note`, `image → image`, `file → file`, `person → person`, `repo → repo`, `unknown → toolrun`.
+- **`paint.l0` / `paint.l1` are not functions on the definition.** A definition exposes a declarative
+  `glyph` (`colorToken`, `icon`, `shape`) and the engine paints it. Handing the engine per-type
+  callbacks would put type code back inside the render loop, which §14 forbids; the four glyph
+  shapes cover every built-in type.
+- **`componentId` is present; `inspectorId` is not.** The inspector is rendered generically from
+  `inspector: InspectorField[]`, so a second component id would have no consumer.
+
+### 13.3 Enforcement
+
+- `nexus/no-node-type-switch` (`packages/config/eslint/rules/no-node-type-switch.cjs`) fails the
+  build on `switch (node.type)`, `node.type === '…'` and `[…].includes(node.type)` outside
+  `packages/domain/src/nodes/` and test files.
+- `NodeTypeRegistry.assertComplete()` fails a type missing a label, `componentId`, colour token,
+  icon, inspector fields or with a default size outside its own min/max.
+- `packages/domain/test/nodes.registry.test.ts` asserts every registered type parses its own
+  defaults, produces search fields, identity keys and markdown, round-trips its payload through
+  export, and owns a distinct colour token.
+
+### 13.4 Lifecycle and capture as implemented
+
+`createNode` fills registry defaults, normalises tags (returning the rejected ones with reasons) and
+mints `<nodeId>:body` in the `richtext` root for types with `capabilities.editableText`.
+`duplicateNode` offsets by 24 px, mints a new id **and a new fragment** (a shared fragment would
+make editing the copy edit the original) and records `provenance.derivedFrom`. `planConversion`
+returns the payload keys a conversion would drop so the UI can confirm before `convertNode` writes.
+`decideCapture` scores a pasted/dropped payload across every type and takes the highest score,
+falling back to `text` — a payload nobody claims still becomes a node rather than being discarded.
