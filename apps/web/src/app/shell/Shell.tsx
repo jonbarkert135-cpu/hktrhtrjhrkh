@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Banner, Button, Menu, MenuItem, Skeleton, SkipToContent } from '@nexus/ui';
 import { CommandPalette } from '../commands/palette';
+import { useBoardStatus } from './boardStatus';
 import { capabilities } from '../../mode/appMode';
 
 export type ShellProject = { id: string; name: string };
@@ -83,6 +84,27 @@ function ProjectRail({
   );
 }
 
+function StatusBar() {
+  const { counts, persistence } = useBoardStatus();
+  return (
+    <footer className="nx-statusbar">
+      <span aria-live="polite">{persistence}</span>
+      {counts === null ? (
+        <span className="nx-muted">No board open</span>
+      ) : (
+        <>
+          <span>
+            {String(counts.nodes)} {counts.nodes === 1 ? 'node' : 'nodes'}
+          </span>
+          <span>
+            {String(counts.edges)} {counts.edges === 1 ? 'connection' : 'connections'}
+          </span>
+        </>
+      )}
+    </footer>
+  );
+}
+
 export function Shell({
   children,
   loading = false,
@@ -102,10 +124,8 @@ export function Shell({
         <Menu trigger={<Button variant="ghost">{orgName}</Button>}>
           <MenuItem>{orgName}</MenuItem>
         </Menu>
-        <h1>{boardTitle}</h1>
-        <span className="nx-muted" aria-live="polite">
-          Saved locally
-        </span>
+        <h1 className="nx-topbar-title">{boardTitle}</h1>
+        <div className="nx-topbar-spacer" />
         <Menu trigger={<Button variant="ghost">{userName}</Button>} align="end">
           <MenuItem>Settings</MenuItem>
           {authEnabled ? <MenuItem>Sign out</MenuItem> : null}
@@ -127,17 +147,9 @@ export function Shell({
             children
           )}
         </main>
-
-        <aside className="nx-inspector" aria-label="Inspector">
-          <p className="nx-muted">Select a node to inspect it. Board properties appear here.</p>
-        </aside>
       </div>
 
-      <footer className="nx-statusbar">
-        <span aria-live="polite">Saved locally</span>
-        <span>0 nodes</span>
-        <span>0 edges</span>
-      </footer>
+      <StatusBar />
 
       <CommandPalette />
     </div>
