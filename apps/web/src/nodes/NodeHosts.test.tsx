@@ -254,7 +254,10 @@ describe('NodeHosts in-place editing', () => {
     });
     expect(await screen.findByTestId(`card-editor-${note.id}`)).toBeInTheDocument();
     // The editor is code-split, so the card shows its slot first and the surface a tick later.
-    expect(await screen.findByTestId(`richtext-${note.id}`)).toBeInTheDocument();
+    // Under coverage instrumentation that dynamic import is slow, hence the explicit timeout.
+    expect(
+      await screen.findByTestId(`richtext-${note.id}`, {}, { timeout: 10_000 }),
+    ).toBeInTheDocument();
 
     act(() => {
       screen
@@ -339,7 +342,9 @@ describe('NodeHosts in-place editing', () => {
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
     });
-    expect(await screen.findByTestId(`card-editor-${note.id}`)).toBeInTheDocument();
+    expect(
+      await screen.findByTestId(`card-editor-${note.id}`, {}, { timeout: 10_000 }),
+    ).toBeInTheDocument();
 
     act(() => emitHosts([]));
     await waitFor(() =>
