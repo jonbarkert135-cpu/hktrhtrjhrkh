@@ -1,87 +1,97 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const listQuery = vi.fn();
-const createMutation = vi.fn();
-const invalidate = vi.fn();
+import { WorkspaceProvider } from '../../data/workspace/context';
+import { WorkspaceError, type WorkspaceRepository } from '../../data/workspace/types';
+import { ShellContainer } from './ShellContainer';
 
-vi.mock('../../lib/trpc', () => ({
-  errorMessage: () => 'The server took too long to answer.',
-  trpc: {
-    useUtils: () => ({ project: { list: { invalidate } } }),
-    project: {
-      list: { useQuery: (...args: unknown[]): unknown => listQuery(...args) },
-      create: { useMutation: (...args: unknown[]): unknown => createMutation(...args) },
-    },
-  },
-}));
+let repository: WorkspaceRepository;
 
-const { ShellContainer } = await import('./ShellContainer');
-
-const mutate = vi.fn();
-let onSuccess: ((project: { id: string }) => Promise<void>) | undefined;
+const base = (): WorkspaceRepository => ({
+  kind: 'local',
+  listProjects: vi.fn(() => Promise.resolve([])),
+  createProject: vi.fn((input: { name: string }) =>
+    Promise.resolve({ id: 'p-new', name: input.name, createdAt: '2026-01-01T00:00:00.000Z' }),
+  ),
+  listBoards: vi.fn(() => Promise.resolve([])),
+  createBoard: vi.fn(() => Promise.reject(new Error('not used here'))),
+});
 
 beforeEach(() => {
-  vi.clearAllMocks();
-  invalidate.mockResolvedValue(undefined);
-  createMutation.mockImplementation(
-    (options: { onSuccess: (p: { id: string }) => Promise<void> }) => {
-      onSuccess = options.onSuccess;
-      return { mutate, isPending: false, error: null };
-    },
-  );
-  listQuery.mockReturnValue({ isPending: false, error: null, data: [], refetch: vi.fn() });
+  repository = base();
 });
 
 function renderContainer() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter>
-      <ShellContainer>
-        <p>board</p>
-      </ShellContainer>
-    </MemoryRouter>,
+    <QueryClientProvider client={client}>
+      <WorkspaceProvider repository={repository}>
+        <MemoryRouter>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <ShellContainer>
+                  <p>board</p>
+                </ShellContainer>
+              }
+            />
+            <Route path="/p/:projectId" element={<p>project page</p>} />
+          </Routes>
+        </MemoryRouter>
+      </WorkspaceProvider>
+    </QueryClientProvider>,
   );
 }
 
 describe('ShellContainer', () => {
   it('renders the empty state and creates a project from the dialog', async () => {
     renderContainer();
-    fireEvent.click(screen.getByRole('button', { name: /create your first project/i }));
-    fireEvent.change(await screen.findByLabelText(/name/i), { target: { value: 'Atlas' } });
-    fireEvent.click(screen.getByRole('button', { name: /^create$/i }));
-    expect(mutate).toHaveBeenCalledWith({ name: 'Atlas' });
+    await userEvent.click(
+      await screen.findByRole('button', { name: /create your first project/i }),
+    );
+    await userEvent.type(await screen.findByLabelText(/name/i), 'Atlas');
+    await userEvent.click(screen.getByRole('button', { name: /^create$/i }));
+    await waitFor(() => expect(repository.createProject).toHaveBeenCalledWith({ name: 'Atlas' }));
   });
 
-  it('invalidates the rail and routes to the new project', async () => {
+  it('refreshes the rail and routes to the new project', async () => {
     renderContainer();
-    await onSuccess?.({ id: 'p-new' });
-    await waitFor(() => expect(invalidate).toHaveBeenCalled());
+    await userEvent.click(
+      await screen.findByRole('button', { name: /create your first project/i }),
+    );
+    await userEvent.type(await screen.findByLabelText(/name/i), 'Atlas');
+    await userEvent.click(screen.getByRole('button', { name: /^create$/i }));
+    await waitFor(() => expect(screen.getByText('project page')).toBeInTheDocument());
+    expect(repository.listProjects).toHaveBeenCalledTimes(2);
   });
 
-  it('lists the projects it fetched', () => {
-    listQuery.mockReturnValue({
-      isPending: false,
-      error: null,
-      data: [{ id: 'p1', name: 'Atlas' }],
-      refetch: vi.fn(),
-    });
+  it('lists the projects it read', async () => {
+    repository.listProjects = vi.fn(() =>
+      Promise.resolve([{ id: 'p1', name: 'Atlas', createdAt: '2026-01-01T00:00:00.000Z' }]),
+    );
     renderContainer();
-    expect(screen.getByRole('link', { name: 'Atlas' })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Atlas' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'New project' })).toBeInTheDocument();
   });
 
   it('shows skeletons while the rail is loading', () => {
-    listQuery.mockReturnValue({ isPending: true, error: null, refetch: vi.fn() });
     renderContainer();
     expect(screen.getByLabelText('Loading projects')).toBeInTheDocument();
   });
 
-  it('maps a failed query to copy with a retry that refetches', () => {
-    const refetch = vi.fn();
-    listQuery.mockReturnValue({ isPending: false, error: new Error('boom'), refetch });
+  it('maps a failed read to copy with a retry that reads again', async () => {
+    const listProjects = vi
+      .fn<() => Promise<never[]>>()
+      .mockRejectedValueOnce(new WorkspaceError('This device is out of storage.'))
+      .mockResolvedValue([]);
+    repository.listProjects = listProjects;
     renderContainer();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(refetch).toHaveBeenCalled();
+    expect(await screen.findByText('This device is out of storage.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(listProjects.mock.calls.length).toBeGreaterThan(1));
   });
 });

@@ -6,6 +6,21 @@ import type { BlobPut } from './upload.ts';
 const presign = vi.fn(() => Promise.resolve({ mode: 'single' as const, fileId: 'f1', url: 'u' }));
 const complete = vi.fn(() => Promise.resolve({ state: 'ready', failure: null }));
 
+// This suite exercises the server transport; the local one has its own suite.
+vi.mock('../mode/appMode.ts', () => ({
+  appMode: 'server',
+  capabilities: {
+    backend: true,
+    auth: true,
+    googleAuth: false,
+    cloudSync: false,
+    remoteDatabase: true,
+    collaboration: false,
+  },
+  localOnly: false,
+  resolveAppModeConfig: () => ({ mode: 'server', capabilities: {} }),
+}));
+
 vi.mock('../lib/trpc.tsx', () => ({
   trpc: {
     useUtils: () => ({

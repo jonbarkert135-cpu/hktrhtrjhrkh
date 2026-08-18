@@ -11,6 +11,20 @@ Nothing here may contradict `00_MASTER.md`; if it does, `00_MASTER.md` wins.
 
 ---
 
+## Architectural corrections applied outside the phase plan
+
+**Local-first, backend-ready (2026-08-18, branch `arch/local-first`).** The product's default
+deployment shape is now `APP_MODE=local`: no account, no server, no database, no network. The phase
+prompts below still describe the server shape and remain correct for it — read them together with
+`docs/adr/ADR-001-local-first.md`, which states the two-shape rule, and `docs/backend/BACKEND_STATUS.md`,
+which records what of the backend is built, dormant or missing. Concretely, when a phase prompt says
+"call the API", the correct implementation is a method on `WorkspaceRepository`
+(`apps/web/src/data/workspace/types.ts`) with both a local and a server implementation. Phases P8
+(sync) and P9 (backend API & auth) are the phases that switch capabilities on; they do not become
+prerequisites for anything shipping before them.
+
+---
+
 ## How to use these prompts
 
 1. **Pick the lowest un-ticked phase in the progress tracker (§ bottom)** whose dependencies are

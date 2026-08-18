@@ -104,7 +104,7 @@ const defaultBackoff = (attempt: number): number => Math.min(30_000, 500 * 2 ** 
  * Bytes of a blob slice. Browsers implement `Blob.arrayBuffer()`, but jsdom's `slice()` returns a
  * blob without it, so the FileReader path keeps the hashing loop testable in the unit environment.
  */
-const readBytes = async (blob: Blob): Promise<Uint8Array> => {
+export const readBytes = async (blob: Blob): Promise<Uint8Array> => {
   if (typeof blob.arrayBuffer === 'function') return new Uint8Array(await blob.arrayBuffer());
   return new Promise<Uint8Array>((resolve, reject) => {
     const reader = new FileReader();

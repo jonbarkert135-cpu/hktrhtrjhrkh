@@ -1,96 +1,96 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const projectList = vi.fn();
-const boardList = vi.fn();
-const boardCreate = vi.fn();
-const invalidate = vi.fn();
+import { WorkspaceProvider } from '../../data/workspace/context';
+import { WorkspaceError, type WorkspaceRepository } from '../../data/workspace/types';
+import ProjectPage from './ProjectPage';
 
-vi.mock('../../lib/trpc', () => ({
-  errorMessage: () => 'The server took too long to answer.',
-  trpc: {
-    useUtils: () => ({ board: { list: { invalidate } } }),
-    project: { list: { useQuery: (...args: unknown[]): unknown => projectList(...args) } },
-    board: {
-      list: { useQuery: (...args: unknown[]): unknown => boardList(...args) },
-      create: { useMutation: (...args: unknown[]): unknown => boardCreate(...args) },
-    },
-  },
-}));
+const project = { id: 'p1', name: 'Atlas', createdAt: '2026-01-01T00:00:00.000Z' };
 
-const { default: ProjectPage } = await import('./ProjectPage');
+let repository: WorkspaceRepository;
 
-const mutate = vi.fn();
-let onSuccess: ((board: { id: string }) => Promise<void>) | undefined;
-
-const project = { id: 'p1', name: 'Atlas' };
+const base = (): WorkspaceRepository => ({
+  kind: 'local',
+  listProjects: vi.fn(() => Promise.resolve([project])),
+  createProject: vi.fn(() => Promise.reject(new Error('not used here'))),
+  listBoards: vi.fn(() => Promise.resolve([])),
+  createBoard: vi.fn((input: { projectId: string; title: string }) =>
+    Promise.resolve({ id: 'b-new', ...input, createdAt: '2026-01-02T00:00:00.000Z' }),
+  ),
+});
 
 beforeEach(() => {
-  vi.clearAllMocks();
-  invalidate.mockResolvedValue(undefined);
-  projectList.mockReturnValue({ isPending: false, error: null, data: [project] });
-  boardList.mockReturnValue({ isPending: false, error: null, data: [] });
-  boardCreate.mockImplementation((options: { onSuccess: (b: { id: string }) => Promise<void> }) => {
-    onSuccess = options.onSuccess;
-    return { mutate, isPending: false, error: null };
-  });
+  repository = base();
 });
 
 function renderPage() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter initialEntries={['/p/p1']}>
-      <Routes>
-        <Route path="/p/:projectId" element={<ProjectPage />} />
-        <Route path="/b/:boardId" element={<p>canvas</p>} />
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={client}>
+      <WorkspaceProvider repository={repository}>
+        <MemoryRouter initialEntries={['/p/p1']}>
+          <Routes>
+            <Route path="/p/:projectId" element={<ProjectPage />} />
+            <Route path="/b/:boardId" element={<p>canvas</p>} />
+          </Routes>
+        </MemoryRouter>
+      </WorkspaceProvider>
+    </QueryClientProvider>,
   );
 }
 
 describe('ProjectPage', () => {
   it('names the project and creates the first board', async () => {
     renderPage();
-    expect(screen.getByRole('heading', { name: 'Atlas' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /create your first board/i }));
-    fireEvent.change(await screen.findByLabelText(/name/i), { target: { value: 'Sweep' } });
-    fireEvent.click(screen.getByRole('button', { name: /^create$/i }));
-    expect(mutate).toHaveBeenCalledWith({ projectId: 'p1', title: 'Sweep' });
+    expect(await screen.findByRole('heading', { name: 'Atlas' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /create your first board/i }));
+    await userEvent.type(await screen.findByLabelText(/name/i), 'Sweep');
+    await userEvent.click(screen.getByRole('button', { name: /^create$/i }));
+    await waitFor(() => {
+      expect(repository.createBoard).toHaveBeenCalledWith({ projectId: 'p1', title: 'Sweep' });
+    });
   });
 
   it('opens the new board once it exists', async () => {
     renderPage();
-    await onSuccess?.({ id: 'b-new' });
+    await screen.findByRole('heading', { name: 'Atlas' });
+    await userEvent.click(screen.getByRole('button', { name: /create your first board/i }));
+    await userEvent.type(await screen.findByLabelText(/name/i), 'Sweep');
+    await userEvent.click(screen.getByRole('button', { name: /^create$/i }));
     await waitFor(() => expect(screen.getByText('canvas')).toBeInTheDocument());
-    expect(invalidate).toHaveBeenCalledWith({ projectId: 'p1' });
   });
 
-  it('links every existing board and offers another one', () => {
-    boardList.mockReturnValue({
-      isPending: false,
-      error: null,
-      data: [{ id: 'b1', title: 'Sweep' }],
-    });
+  it('links every existing board and offers another one', async () => {
+    repository.listBoards = vi.fn(() =>
+      Promise.resolve([
+        { id: 'b1', projectId: 'p1', title: 'Sweep', createdAt: '2026-01-01T00:00:00.000Z' },
+      ]),
+    );
     renderPage();
-    expect(screen.getByRole('link', { name: 'Sweep' })).toHaveAttribute('href', '/b/b1');
+    expect(await screen.findByRole('link', { name: 'Sweep' })).toHaveAttribute('href', '/b/b1');
     expect(screen.getByRole('button', { name: 'New board' })).toBeInTheDocument();
   });
 
   it('shows a skeleton while either query is pending', () => {
-    boardList.mockReturnValue({ isPending: true, error: null });
     renderPage();
     expect(screen.getByLabelText('Loading project')).toBeInTheDocument();
   });
 
-  it('maps a failed query to copy', () => {
-    boardList.mockReturnValue({ isPending: false, error: new Error('boom') });
+  it('maps a failed local read to copy the user can act on', async () => {
+    repository.listBoards = vi.fn(() =>
+      Promise.reject(new WorkspaceError('This device is out of storage.')),
+    );
     renderPage();
-    expect(screen.getByText("Couldn't load this project")).toBeInTheDocument();
+    expect(await screen.findByText("Couldn't load this project")).toBeInTheDocument();
+    expect(screen.getByText('This device is out of storage.')).toBeInTheDocument();
   });
 
-  it('explains a project that is gone instead of rendering an empty page', () => {
-    projectList.mockReturnValue({ isPending: false, error: null, data: [] });
+  it('explains a project that is gone instead of rendering an empty page', async () => {
+    repository.listProjects = vi.fn(() => Promise.resolve([]));
     renderPage();
-    expect(screen.getByText('That project no longer exists')).toBeInTheDocument();
+    expect(await screen.findByText('That project no longer exists')).toBeInTheDocument();
   });
 });

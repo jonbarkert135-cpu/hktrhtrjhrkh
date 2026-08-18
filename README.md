@@ -7,13 +7,43 @@
 
 ---
 
-## Quickstart (clean machine → running app, ≤ 15 minutes)
+## Quick start — local mode (clean machine → running app, ≤ 3 minutes)
 
-Prerequisites: **Node 22** (`nvm use`), **pnpm 9** (`corepack enable`), **Docker** with Compose.
+Raven runs **local-first**. The default build needs no account, no server, no database and no
+network: your boards, files and history live in your browser's storage on this device.
+
+Prerequisites: **Node 22** (`nvm use`) and **pnpm 9** (`corepack enable`). That is all.
 
 ```bash
 git clone <repo-url> raven && cd raven
-cp .env.example .env                     # dummy values work for local development
+pnpm install
+pnpm dev:local                           # web on :5173 — nothing else starts
+```
+
+Open <http://localhost:5173> and start working. There is no sign-up step, because there are no
+accounts in this mode. To serve it from your own VPS, build the same bundle and put any static file
+server in front of it:
+
+```bash
+pnpm --filter @nexus/web build           # apps/web/dist — plain static files
+```
+
+What "local" means concretely: board documents are a Yjs CRDT persisted in IndexedDB, attachments go
+to OPFS, and the project/board list is IndexedDB as well (`apps/web/src/data/workspace/local.ts`).
+Nothing leaves the machine. The rationale and the upgrade path are in
+[`docs/adr/ADR-001-local-first.md`](docs/adr/ADR-001-local-first.md) and
+[`docs/adr/ADR-003-local-database.md`](docs/adr/ADR-003-local-database.md).
+
+## Quick start — server mode (multi-user deployment)
+
+Needed only when you want accounts, a shared database and (later) sync between devices. It is the
+same code base with `APP_MODE=server`; see
+[`docs/backend/BACKEND_SETUP.md`](docs/backend/BACKEND_SETUP.md) for the full path.
+
+Prerequisites: the above plus **Docker** with Compose.
+
+```bash
+cp .env.example .env                     # set APP_MODE=server and VITE_APP_MODE=server
 pnpm install
 docker compose -f infra/docker-compose.yml up -d postgres redis minio
 pnpm db:migrate                          # apply Prisma migrations
@@ -21,17 +51,20 @@ pnpm db:seed                             # dev org, 4 users, 3 projects, 8 board
 pnpm dev                                 # api on :3001, web on :5173
 ```
 
-Open <http://localhost:5173>, sign up, and you get an empty board surface.
-Seeded logins use the password `dev-only`.
+Seeded logins use the password `dev-only`. The full self-host path (Caddy TLS termination, built
+images, egress proxy) is `docker compose -f infra/docker-compose.yml up -d` with `PUBLIC_HOSTNAME`
+and the secrets in `.env` set to real values.
 
-The full self-host path (Caddy TLS termination, built images, egress proxy) is
-`docker compose -f infra/docker-compose.yml up -d` with `PUBLIC_HOSTNAME` and the secrets in
-`.env` set to real values.
+**Which subsystems are on** is decided in one place — `packages/config/src/appMode.ts` — and
+validated at boot: a capability whose dependency is missing stops the process with a sentence saying
+what to fix. Current state of every backend piece:
+[`docs/backend/BACKEND_STATUS.md`](docs/backend/BACKEND_STATUS.md).
 
 ## Scripts
 
 | Command                            | What it does                                            |
 | ---------------------------------- | ------------------------------------------------------- |
+| `pnpm dev:local`                   | Local mode: the web app alone, no API, no database      |
 | `pnpm dev`                         | Runs every app in watch mode (turbo, parallel)          |
 | `pnpm build`                       | Builds all packages and apps                            |
 | `pnpm test`                        | Vitest unit/component suites in every package           |
