@@ -35,6 +35,7 @@ model Organization {
   members   Membership[]
   projects  Project[]
   auditLogs AuditLog[]
+  files     File[]
 
   @@map("organizations")
 }
@@ -136,6 +137,7 @@ model Project {
 
   org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   boards Board[]
+  files  File[]
 
   @@unique([orgId, key])
   @@index([orgId, archivedAt])
@@ -187,4 +189,48 @@ model AuditLog {
   @@index([actorId])
   @@index([targetId])
   @@map("audit_log")
+}
+
+enum FileState {
+  pending
+  scanning
+  ready
+  failed
+  quarantined
+
+  @@map("file_state")
+}
+
+/// Uploaded blob metadata. The bytes live in S3 under `key`; this row is the only authority on
+/// state, provenance and derivatives (09_BACKEND.md §7).
+model File {
+  id             String    @id
+  orgId          String    @map("org_id")
+  projectId      String    @map("project_id")
+  boardId        String?   @map("board_id")
+  filename       String    @db.VarChar(255)
+  mime           String    @db.VarChar(255)
+  kind           String    @db.VarChar(16)
+  bytes          BigInt
+  sha256         String?   @db.VarChar(64)
+  storageKey     String    @map("storage_key") @db.VarChar(1024)
+  state          FileState @default(pending)
+  failureCode    String?   @map("failure_code") @db.VarChar(64)
+  failureMessage String?   @map("failure_message") @db.VarChar(500)
+  thumbKey       String?   @map("thumb_key") @db.VarChar(1024)
+  previewKey     String?   @map("preview_key") @db.VarChar(1024)
+  pageCount      Int?      @map("page_count")
+  width          Int?
+  height         Int?
+  deletedAt      DateTime? @map("deleted_at")
+  createdBy      String    @map("created_by")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  org     Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, deletedAt, createdAt(sort: Desc)])
+  @@index([orgId, sha256, state])
+  @@map("files")
 }

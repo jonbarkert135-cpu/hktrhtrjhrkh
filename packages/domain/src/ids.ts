@@ -12,6 +12,7 @@ export const ID_KINDS = [
   'account',
   'project',
   'board',
+  'file',
   'audit',
 ] as const;
 
@@ -29,6 +30,7 @@ export type SessionId = Id<'session'>;
 export type AccountId = Id<'account'>;
 export type ProjectId = Id<'project'>;
 export type BoardId = Id<'board'>;
+export type FileId = Id<'file'>;
 export type AuditId = Id<'audit'>;
 
 // cuid2's own `isCuid` accepts any 2–32 char lowercase token ('nope' passes), which is useless as a
@@ -74,5 +76,6 @@ export const newId = {
   account: factory('account'),
   project: factory('project'),
   board: factory('board'),
+  file: factory('file'),
   audit: factory('audit'),
 } as const;

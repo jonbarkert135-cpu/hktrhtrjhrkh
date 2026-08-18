@@ -17,7 +17,10 @@ export type AuditAction =
   | 'auth.logout'
   | 'project.created'
   | 'project.deleted'
-  | 'board.created';
+  | 'board.created'
+  | 'file.uploaded'
+  | 'file.rejected'
+  | 'file.deleted';
 
 export interface AuditInput extends Omit<AuditEntry, 'action' | 'orgId'> {
   action: AuditAction;
