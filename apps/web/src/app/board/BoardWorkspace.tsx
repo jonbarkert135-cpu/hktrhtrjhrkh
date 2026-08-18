@@ -201,6 +201,7 @@ export function BoardWorkspace() {
           {({ slotOf }) => (
             <NodeHosts
               engine={engine}
+              doc={doc}
               store={store}
               slotOf={slotOf}
               selectedIds={selectedIds}

@@ -7,6 +7,9 @@ import { tx } from '../src/doc/transactions.ts';
 import {
   applyJsonToFragment,
   fragmentToJson,
+  richTextByteSize,
+  richTextProjection,
+  richTextToPlainText,
   type RichTextDocJson,
 } from '../src/export/richtext.ts';
 import { T0 } from './doc-fixtures.ts';
@@ -86,5 +89,134 @@ describe('rich text ↔ ProseMirror JSON', () => {
       encoding: 'prosemirror-json',
       doc: { type: 'doc', content: [] },
     });
+  });
+});
+
+describe('plain-text projection', () => {
+  const structured: RichTextDocJson = {
+    encoding: 'prosemirror-json',
+    doc: {
+      type: 'doc',
+      content: [
+        { type: 'heading', attrs: { level: '2' }, content: [{ type: 'text', text: 'Findings' }] },
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'the handle ' },
+            { type: 'text', text: 'k0bra', marks: [{ type: 'code' }] },
+            { type: 'text', text: ' appears twice' },
+          ],
+        },
+        {
+          type: 'bulletList',
+          content: [
+            { type: 'listItem', content: [{ type: 'text', text: 'github' }] },
+            { type: 'listItem', content: [{ type: 'text', text: 'keybase' }] },
+          ],
+        },
+        {
+          type: 'taskList',
+          content: [
+            {
+              type: 'taskItem',
+              attrs: { checked: true },
+              content: [{ type: 'text', text: 'ask' }],
+            },
+            {
+              type: 'taskItem',
+              attrs: { checked: false },
+              content: [{ type: 'text', text: 'verify' }],
+            },
+          ],
+        },
+      ],
+    },
+  };
+
+  it('flattens blocks to one line each, in reading order', () => {
+    expect(richTextToPlainText(structured)).toBe(
+      [
+        'Findings',
+        'the handle k0bra appears twice',
+        'github',
+        'keybase',
+        '[x] ask',
+        '[ ] verify',
+      ].join('\n'),
+    );
+  });
+
+  it('is deterministic and survives a fragment round trip', () => {
+    const board = doc();
+    const fragment = ensureFragment(board, 'fk_plain', 'local:create');
+    tx(board, 'local:edit', () => applyJsonToFragment(fragment, structured));
+    const first = richTextProjection(fragment);
+    const second = richTextProjection(fragment);
+    expect(first.plain).toBe(second.plain);
+    expect(first.plain).toBe(richTextToPlainText(structured));
+    expect(first.bytes).toBe(richTextByteSize(first.json));
+    expect(first.bytes).toBeGreaterThan(0);
+  });
+
+  it('keeps one line per list item when items wrap their text in a paragraph', () => {
+    // This is the shape TipTap actually produces; the flat shape above is what an import may hand us.
+    expect(
+      richTextToPlainText({
+        encoding: 'prosemirror-json',
+        doc: {
+          type: 'doc',
+          content: [
+            {
+              type: 'bulletList',
+              content: [
+                {
+                  type: 'listItem',
+                  content: [{ type: 'paragraph', content: [{ type: 'text', text: 'one' }] }],
+                },
+                {
+                  type: 'listItem',
+                  content: [{ type: 'paragraph', content: [{ type: 'text', text: 'two' }] }],
+                },
+              ],
+            },
+            {
+              type: 'taskList',
+              content: [
+                {
+                  type: 'taskItem',
+                  attrs: { checked: false },
+                  content: [{ type: 'paragraph', content: [{ type: 'text', text: 'call back' }] }],
+                },
+              ],
+            },
+            { type: 'horizontalRule' },
+          ],
+        },
+      }),
+    ).toBe(['one', 'two', '[ ] call back'].join('\n'));
+  });
+
+  it('returns an empty string for an empty document', () => {
+    expect(
+      richTextToPlainText({ encoding: 'prosemirror-json', doc: { type: 'doc', content: [] } }),
+    ).toBe('');
+  });
+
+  it('counts bytes, not characters, so the size guard matches what is stored', () => {
+    const ascii = richTextByteSize({
+      encoding: 'prosemirror-json',
+      doc: {
+        type: 'doc',
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: 'aa' }] }],
+      },
+    });
+    const cyrillic = richTextByteSize({
+      encoding: 'prosemirror-json',
+      doc: {
+        type: 'doc',
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: 'яя' }] }],
+      },
+    });
+    expect(cyrillic).toBe(ascii + 2);
   });
 });

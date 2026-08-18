@@ -3,8 +3,8 @@
  * lifecycle, so these tests assert the *document* changed — not that a local state hook did.
  */
 
-import { createBoardDoc, createNode, getNode, makeEdge, addEdge } from '@nexus/domain';
-import { render, screen, within } from '@testing-library/react';
+import { addEdge, createBoardDoc, createNode, getNode, makeEdge, updateNode } from '@nexus/domain';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import type * as Y from 'yjs';
@@ -172,5 +172,26 @@ describe('Inspector', () => {
       <Inspector doc={doc} store={createNodeStore(doc)} selectedIds={[node.id]} now={() => T0} />,
     );
     expect(screen.getByTestId('inspector-data-readonly').textContent).toContain('anything');
+  });
+});
+
+describe('Inspector rich text', () => {
+  it('binds the note body to the same fragment the card edits, and locks with the node', async () => {
+    const { doc, store, ids } = board();
+    const noteId = ids[1] ?? '';
+    const { rerender } = render(
+      <Inspector doc={doc} store={store} selectedIds={[noteId]} now={() => T0} />,
+    );
+
+    const editor = await screen.findByTestId(`richtext-${noteId}`);
+    expect(editor).not.toHaveAttribute('data-readonly');
+    expect(within(editor).getByRole('toolbar', { name: 'Formatting' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Finding' })).toBeInTheDocument();
+
+    updateNode(doc, noteId, { locked: true }, { origin: 'local:edit', now: T0 });
+    rerender(<Inspector doc={doc} store={store} selectedIds={[noteId]} now={() => T0} />);
+    await waitFor(() =>
+      expect(screen.getByTestId(`richtext-${noteId}`)).toHaveAttribute('data-readonly', 'true'),
+    );
   });
 });
