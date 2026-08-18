@@ -13,6 +13,7 @@ export * from './doc/migrations.ts';
 export * from './doc/invariants.ts';
 export * from './doc/restore.ts';
 export * from './nodes/index.ts';
+export * from './edges/index.ts';
 export * from './files/policy.ts';
 export * from './files/sniff.ts';
 export * from './files/sha256.ts';

@@ -928,3 +928,41 @@ These drive the index choices in `08_DATA_MODEL.md` §4.10 and the query shapes 
    route, so the tree is briefly approximate during a drag. Hit-testing is therefore performed
    against the _drawn_ geometry, and the tree is updated on pointer-up. Acceptable: a mis-hit during
    an active drag has no user-visible consequence.
+
+---
+
+## 15. Implementation status
+
+### 15.1 Shipped (P5 part 1 — relationship layer)
+
+| Section | Where it lives                                                                        |
+| ------- | ------------------------------------------------------------------------------------- |
+| §3.1    | `packages/domain/src/edges/types.ts`, `registry.ts`, `define.ts`                      |
+| §3.2    | `packages/domain/src/edges/builtins.ts` (22 taxonomy types + `related_to` + `custom`) |
+| §3.4    | `packages/domain/src/edges/validation.ts`                                             |
+| §2.1    | `normalizeUndirected` / `edgeIdentityKey` in `packages/domain/src/edges/semantics.ts` |
+| §2.3    | `resolveEdgeVisual` in `packages/domain/src/edges/defaults.ts`                        |
+| §5.3    | `suggestEdgeTypes` / `bestEdgeType` in `semantics.ts`                                 |
+
+### 15.2 Deviations from the text above, and why
+
+1. **Schema location.** §2 sketches `packages/domain/src/edges/schema.ts`; the schema shipped in P3
+   as `packages/domain/src/entities/edge.ts` and is not moved — the document format is frozen and a
+   move would churn every importer for no behavioural gain. The edges directory holds semantics.
+2. **Confidence values.** The document schema uses `low | medium | high | unknown` (08 §2.2.3);
+   §2.3's `confirmed`/`unverified` names are mapped onto `high`/`unknown`. Opacity buckets are
+   unchanged.
+3. **Dash representation.** The document stores a numeric dash array; the taxonomy speaks in names
+   (`solid | dashed | dotted | dash-dot`). `resolveEdgeVisual` returns the name and `dashPattern()`
+   turns it into canvas units, so an explicit numeric override still wins.
+4. **`related_to`.** Added to the built-ins because it is the schema default of `makeEdge`; without
+   it every hand-drawn edge would fall back to `custom`.
+5. **Suggestion scoring.** The `allowed` term of §5.3 is graded by how specific the matching
+   endpoint rule is (`matchSpecificity`) instead of being a flat 0/1. With a flat term, `person →
+organization` ranked `alias_of` above `works_at` purely on alphabetical tie-breaking; grading
+   keeps the narrow, more informative relationship on top. Weights are unchanged.
+
+### 15.3 Not yet implemented
+
+Routing (§7), invalidation and caching (§8), labels (§9), hit-testing and interaction (§10),
+bundling and the worker (§11) — P5 parts 2 and 3.
