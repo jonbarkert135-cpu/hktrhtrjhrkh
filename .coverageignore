@@ -17,6 +17,11 @@ packages/db/src/index.ts
 packages/domain/src/index.ts
 packages/domain/src/nodes/index.ts
 
+# Browser bootstrap: finds #root and calls createRoot, so it can only run against a real document
+# root. Everything it composes (AppProviders, AppRoutes) is covered by unit tests; the file itself
+# is exercised by the e2e and visual jobs, which load the built bundle.
+apps/web/src/main.tsx
+
 # Browser-only engine boundary: the whole effect needs a real 2D canvas context, pointer capture
 # and ResizeObserver, so under jsdom it returns early by design (see the guard in the file). The
 # behaviour it wires up is covered by the e2e and visual jobs instead.
