@@ -15,6 +15,7 @@ import { TrpcWorkspaceBridge, WorkspaceProvider } from '../data/workspace/contex
 import type { WorkspaceRepository } from '../data/workspace/types.ts';
 import { TRPCProvider } from '../lib/trpc.tsx';
 import { capabilities } from '../mode/appMode.ts';
+import { BoardStatusProvider } from './shell/boardStatus.tsx';
 
 export interface AppProvidersProps {
   children: ReactNode;
@@ -39,18 +40,22 @@ export function AppProviders({ children, repository, backendEnabled }: AppProvid
   if (backend) {
     return (
       <TRPCProvider>
-        {repository === undefined ? (
-          <TrpcWorkspaceBridge>{children}</TrpcWorkspaceBridge>
-        ) : (
-          <WorkspaceProvider repository={repository}>{children}</WorkspaceProvider>
-        )}
+        <BoardStatusProvider>
+          {repository === undefined ? (
+            <TrpcWorkspaceBridge>{children}</TrpcWorkspaceBridge>
+          ) : (
+            <WorkspaceProvider repository={repository}>{children}</WorkspaceProvider>
+          )}
+        </BoardStatusProvider>
       </TRPCProvider>
     );
   }
 
   return (
     <QueryClientProvider client={queryClient}>
-      <WorkspaceProvider repository={localRepository}>{children}</WorkspaceProvider>
+      <BoardStatusProvider>
+        <WorkspaceProvider repository={localRepository}>{children}</WorkspaceProvider>
+      </BoardStatusProvider>
     </QueryClientProvider>
   );
 }

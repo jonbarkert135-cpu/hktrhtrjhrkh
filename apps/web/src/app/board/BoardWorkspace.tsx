@@ -31,6 +31,7 @@ import { Inspector } from '../../nodes/inspector/Inspector.tsx';
 import { NodeHosts } from '../../nodes/NodeHosts.tsx';
 import { createNodeStore } from '../../nodes/nodeStore.ts';
 import { SyncStatus } from '../shell/SyncStatus.tsx';
+import { useBoardStatus } from '../shell/boardStatus.tsx';
 import { ImportDialog, type ImportPreview } from './ImportDialog.tsx';
 import { VersionHistory } from './VersionHistory.tsx';
 
@@ -49,6 +50,8 @@ export function BoardWorkspace() {
   const [counts, setCounts] = useState({ nodes: 0, edges: 0 });
   const [selectedIds, setSelectedIds] = useState<readonly string[]>([]);
   const [inspectorWidth, setInspectorWidth] = useState(360);
+
+  const boardStatus = useBoardStatus();
 
   // One store per document: cards subscribe per node id, so an edit re-renders one card (P4 §7).
   const store = useMemo(() => createNodeStore(doc), [doc]);
@@ -80,6 +83,13 @@ export function BoardWorkspace() {
       setCounts({ nodes: countEntities(doc).nodes, edges: countEntities(doc).edges });
     });
   }, [doc, ready, engine]);
+
+  // The status bar belongs to the shell but the numbers belong here (see shell/boardStatus).
+  useEffect(() => {
+    boardStatus.publish({ counts });
+    // `publish` is stable enough for this: it de-duplicates identical values itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [counts.nodes, counts.edges]);
 
   // Selection lives in the engine (it is per-user state, never in the CRDT); the panel mirrors it.
   useEffect(() => {

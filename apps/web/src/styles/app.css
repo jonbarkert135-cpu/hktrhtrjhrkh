@@ -14,15 +14,29 @@
   .nx-topbar {
     display: flex;
     align-items: center;
-    gap: var(--nx-space-4);
-    padding-inline: var(--nx-space-4);
+    gap: var(--nx-space-3);
+    padding-inline: var(--nx-space-3);
     background: var(--surface-2);
     border-bottom: 1px solid var(--border-subtle);
   }
 
+  /* The board name is the one piece of content in the chrome, so it gets the only non-muted
+     weight up here (04 §6.3: one emphasis per region). */
+  .nx-topbar-title {
+    font: var(--text-body);
+    font-weight: var(--nx-weight-medium);
+    letter-spacing: var(--tracking-body);
+    color: var(--fg-primary);
+    margin-inline-start: var(--nx-space-2);
+  }
+
+  .nx-topbar-spacer {
+    flex: 1 1 auto;
+  }
+
   .nx-body {
     display: grid;
-    grid-template-columns: var(--nx-rail-width, 264px) 1fr var(--nx-inspector-width, 320px);
+    grid-template-columns: var(--nx-rail-width, 264px) minmax(0, 1fr);
     min-height: 0;
   }
 
@@ -54,7 +68,10 @@
 
   .nx-surface {
     position: relative;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
     min-width: 0;
+    min-height: 0;
     background: var(--canvas-void);
   }
 
@@ -80,6 +97,103 @@
     color: var(--fg-muted);
   }
 
+  /* ------------------------------------------------------------ page shells */
+
+  /* A routed page inside the surface: its own scroll container, so the shell never scrolls. */
+  .nx-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nx-space-5);
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--nx-space-6);
+  }
+
+  .nx-page-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--nx-space-4);
+  }
+
+  .nx-page-title {
+    font: var(--text-title-lg);
+    letter-spacing: var(--tracking-title-lg);
+    color: var(--fg-primary);
+  }
+
+  .nx-page-sub {
+    font: var(--text-body-sm);
+    letter-spacing: var(--tracking-body-sm);
+    color: var(--fg-muted);
+    margin-block-start: var(--nx-space-1);
+  }
+
+  /* Empty states are designed, not apologetic (04 §P5): one card, one sentence, one action. */
+  .nx-empty {
+    display: grid;
+    place-items: center;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .nx-empty-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nx-space-3);
+    align-items: flex-start;
+    max-width: 46ch;
+    padding: var(--nx-space-6);
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--nx-radius-4);
+  }
+
+  .nx-empty-title {
+    font: var(--text-title);
+    letter-spacing: var(--tracking-title);
+    color: var(--fg-primary);
+  }
+
+  .nx-empty-body {
+    font: var(--text-body);
+    color: var(--fg-muted);
+  }
+
+  .nx-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--nx-space-3);
+  }
+
+  .nx-board-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nx-space-1);
+    padding: var(--nx-space-4);
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--nx-radius-3);
+    color: var(--fg-primary);
+    text-decoration: none;
+  }
+  .nx-board-card:hover {
+    background: var(--surface-hover);
+    border-color: var(--border-strong);
+  }
+
+  .nx-board-card-title {
+    font: var(--text-body);
+    font-weight: var(--nx-weight-medium);
+  }
+
+  .nx-board-card-meta {
+    font: var(--text-caption);
+    letter-spacing: var(--tracking-caption);
+    color: var(--fg-muted);
+    text-transform: uppercase;
+  }
+
   .nx-stack {
     display: flex;
     flex-direction: column;
@@ -103,8 +217,8 @@
 
   /* Board page: a fixed top bar over a full-height canvas (P3 §6). */
   .nx-board {
-    display: grid;
-    grid-template-rows: auto auto 1fr;
+    display: flex;
+    flex-direction: column;
     min-height: 0;
     height: 100%;
   }
@@ -238,9 +352,11 @@
   .nx-board-main {
     position: relative;
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+    /* The canvas row is what absorbs the leftover height; banners above it are optional, so the
+       board is a flex column and this is the growing item. */
+    flex: 1 1 auto;
     min-height: 0;
-    height: 100%;
   }
 
   /* The card fills the slot the engine positions in world space; the slot owns geometry, the

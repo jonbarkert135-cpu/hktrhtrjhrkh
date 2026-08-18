@@ -48,28 +48,44 @@ export default function ProjectPage() {
   const items = boards.data ?? [];
 
   return (
-    <section className="nx-stack">
-      <h2>{project.name}</h2>
-      {items.length === 0 ? (
-        <>
-          <p className="nx-muted">
-            A board is one canvas: notes, links and files you connect while you work.
+    <section className="nx-page">
+      <header className="nx-page-head">
+        <div>
+          <h2 className="nx-page-title">{project.name}</h2>
+          <p className="nx-page-sub">
+            {items.length === 0
+              ? 'No boards yet'
+              : `${String(items.length)} ${items.length === 1 ? 'board' : 'boards'}`}
           </p>
-          <Button onClick={() => setOpen(true)}>Create your first board</Button>
-        </>
+        </div>
+        {items.length > 0 ? <Button onClick={() => setOpen(true)}>New board</Button> : null}
+      </header>
+
+      {items.length === 0 ? (
+        <div className="nx-empty">
+          <div className="nx-empty-card">
+            <h3 className="nx-empty-title">Start with a board</h3>
+            <p className="nx-empty-body">
+              A board is one canvas: notes, links and files you connect while you work. Everything
+              stays on this device until you choose otherwise.
+            </p>
+            <Button onClick={() => setOpen(true)}>Create your first board</Button>
+          </div>
+        </div>
       ) : (
-        <>
-          <ul className="nx-stack">
-            {items.map((board) => (
-              <li key={board.id}>
-                <Link to={`/b/${board.id}`}>{board.title}</Link>
-              </li>
-            ))}
-          </ul>
-          <Button variant="ghost" onClick={() => setOpen(true)}>
-            New board
-          </Button>
-        </>
+        <ul className="nx-card-grid">
+          {items.map((board) => (
+            <li key={board.id}>
+              <Link className="nx-board-card" to={`/b/${board.id}`}>
+                <span className="nx-board-card-title">{board.title}</span>
+                {/* Decorative: the link's accessible name must stay the board title. */}
+                <span className="nx-board-card-meta" aria-hidden="true">
+                  Open canvas
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
       <CreateDialog
         open={open}
