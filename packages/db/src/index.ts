@@ -4,6 +4,8 @@ export type {
   Account,
   AuditLog,
   Board,
+  File,
+  FileState,
   Membership,
   Organization,
   OrgRole,

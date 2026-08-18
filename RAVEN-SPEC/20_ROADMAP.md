@@ -658,6 +658,17 @@ functional offline.
 
 # P4 — Node system
 
+**Status: DONE** — implemented in three PRs: `phase/p04-node-registry` (PR #6, type registry, the
+nine built-in types, lifecycle, tags), `phase/p04-richtext` (PR #7, TipTap over `Y.XmlFragment`,
+`@`-mentions) and `phase/p04-file-uploads` (presign → direct S3 PUT → `files.complete` with
+magic-byte sniffing, streaming SHA-256 with content-addressed dedupe, and a 4-slot upload queue
+with progress, cancel and backoff retry).
+Two items of §5.8/§7.1 are deliberately deferred, because both need infrastructure this phase does
+not own: **derivative thumbnails** require `apps/worker` and the job queue (P6 introduces both —
+`apps/worker/src/jobs/thumbnail.ts` is listed there too), and **multipart upload** is an
+availability optimisation over a single PUT, which is valid for every size we accept. The UI already
+falls back to a per-kind glyph when `variants.thumb` is null, exactly as §7.4 requires.
+
 ## 1 Objective
 
 Implement every node type with its schema, renderer, inspector editor and lifecycle: website, text,
