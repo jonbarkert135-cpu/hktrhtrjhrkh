@@ -50,6 +50,7 @@ export default {
           image: 'var(--nx-entity-image)',
           file: 'var(--nx-entity-file)',
           note: 'var(--nx-entity-note)',
+          text: 'var(--nx-entity-text)',
           person: 'var(--nx-entity-person)',
           identity: 'var(--nx-entity-identity)',
           repo: 'var(--nx-entity-repo)',

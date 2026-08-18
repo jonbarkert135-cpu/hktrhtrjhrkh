@@ -16,19 +16,15 @@ import {
 } from '@nexus/domain';
 import type * as Y from 'yjs';
 
+import { accentFor, glyphForType } from '../../../nodes/accents.ts';
+
 export const MAIN_LAYER_ID = 'l_main';
 
 const rgba = (r: number, g: number, b: number, a = 1): RGBA => ({ r, g, b, a });
 
-/** Accent per node type. Values are resolved from tokens by the theme layer in P4. */
-const ACCENTS: Record<string, RGBA> = {
-  note: rgba(0.98, 0.79, 0.29),
-  website: rgba(0.36, 0.65, 0.98),
-  person: rgba(0.62, 0.55, 0.98),
-  file: rgba(0.45, 0.83, 0.66),
-};
-
 export function nodeToView(node: BoardNode, index: number): NodeView {
+  // Appearance comes from the node type registry: the engine never learns a type name (P4 §14).
+  const glyph = glyphForType(node.type);
   return {
     id: node.id,
     kind: node.type,
@@ -43,9 +39,9 @@ export function nodeToView(node: BoardNode, index: number): NodeView {
     locked: node.locked,
     hidden: node.hidden || node.status !== 'active',
     glyph: {
-      accent: ACCENTS[node.type] ?? rgba(0.55, 0.6, 0.68),
+      accent: accentFor(glyph),
       fill: rgba(0.11, 0.12, 0.15),
-      icon: node.type,
+      icon: glyph.icon,
       title: node.title.slice(0, 96),
       badgeCount: node.tags.length,
       thumbnailKey: null,

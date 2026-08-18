@@ -262,7 +262,8 @@ describe('applyIntent', () => {
       },
       ctx,
     );
-    expect(listNodes(doc).map((node) => node.type)).toEqual(['website', 'note', 'file']);
+    // The capture registry picks the type: a URL unfurls, prose becomes a text note, a .png is an image.
+    expect(listNodes(doc).map((node) => node.type)).toEqual(['website', 'text', 'image']);
     expect(getNode(doc, 'd1')?.provenance.source).toBe('https://x.test');
     expect(getNode(doc, 'd3')?.title).toBe('evidence.png');
   });

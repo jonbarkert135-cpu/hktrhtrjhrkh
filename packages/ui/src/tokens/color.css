@@ -39,6 +39,7 @@
   --nx-entity-image: #b79adb;
   --nx-entity-file: #8fa8c4;
   --nx-entity-note: #c9b27a;
+  --nx-entity-text: #a5b8d0;
   --nx-entity-person: #dfa07a;
   --nx-entity-identity: #d98ba8;
   --nx-entity-repo: #7fb985;
@@ -100,6 +101,7 @@
   --entity-image-fg: var(--nx-entity-image);
   --entity-file-fg: var(--nx-entity-file);
   --entity-note-fg: var(--nx-entity-note);
+  --entity-text-fg: var(--nx-entity-text);
   --entity-person-fg: var(--nx-entity-person);
   --entity-identity-fg: var(--nx-entity-identity);
   --entity-repo-fg: var(--nx-entity-repo);

@@ -12,6 +12,7 @@ export * from './doc/observers.ts';
 export * from './doc/migrations.ts';
 export * from './doc/invariants.ts';
 export * from './doc/restore.ts';
+export * from './nodes/index.ts';
 export * from './history/origins.ts';
 export * from './history/undoManager.ts';
 export * from './export/schema.v1.ts';

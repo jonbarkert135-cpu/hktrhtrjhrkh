@@ -46,6 +46,7 @@ export const tokens = {
       image: '#b79adb',
       file: '#8fa8c4',
       note: '#c9b27a',
+      text: '#a5b8d0',
       person: '#dfa07a',
       identity: '#d98ba8',
       repo: '#7fb985',

@@ -8,16 +8,15 @@
 
 import type { Intent } from '@nexus/canvas-engine';
 import {
-  DEFAULT_NODE_HEIGHT,
-  DEFAULT_NODE_WIDTH,
   addEdge,
-  addNode,
+  builtinNodeTypes,
+  createNode,
+  decideCapture,
   getEdge,
   getNode,
   hasEdge,
   hasNode,
   makeEdge,
-  makeNode,
   moveNodes,
   newId,
   removeEdges,
@@ -27,6 +26,7 @@ import {
   updateEdge,
   updateNode,
   type BoardHistory,
+  type CaptureInput,
 } from '@nexus/domain';
 import type * as Y from 'yjs';
 
@@ -133,34 +133,31 @@ function applyIntentToDoc(intent: Intent, context: IntentContext): boolean {
     }
 
     case 'create-node-from-drop': {
+      // The payload picks its own type through the capture registry (06 §7.1): no type list here.
       const payload = intent.payload;
-      const title =
-        payload.kind === 'url'
-          ? (payload.text ?? 'Link')
-          : payload.kind === 'text'
-            ? (payload.text ?? '').slice(0, 96)
-            : (payload.files?.[0]?.name ?? 'File');
+      const file = payload.files?.[0];
+      const input: CaptureInput =
+        payload.kind === 'files' && file !== undefined
+          ? { kind: 'file', filename: file.name, mime: file.type, size: file.size }
+          : { kind: payload.kind === 'url' ? 'url' : 'text', text: payload.text ?? '' };
+      const decision = decideCapture(input, builtinNodeTypes());
+
       label('create 1 node');
-      addNode(
+      const size = builtinNodeTypes().get(decision.type).defaults.size;
+      createNode(
         doc,
-        makeNode(
-          {
-            id: makeId(),
-            type: payload.kind === 'url' ? 'website' : payload.kind === 'files' ? 'file' : 'note',
-            x: intent.at.x - DEFAULT_NODE_WIDTH / 2,
-            y: intent.at.y - DEFAULT_NODE_HEIGHT / 2,
-            title,
-            data: payload.kind === 'text' ? { text: payload.text ?? '' } : {},
-            provenance: {
-              kind: 'drop',
-              source: payload.kind === 'url' ? (payload.text ?? null) : null,
-              observedAt: now,
-              importedAt: now,
-            },
+        {
+          type: decision.type,
+          x: intent.at.x - size.w / 2,
+          y: intent.at.y - size.h / 2,
+          title: decision.title,
+          data: decision.data,
+          provenance: {
+            kind: 'drop',
+            source: payload.kind === 'url' ? (payload.text ?? null) : (file?.name ?? null),
           },
-          now,
-        ),
-        { origin: 'local:create', now },
+        },
+        { now, makeId, origin: 'local:create' },
       );
       return true;
     }
@@ -197,24 +194,20 @@ export function createNoteNode(
   title = 'New note',
 ): string {
   const now = context.now();
-  const id = (context.makeId ?? ((): string => newId.board()))();
+  const makeId = context.makeId ?? ((): string => newId.board());
+  const size = builtinNodeTypes().get('note').defaults.size;
   context.history?.label('create 1 node');
-  addNode(
+  const { node } = createNode(
     context.doc,
-    makeNode(
-      {
-        id,
-        type: 'note',
-        x: at.x - DEFAULT_NODE_WIDTH / 2,
-        y: at.y - DEFAULT_NODE_HEIGHT / 2,
-        title,
-        data: { text: '' },
-        provenance: { kind: 'manual', observedAt: now, importedAt: now },
-      },
-      now,
-    ),
-    { origin: 'local:create', now },
+    {
+      type: 'note',
+      x: at.x - size.w / 2,
+      y: at.y - size.h / 2,
+      title,
+      provenance: { kind: 'manual' },
+    },
+    { now, makeId, origin: 'local:create' },
   );
   context.history?.separate();
-  return id;
+  return node.id;
 }
