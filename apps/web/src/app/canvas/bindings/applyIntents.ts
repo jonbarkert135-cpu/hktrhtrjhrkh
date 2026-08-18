@@ -12,10 +12,12 @@ import {
   builtinNodeTypes,
   createNode,
   decideCapture,
+  findFreePlacement,
   getEdge,
   getNode,
   hasEdge,
   hasNode,
+  listNodes,
   makeEdge,
   moveNodes,
   newId,
@@ -196,13 +198,20 @@ export function createNoteNode(
   const now = context.now();
   const makeId = context.makeId ?? ((): string => newId.board());
   const size = builtinNodeTypes().get('note').defaults.size;
+  // Aim at the viewport centre, then step aside if something is already there: two notes in a row
+  // must never land on the same pixel (06 §1.6).
+  const spot = findFreePlacement({
+    desired: { x: at.x - size.w / 2, y: at.y - size.h / 2 },
+    size,
+    occupied: listNodes(context.doc),
+  });
   context.history?.label('create 1 node');
   const { node } = createNode(
     context.doc,
     {
       type: 'note',
-      x: at.x - size.w / 2,
-      y: at.y - size.h / 2,
+      x: spot.x,
+      y: spot.y,
       title,
       provenance: { kind: 'manual' },
     },

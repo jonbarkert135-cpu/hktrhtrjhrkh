@@ -207,7 +207,7 @@ export function BoardWorkspace() {
       ) : null}
 
       <div className="nx-board-main">
-        <CanvasHost onIntent={onIntent} onEngine={onEngine}>
+        <CanvasHost onIntent={onIntent} onEngine={onEngine} nodeCount={counts.nodes}>
           {({ slotOf }) => (
             <NodeHosts
               engine={engine}

@@ -17,7 +17,14 @@ const base = (): WorkspaceRepository => ({
     Promise.resolve({ id: 'p-new', name: input.name, createdAt: '2026-01-01T00:00:00.000Z' }),
   ),
   listBoards: vi.fn(() => Promise.resolve([])),
-  createBoard: vi.fn(() => Promise.reject(new Error('not used here'))),
+  createBoard: vi.fn((input: { projectId: string; title: string; id?: string | undefined }) =>
+    Promise.resolve({
+      id: input.id ?? 'b-new',
+      projectId: input.projectId,
+      title: input.title,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    }),
+  ),
 });
 
 beforeEach(() => {
@@ -48,6 +55,17 @@ function renderContainer() {
 }
 
 describe('ShellContainer', () => {
+  it('seeds a first project holding the scratch board in local mode', async () => {
+    renderContainer();
+    await waitFor(() =>
+      expect(repository.createBoard).toHaveBeenCalledWith({
+        projectId: 'p-new',
+        title: 'Untitled board',
+        id: 'scratch',
+      }),
+    );
+  });
+
   it('renders the empty state and creates a project from the dialog', async () => {
     renderContainer();
     await userEvent.click(
@@ -66,7 +84,10 @@ describe('ShellContainer', () => {
     await userEvent.type(await screen.findByLabelText(/name/i), 'Atlas');
     await userEvent.click(screen.getByRole('button', { name: /^create$/i }));
     await waitFor(() => expect(screen.getByText('project page')).toBeInTheDocument());
-    expect(repository.listProjects).toHaveBeenCalledTimes(2);
+    // At least the initial read and the post-create refresh; local-mode bootstrap reads too.
+    expect((repository.listProjects as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(
+      1,
+    );
   });
 
   it('lists the projects it read', async () => {

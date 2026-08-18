@@ -128,16 +128,16 @@ export function createLocalWorkspaceRepository(
       return byCreatedAt(rows);
     },
 
-    async createBoard({ projectId, title }) {
+    async createBoard({ projectId, title, id }) {
       const trimmed = title.trim();
       if (trimmed === '') throw new WorkspaceError('Give the board a title first.');
       const board: WorkspaceBoard = {
-        id: newId.board(),
+        id: id ?? newId.board(),
         projectId,
         title: trimmed,
         createdAt: now(),
       };
-      await run(BOARDS, 'readwrite', (store) => store.add(board));
+      await run(BOARDS, 'readwrite', (store) => store.put(board));
       return board;
     },
   };
