@@ -59,7 +59,7 @@ describe('redactValue', () => {
   it.each([
     ['Authorization: Bearer eyJhbGciOiJIUzI1NiJ9', 'eyJhbGciOiJIUzI1NiJ9'],
     ['key sk-abcdefghijklmnop', 'sk-abcdefghijklmnop'],
-    ['postgres://user:hunter2@db:5432/nexus', 'hunter2'],
+    ['postgres://user:hunter2@db:5432/raven', 'hunter2'],
     ['blob QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowMTIzNDU2Nzg5', 'QUJDREVG'],
   ])('removes the secret from %s', (input, leaked) => {
     expect(redactValue(input)).not.toContain(leaked);

@@ -2,7 +2,7 @@
 
 ## Scope
 
-Defines the performance contract for NEXUS: numeric budgets per surface, the reference hardware
+Defines the performance contract for Raven: numeric budgets per surface, the reference hardware
 they are measured on, the `bench/` harness and its statistics, the CI regression gate, the catalog
 of optimisation techniques with the exact file each is applied in, backend query budgets, a
 step-by-step profiling playbook, and the ranked list of known bottlenecks. Non-negotiable N1 from

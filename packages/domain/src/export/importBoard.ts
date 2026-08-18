@@ -51,7 +51,7 @@ export class ImportError extends Error {
 /** Validates and migrates without mutating anything — the dialog's "what will happen" step. */
 export function parseBoardExport(input: unknown): { data: BoardExportV1; migrations: string[] } {
   if (typeof input !== 'object' || input === null) {
-    throw new ImportError('This file is not a NEXUS board export.');
+    throw new ImportError('This file is not a Raven board export.');
   }
   const { json, applied } = migrateExportJson(input as Record<string, unknown>);
   const nodes = json.nodes;

@@ -122,7 +122,7 @@ export function BoardWorkspace() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${archive.board.title || 'board'}.nexus.json`;
+    link.download = `${archive.board.title || 'board'}.raven.json`;
     link.click();
     URL.revokeObjectURL(url);
   }, [doc]);

@@ -8,8 +8,8 @@ const { plugin: designPlugin } = require('./rules/no-hardcoded-design-values.cjs
 const { plugin: graphPlugin } = require('./rules/no-direct-graph-write.cjs');
 const { plugin: nodeTypePlugin } = require('./rules/no-node-type-switch.cjs');
 
-/** One `nexus/*` plugin namespace for every workspace rule. */
-const nexusPlugin = {
+/** One `raven/*` plugin namespace for every workspace rule. */
+const ravenPlugin = {
   rules: { ...designPlugin.rules, ...graphPlugin.rules, ...nodeTypePlugin.rules },
 };
 
@@ -31,7 +31,7 @@ const base = [
     languageOptions: {
       parserOptions: { projectService: true },
     },
-    plugins: { nexus: nexusPlugin },
+    plugins: { raven: ravenPlugin },
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
@@ -42,7 +42,7 @@ const base = [
       'no-console': ['error', { allow: ['warn', 'error'] }],
       eqeqeq: ['error', 'always'],
       // Board documents are mutated only through @nexus/domain's doc helpers (08 §2.4).
-      'nexus/no-direct-graph-write': [
+      'raven/no-direct-graph-write': [
         'error',
         {
           allowFiles: [
@@ -54,7 +54,7 @@ const base = [
         },
       ],
       // Node behaviour is looked up in the registry, never switched on (06_NODE_SYSTEM.md §1).
-      'nexus/no-node-type-switch': [
+      'raven/no-node-type-switch': [
         'error',
         {
           allowFiles: [
@@ -88,7 +88,7 @@ const react = [
     rules: {
       ...reactHooks.configs.recommended.rules,
       ...jsxA11y.flatConfigs.recommended.rules,
-      'nexus/no-hardcoded-design-values': [
+      'raven/no-hardcoded-design-values': [
         'error',
         { allowFiles: ['packages/ui/src/tokens/', '\\.test\\.tsx?$', '\\.stories\\.tsx?$'] },
       ],
@@ -113,4 +113,4 @@ const domainStrict = [
   },
 ];
 
-module.exports = { base, react, node, domainStrict, nexusPlugin };
+module.exports = { base, react, node, domainStrict, ravenPlugin };

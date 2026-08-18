@@ -8,7 +8,7 @@ const { rule } = require('../eslint/rules/no-node-type-switch.cjs') as { rule: R
 
 const tester = new RuleTester({ languageOptions: { ecmaVersion: 2023, sourceType: 'module' } });
 
-describe('nexus/no-node-type-switch', () => {
+describe('raven/no-node-type-switch', () => {
   it('allows registry lookups and rejects type branching outside the registry', () => {
     tester.run('no-node-type-switch', rule, {
       valid: [

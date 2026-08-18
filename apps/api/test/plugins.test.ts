@@ -1,6 +1,6 @@
 import Fastify from 'fastify';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { metricsPlugin, registry } from '../src/plugins/metrics.ts';
+import { metricsPlugin, registry, startMetricsServer } from '../src/plugins/metrics.ts';
 import { REQ_ID_HEADER, requestContextPlugin } from '../src/plugins/request-context.ts';
 
 const build = async () => {
@@ -51,12 +51,33 @@ describe('metrics plugin', () => {
     await app.close();
 
     const metrics = await registry.metrics();
-    expect(metrics).toContain('nexus_http_requests_total');
-    expect(metrics).toContain('nexus_http_request_duration_seconds');
+    expect(metrics).toContain('raven_http_requests_total');
+    expect(metrics).toContain('raven_http_request_duration_seconds');
     expect(metrics).toMatch(
-      /nexus_http_requests_total\{service="nexus-api",method="GET",route="\/ok",status="200"\}/,
+      /raven_http_requests_total\{service="raven-api",method="GET",route="\/ok",status="200"\}/,
     );
     expect(metrics).toMatch(/route="unmatched",status="404"/);
-    expect(metrics).toMatch(/nexus_http_request_duration_seconds_count\{[^}]*route="\/ok"\} 1/);
+    expect(metrics).toMatch(/raven_http_request_duration_seconds_count\{[^}]*route="\/ok"\} 1/);
+  });
+});
+
+describe('metrics server', () => {
+  it('serves the registry on its own port, separate from the public API', async () => {
+    const app = await build();
+    await app.inject({ method: 'GET', url: '/ok' });
+    await app.close();
+
+    // Port 0 lets the OS pick a free port, so the test never collides with a real service.
+    const server = await startMetricsServer(0);
+    const address = server.server.address();
+    const port = typeof address === 'object' && address !== null ? address.port : 0;
+    expect(port).toBeGreaterThan(0);
+
+    const res = await fetch(`http://127.0.0.1:${port}/metrics`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/plain');
+    expect(await res.text()).toContain('raven_http_requests_total');
+
+    await server.close();
   });
 });

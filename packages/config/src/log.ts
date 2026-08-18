@@ -59,7 +59,7 @@ export interface LoggerConfig {
 }
 
 /**
- * Pino logger with the mandatory NEXUS fields. `service`/`env`/`version` are bindings;
+ * Pino logger with the mandatory Raven fields. `service`/`env`/`version` are bindings;
  * per-request fields (`trace_id`, `span_id`, `req_id`, `org_id`, `user_id`, `event`) are
  * supplied by callers via `logger.child({...})` or the first log argument.
  */

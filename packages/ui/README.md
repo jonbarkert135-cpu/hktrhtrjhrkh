@@ -1,10 +1,10 @@
 # @nexus/ui
 
-Design tokens, accessible primitives and motion presets for NEXUS. Source-only package: no
+Design tokens, accessible primitives and motion presets for Raven. Source-only package: no
 build output, consumers (Vite / vitest / tsx) compile `src/*.ts(x)` directly. The one build
 step is `pnpm --filter @nexus/ui build`, which regenerates the Tailwind preset from the tokens.
 
-Normative source for everything here: `NEXUS-SPEC/04_DESIGN_SYSTEM.md`.
+Normative source for everything here: `RAVEN-SPEC/04_DESIGN_SYSTEM.md`.
 
 ## Using it
 

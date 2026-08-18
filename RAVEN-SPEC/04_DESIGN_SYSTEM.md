@@ -1,9 +1,9 @@
-# NEXUS — 04 DESIGN SYSTEM
+# Raven — 04 DESIGN SYSTEM
 
 ## Dark Premium Intelligence Interface
 
 **Scope**
-This document defines the complete visual and interaction-surface language of NEXUS: token
+This document defines the complete visual and interaction-surface language of Raven: token
 architecture, color, elevation, typography, space, motion, every UI component with every state,
 and the canvas-specific visual language. It is the normative source for `packages/ui` and is the
 reference for quality-gate check 3 in `00_MASTER.md` §8 ("Visual"). It does not define layout of
@@ -14,7 +14,7 @@ Everything here is implementable without further design input: no value is left 
 
 ## 1. Design philosophy
 
-NEXUS looks like professional instrumentation, not like a consumer app and not like a "cyber"
+Raven looks like professional instrumentation, not like a consumer app and not like a "cyber"
 dashboard. The reference feeling is a high-end audio console or a Bloomberg-class terminal
 redesigned in 2026: dark, dense, quiet, with light used as information rather than decoration.
 `00_MASTER.md` §3.5 states the product principle ("Calm interface. Dark, quiet, high-contrast
@@ -1871,7 +1871,7 @@ visual noise; instead the avatar stack in the header shows a "jump to" action.
 1. **Set:** [Lucide](https://lucide.dev) (ISC license) as the base, consumed via
    `lucide-react` with tree-shaken named imports. Rationale: 1.5px stroke on a 24px grid matches
    our stroke rules natively, permissive license, complete coverage of file/network/graph glyphs.
-2. **Custom icons** are authored only when: (a) it is a NEXUS domain concept with no Lucide
+2. **Custom icons** are authored only when: (a) it is a Raven domain concept with no Lucide
    equivalent (entity glyphs, provenance mark, proposal mark, LOD glyph silhouettes), or (b) it is
    a third-party brand mark (GitHub, Sherlock, SpiderFoot). Custom icons live in
    `packages/ui/src/icons/custom/*.svg`, are drawn on the same 24px grid with 1.5px strokes, and

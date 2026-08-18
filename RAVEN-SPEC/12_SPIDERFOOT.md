@@ -1,11 +1,11 @@
-# NEXUS — 12 — SPIDERFOOT INTEGRATION
+# Raven — 12 — SPIDERFOOT INTEGRATION
 
 ## Scope
 
 Specifies the SpiderFoot integration: an honest maturity assessment and its consequences, the two
-supported deployment models (user-provided instance / NEXUS-managed container), the `SpiderFootClient`
+supported deployment models (user-provided instance / Raven-managed container), the `SpiderFootClient`
 adapter with a mandatory capability probe, scan configuration UX with a legal consent gate, the
-event-type → NEXUS entity mapping with confidence and dedupe rules, and volume control so a scan
+event-type → Raven entity mapping with confidence and dedupe rules, and volume control so a scan
 that emits tens of thousands of events never floods the canvas.
 Ships in phase **P12** (`00_MASTER.md` §7) on the pipeline of `10_INTEGRATIONS.md`. Execution is
 always inside the sandboxed runner (N5); every imported node arrives via a Proposal (N4).
@@ -25,17 +25,17 @@ Verified facts (as of 2026-08-17):
 
 Applying the maintenance-risk formula of `11_GITHUB.md` §5.8 to those signals yields band
 **`unmaintained`**. That is a statement about _recent activity_, not about code quality: v4.0 is a
-widely deployed, functional tool. But for NEXUS it has hard consequences.
+widely deployed, functional tool. But for Raven it has hard consequences.
 
 ### 1.1 Consequences
 
 | Consequence                                          | Why                                                                  | Our response                                                                                                                         |
 | ---------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| No upstream fixes expected on our timeline           | zero recent activity                                                 | never block a NEXUS release on an upstream PR; fork-and-patch is the escalation path                                                 |
+| No upstream fixes expected on our timeline           | zero recent activity                                                 | never block a Raven release on an upstream PR; fork-and-patch is the escalation path                                                 |
 | Security patches may not arrive                      | same                                                                 | strict network isolation (§3.3); the container never gets credentials to anything but the targets the user authorized                |
 | API shape may be undocumented / may differ per build | web-UI-first project, no published stable API contract we can verify | **every endpoint shape is an assumption validated by the capability probe** (§4.2); nothing is called before the probe classifies it |
 | Python dependency rot (old pins)                     | unmaintained deps                                                    | pinned image digest, no `pip install` at runtime, `--read-only` FS                                                                   |
-| Feature may need removal one day                     | project could be archived                                            | adapter isolation: deleting `packages/integrations/spiderfoot/` must leave NEXUS compiling and every already-imported node intact    |
+| Feature may need removal one day                     | project could be archived                                            | adapter isolation: deleting `packages/integrations/spiderfoot/` must leave Raven compiling and every already-imported node intact    |
 
 ### 1.2 Mitigation plan (all mandatory)
 
@@ -45,13 +45,13 @@ widely deployed, functional tool. But for NEXUS it has hard consequences.
    that re-runs the probe fixture suite. If the operator has not configured a digest, the managed
    mode is **disabled** (not "falls back to `:latest`").
 2. **Adapter isolation.** All SpiderFoot knowledge lives in
-   `packages/integrations/spiderfoot/`. The only exports the rest of NEXUS may import are
+   `packages/integrations/spiderfoot/`. The only exports the rest of Raven may import are
    `manifest`, `runSpiderFootScan` (a job handler) and the mapping table. No SpiderFoot type
    appears in `packages/domain`.
 3. **Capability probe at install and at every connect** (§4.2). The probe result drives feature
    availability; unprobed capability = unavailable capability.
 4. **Documented fallback path** when the probe fails or the instance is gone:
-   - `fallback.tier1` — run the _individual_ capability with a first-party NEXUS module instead:
+   - `fallback.tier1` — run the _individual_ capability with a first-party Raven module instead:
      DNS/whois/passive-DNS/certificate-transparency lookups are implemented natively in
      `packages/integrations/netrecon/` (phase P12b, HTTP-only, no third-party code) and cover the
      domain/hostname/IP families of §6.
@@ -60,7 +60,7 @@ widely deployed, functional tool. But for NEXUS it has hard consequences.
    - `fallback.tier3` — the integration reports `unavailable` with the exact reason, and the
      Scan button becomes "SpiderFoot unavailable — see why", never a silent no-op.
 5. **Data durability independent of the tool.** Everything imported from SpiderFoot is normal
-   NEXUS graph data with provenance. Removing the integration never deletes nodes.
+   Raven graph data with provenance. Removing the integration never deletes nodes.
 6. **No auto-update.** The managed container is never pulled at runtime by tag; the runner refuses
    to start an image whose digest differs from the pinned one.
 
@@ -119,17 +119,17 @@ Rules:
   entry, not a blanket exemption.
 - All calls originate from the worker over the egress proxy with an allowlist containing exactly
   the configured host:port.
-- We never proxy the SpiderFoot web UI through NEXUS. "Open in SpiderFoot" is a plain external link
+- We never proxy the SpiderFoot web UI through Raven. "Open in SpiderFoot" is a plain external link
   with `rel="noopener noreferrer"` (roadmap §11 requirement) plus the scan id when the probe
   determined a stable UI route; otherwise it links to the instance root.
 
-### 3.2 Mode `managed` — NEXUS-started container
+### 3.2 Mode `managed` — Raven-started container
 
 Started by the runner as a per-scan ephemeral container.
 
 ```
 docker run --rm \
-  --name nexus-sf-{runId} \
+  --name raven-sf-{runId} \
   --user 65532:65532 \
   --read-only \
   --tmpfs /tmp:rw,noexec,nosuid,size=256m \
@@ -138,9 +138,9 @@ docker run --rm \
   --security-opt no-new-privileges \
   --pids-limit 512 \
   --memory 2g --memory-swap 2g --cpus 2 \
-  --network nexus-egress \                # proxy-only network, see §3.3
+  --network raven-egress \                # proxy-only network, see §3.3
   --env HTTP_PROXY=http://egress:3128 --env HTTPS_PROXY=http://egress:3128 \
-  --mount type=bind,src=/var/nexus/runs/{runId},dst=/out,rw \
+  --mount type=bind,src=/var/raven/runs/{runId},dst=/out,rw \
   spiderfoot@sha256:{PINNED_DIGEST} \
   {argv}
 ```
@@ -166,7 +166,7 @@ Hard timeout: `scan.timeoutMs`, default 30 min, max 4 h. On timeout the runner s
 
 ### 3.3 Network isolation and legal gating
 
-- The container has **no direct internet access**. All egress goes through the NEXUS egress proxy,
+- The container has **no direct internet access**. All egress goes through the Raven egress proxy,
   which enforces:
   - a per-run allowlist derived from the scan target (the target domain and its subdomains, plus a
     fixed list of OSINT data sources the selected modules require — the module→hosts table is built
@@ -178,7 +178,7 @@ Hard timeout: `scan.timeoutMs`, default 30 min, max 4 h. On timeout the runner s
 - Every blocked destination is recorded and shown in the run report ("14 requests blocked by the
   egress policy") so the analyst understands why a module returned nothing.
 - **Legal gate** (`00_MASTER.md` §3.6, `15_SECURITY.md` §9): an active scan requires a stored
-  consent record (§5.5). Scanning is an active operation against third-party infrastructure; NEXUS
+  consent record (§5.5). Scanning is an active operation against third-party infrastructure; Raven
   refuses to run "invasive" modules unless the user has affirmed authorization for that specific
   target, and the affirmation is written to the audit log with user id, target, timestamp and the
   free-text engagement reference.
@@ -421,7 +421,7 @@ createScan(req):
                   else an id token in the HTML response
   if no id can be extracted -> SF_PARSE (and, if the request may still have started a scan,
      immediately attempt cancel-by-name and surface a warning: "a scan may be running on the
-     instance; NEXUS lost track of it")
+     instance; Raven lost track of it")
 ```
 
 CLI transport instead builds argv from the probed flags and streams stdout to
@@ -460,7 +460,7 @@ to narrow the scan.
   deletion. In managed mode, cancellation additionally kills the container — so cancellation works
   even when `supports.cancel === false`.
 - If `supports.cancel === false` in remote mode, the UI says exactly that: "This SpiderFoot
-  instance does not expose a cancel endpoint. NEXUS stopped collecting results; the scan may
+  instance does not expose a cancel endpoint. Raven stopped collecting results; the scan may
   continue on the instance." Never a fake success.
 - Degradation matrix:
 
@@ -468,9 +468,9 @@ to narrow the scan.
 | ------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `listModules`       | module picker replaced by use-case picker                               | "This instance did not report its module list. Choose a scan profile instead."                                         |
 | `incrementalEvents` | results appear only at the end; live counter shows "collecting…"        | "Live results are unavailable on this instance; results will appear when the scan finishes."                           |
-| `correlations`      | no cluster nodes; grouping falls back to our own family grouping (§7.4) | "Correlations are unavailable; NEXUS grouped results by type."                                                         |
+| `correlations`      | no cluster nodes; grouping falls back to our own family grouping (§7.4) | "Correlations are unavailable; Raven grouped results by type."                                                         |
 | `cancel`            | see above                                                               | as above                                                                                                               |
-| `createScan`        | integration unusable for scanning; existing results remain browsable    | "This instance cannot start scans from NEXUS. Use fallback tools or run the scan in SpiderFoot and import the export." |
+| `createScan`        | integration unusable for scanning; existing results remain browsable    | "This instance cannot start scans from Raven. Use fallback tools or run the scan in SpiderFoot and import the export." |
 | all                 | integration `unavailable`                                               | "SpiderFoot is not reachable — {reason}. Fallbacks: native DNS/WHOIS recon, Sherlock for usernames."                   |
 
 Manual export import is always available as the ultimate fallback: drag a SpiderFoot JSON/CSV
@@ -504,7 +504,7 @@ part → `EMAILADDR`; `+`/digits ≥ 8 with phone shape → `PHONE_NUMBER`; base
 `BITCOIN_ADDRESS`; registrable domain with no subdomain → `DOMAIN_NAME`; hostname with subdomain →
 `INTERNET_NAME`; two capitalized words → `HUMAN_NAME`; `^[a-z0-9._-]{2,30}$` → `USERNAME`.
 Ambiguity (e.g. `john.smith` is both a username and a hostname-ish string) always surfaces chips;
-NEXUS never silently picks one.
+Raven never silently picks one.
 
 When the scan is started from a node, the target and type are pre-filled from the node kind and the
 node id is recorded as `originNodeId` so imported nodes are placed near it and linked to it.
@@ -614,7 +614,7 @@ is versioned by hash so an audit can reconstruct exactly what was agreed.
 
 ### 6.2 Mapping table (common families)
 
-| SpiderFoot event type (exact or prefix)                              | Family         | NEXUS node kind                                           | Edge from source node           | Base confidence |
+| SpiderFoot event type (exact or prefix)                              | Family         | Raven node kind                                           | Edge from source node           | Base confidence |
 | -------------------------------------------------------------------- | -------------- | --------------------------------------------------------- | ------------------------------- | --------------- |
 | `DOMAIN_NAME`                                                        | domain         | `domain`                                                  | `resolves_to` / `related_to`    | 0.9             |
 | `DOMAIN_NAME_PARENT`                                                 | domain         | `domain`                                                  | `parent_of` (reversed)          | 0.9             |
@@ -668,7 +668,7 @@ corroboration: 1 source 1.0 | 2 sources 1.08 | >=3 sources 1.15
 
 `moduleTrust` is a table keyed by module name with a default of 0.8; unknown module names are
 therefore neither privileged nor punished. Confidence is **never 1.0** for SpiderFoot output —
-NEXUS reserves 1.0 for direct observation of an authoritative API by NEXUS itself
+Raven reserves 1.0 for direct observation of an authoritative API by Raven itself
 (`11_GITHUB.md` §4.1).
 
 Confidence is rendered as a 4-step band in the UI (`low < 0.4`, `medium < 0.65`, `high < 0.85`,
@@ -720,7 +720,7 @@ for each staged entity e:
 Cycle safety: if the source chain forms a cycle (possible with mutual references), the mapper keeps
 the first edge and drops repeats — edges are a set keyed by `(from,to,kind)`.
 
-### 6.6 What NEXUS must never assert
+### 6.6 What Raven must never assert
 
 - That two accounts with the same handle belong to the same person. Cross-platform identity edges
   are `same_as` with confidence ≤ 0.9 and a "needs verification" chip (mirrors
@@ -868,17 +868,17 @@ codes) is retained indefinitely for audit.
 
 | Code                       | Title                                  | Body                                                                                                                      | Action                   |
 | -------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| `SF_UNREACHABLE`           | "SpiderFoot is not reachable"          | "NEXUS could not connect to {baseUrl} (timeout after 10 s). Check the instance is running and the URL is correct."        | "Test connection"        |
+| `SF_UNREACHABLE`           | "SpiderFoot is not reachable"          | "Raven could not connect to {baseUrl} (timeout after 10 s). Check the instance is running and the URL is correct."        | "Test connection"        |
 | `SF_AUTH`                  | "SpiderFoot rejected the credentials"  | "The instance answered 401. Update the username/password or header token."                                                | "Open settings"          |
-| `SF_TLS`                   | "Certificate not trusted"              | "The instance presented a certificate NEXUS does not trust (fingerprint {fp}). Pin this fingerprint if you recognize it." | "Pin fingerprint"        |
-| `SF_PROBE_FAILED`          | "Unsupported SpiderFoot build"         | "NEXUS could not identify a usable API on this instance. Version detected: {version ?? 'unknown'}."                       | "See probe log"          |
+| `SF_TLS`                   | "Certificate not trusted"              | "The instance presented a certificate Raven does not trust (fingerprint {fp}). Pin this fingerprint if you recognize it." | "Pin fingerprint"        |
+| `SF_PROBE_FAILED`          | "Unsupported SpiderFoot build"         | "Raven could not identify a usable API on this instance. Version detected: {version ?? 'unknown'}."                       | "See probe log"          |
 | `SF_UNSUPPORTED_OPERATION` | "This instance cannot do that"         | "The operation '{op}' is not available on this SpiderFoot build."                                                         | "See what works"         |
 | `SF_SCAN_REJECTED`         | "Scan was not started"                 | "The instance refused the scan: {reason}."                                                                                | "Adjust and retry"       |
 | `SF_SCAN_FAILED`           | "Scan failed"                          | "The scan stopped after {elapsed}: {reason}. {n} results collected so far can still be imported."                         | "Import partial results" |
 | `SF_TIMEOUT`               | "Scan exceeded its time limit"         | "The scan hit your {limit} limit and was stopped. {n} results were collected."                                            | "Import partial results" |
-| `SF_PARSE`                 | "Unreadable results"                   | "NEXUS could not read {n} records from this instance. The raw data was saved."                                            | "Download raw"           |
-| `SF_LIMIT_EXCEEDED`        | "Too many results"                     | "This scan produced more than {limit} events. NEXUS kept the first {n}; narrow the scan for complete coverage."           | "Open results table"     |
-| `SF_IMAGE_NOT_PINNED`      | "Managed SpiderFoot is not configured" | "No pinned image digest is configured, so NEXUS will not start a SpiderFoot container."                                   | "Read setup docs"        |
+| `SF_PARSE`                 | "Unreadable results"                   | "Raven could not read {n} records from this instance. The raw data was saved."                                            | "Download raw"           |
+| `SF_LIMIT_EXCEEDED`        | "Too many results"                     | "This scan produced more than {limit} events. Raven kept the first {n}; narrow the scan for complete coverage."           | "Open results table"     |
+| `SF_IMAGE_NOT_PINNED`      | "Managed SpiderFoot is not configured" | "No pinned image digest is configured, so Raven will not start a SpiderFoot container."                                   | "Read setup docs"        |
 | `SF_CANCELED`              | "Scan canceled"                        | "{n} results collected before cancellation are available."                                                                | "Import partial results" |
 
 ---
@@ -914,13 +914,13 @@ codes) is retained indefinitely for audit.
 3. **Egress allowlisting can silently break modules** whose data sources we did not enumerate. The
    run report shows blocked-request counts, but a user may misread "no results" as "nothing found".
    Mitigation: the empty state explicitly names blocked hosts and disabled modules.
-4. **API-key-dependent modules** live on the user's instance; NEXUS neither stores nor forwards
-   those keys. Users may expect NEXUS to configure them. Mitigation: explicit copy in the module
+4. **API-key-dependent modules** live on the user's instance; Raven neither stores nor forwards
+   those keys. Users may expect Raven to configure them. Mitigation: explicit copy in the module
    picker and in the docs.
 5. **Correlation semantics vary by build**; risk labels may not exist. We store `risk: 'UNKNOWN'`
    and never color a chip we cannot justify.
 6. **Legal exposure**: active scanning against third-party assets is the highest-risk feature in
-   NEXUS. The consent record is a control, not a defense. Operators can hard-disable the managed
+   Raven. The consent record is a control, not a defense. Operators can hard-disable the managed
    mode instance-wide (`SPIDERFOOT_MANAGED_ENABLED=false`), and that switch must be documented in
    `15_SECURITY.md` §9 and `19_DEPLOYMENT.md`.
 7. **Estimated duration will be wrong early on** (before local calibration data exists). It is

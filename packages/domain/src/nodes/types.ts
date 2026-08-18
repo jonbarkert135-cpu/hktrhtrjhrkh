@@ -148,7 +148,7 @@ export interface NodeTypeDefinition<TData = Record<string, unknown>> {
     build(input: CaptureInput): CaptureResult<TData>;
   };
   io: {
-    /** Payload written to `nexus.board.v1`; must round-trip through `fromExport` (N9). */
+    /** Payload written to `raven.board.v1`; must round-trip through `fromExport` (N9). */
     toExport(node: TypedNode<TData>): Record<string, unknown>;
     fromExport(raw: unknown): TData;
     toMarkdown(node: TypedNode<TData>): string;

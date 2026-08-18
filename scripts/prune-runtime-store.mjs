@@ -10,7 +10,7 @@
 // `pnpm install --prod --filter "@nexus/api..."` produces a tree that contains esbuild, vite,
 // vitest, jsdom and React — none of which `node apps/api/src/server.ts` ever loads, all of which
 // widen the image attack surface (the esbuild binary alone accounted for 1 CRITICAL + 11 HIGH Go
-// stdlib findings in the Trivy gate, see NEXUS-SPEC/15_SECURITY.md §9.4).
+// stdlib findings in the Trivy gate, see RAVEN-SPEC/15_SECURITY.md §9.4).
 //
 // pnpm cannot express "install prod deps but not their optional peers" (`auto-install-peers=false`
 // is a lockfile-level setting and would invalidate `--frozen-lockfile`), so the prune is done

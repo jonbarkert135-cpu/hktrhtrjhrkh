@@ -3,7 +3,7 @@
 ## Scope
 
 Defines `packages/canvas-engine`: the framework-agnostic rendering and interaction engine that
-draws the NEXUS board and turns pointer/keyboard input into intents. Covers renderer selection,
+draws the Raven board and turns pointer/keyboard input into intents. Covers renderer selection,
 coordinate systems, camera, scene graph, spatial index, render pipeline and LOD, the interaction
 finite state machine, edge routing hand-off, undo/redo integration, worker architecture, memory
 management and test hooks. It does **not** define node payload schemas (`06_NODE_SYSTEM.md`),
@@ -37,7 +37,7 @@ The requirement set that any candidate must satisfy simultaneously:
 
 ### 1.1 The frozen decision
 
-**Hybrid canvas + DOM overlay + spatial index**, implemented in-house against the NEXUS entity
+**Hybrid canvas + DOM overlay + spatial index**, implemented in-house against the Raven entity
 graph. Justification, in the order the constraints bite:
 
 1. R-A eliminates options 1 and 2 outright. Node count in a real OSINT board routinely passes
@@ -522,7 +522,7 @@ node's selection ring for 600 ms (`04_DESIGN_SYSTEM.md` motion token `--motion-p
 
 ### 5.7 Viewport persistence
 
-Per user, per board, in `localStorage` under `nexus.viewport.<boardId>` — **not** in the Y.Doc: a
+Per user, per board, in `localStorage` under `raven.viewport.<boardId>` — **not** in the Y.Doc: a
 camera is personal UI state and must never sync to collaborators (`00_MASTER.md` §2, "UI state must
 never be persisted" applies to shared state; personal viewport is exempted and stored outside the
 document).
@@ -1190,7 +1190,7 @@ type Res =
 **Decision: `ArrayBuffer` transfer (zero-copy `postMessage` with a transfer list), not
 `SharedArrayBuffer`, as the baseline.** Justification: `SharedArrayBuffer` requires cross-origin
 isolation (`COOP: same-origin`, `COEP: require-corp`), which breaks embedded third-party content
-(link previews via iframes, external images without CORP headers) — a core NEXUS feature. Transfer
+(link previews via iframes, external images without CORP headers) — a core Raven feature. Transfer
 is zero-copy for the buffer itself and is sufficient at our data volumes.
 
 Encodings (all little-endian, defined once in `protocol.ts`):

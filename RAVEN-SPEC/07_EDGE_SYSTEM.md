@@ -2,7 +2,7 @@
 
 ## Scope
 
-Defines the relationship layer of NEXUS: the edge data model, the typed relationship taxonomy
+Defines the relationship layer of Raven: the edge data model, the typed relationship taxonomy
 (22 built-in types with endpoint constraints), the creation and editing UX contract, the four
 routing algorithms with pseudocode and complexity, label placement, arrowheads and clipping,
 waypoint editing with manual override, canvas rendering and hit-testing, and the performance rules
@@ -499,7 +499,7 @@ clipToBorder(point p_inside_path, box, shape):
   # outside the inflated box; then binary-search 6 iterations for the exact crossing
   target inflation = 2 units (visual gap between card border and line)
   for rect shapes: analytic ray-box intersection (Liang–Barsky), no search needed
-  for rounded rects (all NEXUS cards, radius from --radius-card): analytic on the
+  for rounded rects (all Raven cards, radius from --radius-card): analytic on the
       straight segments, and circle intersection on the corner arcs
   returns {x, y, angle} where angle = atan2 of the tangent at the crossing
 ```

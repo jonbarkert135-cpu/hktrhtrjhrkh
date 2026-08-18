@@ -64,7 +64,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
-  delete window.__nexusBench;
+  delete window.__ravenBench;
 });
 
 describe('CanvasHost', () => {
@@ -84,8 +84,8 @@ describe('CanvasHost', () => {
   it('exposes the bench hook and keyboard-reachable zoom controls', () => {
     render(<CanvasHost />);
 
-    expect(window.__nexusBench?.nodeCount).toBe(0);
-    expect(window.__nexusBench?.frameTimes()).toEqual([]);
+    expect(window.__ravenBench?.nodeCount).toBe(0);
+    expect(window.__ravenBench?.frameTimes()).toEqual([]);
 
     expect(screen.getByLabelText('Zoom in')).toBeInTheDocument();
     expect(screen.getByLabelText('Zoom out')).toBeInTheDocument();
@@ -95,13 +95,13 @@ describe('CanvasHost', () => {
   it('paints a frame through the engine when the loop runs', () => {
     render(<CanvasHost />);
     frameCb?.(performance.now());
-    expect(window.__nexusBench?.frameTimes().length).toBeGreaterThan(0);
+    expect(window.__ravenBench?.frameTimes().length).toBeGreaterThan(0);
   });
 
   it('tears the engine down on unmount', () => {
     const view = render(<CanvasHost />);
     view.unmount();
     expect(disconnect).toHaveBeenCalled();
-    expect(window.__nexusBench).toBeUndefined();
+    expect(window.__ravenBench).toBeUndefined();
   });
 });

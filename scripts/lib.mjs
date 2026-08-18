@@ -12,7 +12,7 @@ const SKIP_DIRS = new Set([
   'build',
   'coverage',
   '.turbo',
-  'NEXUS-SPEC',
+  'RAVEN-SPEC',
   'playwright-report',
   'test-results',
   '.worktrees',

@@ -24,7 +24,7 @@ export function createAuth(env: ServerEnv) {
   const signupRule = resolveSignupRule(env.NEXUS_ENV, process.env['AUTH_SIGNUP_LIMIT']);
 
   return betterAuth({
-    appName: 'nexus',
+    appName: 'raven',
     secret: env.AUTH_SECRET,
     baseURL: env.PUBLIC_APP_URL,
     basePath: '/auth',

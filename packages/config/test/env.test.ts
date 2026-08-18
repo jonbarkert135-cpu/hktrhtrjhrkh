@@ -6,10 +6,10 @@ const SECRET = 'x'.repeat(32);
 const valid = (): Record<string, string> => ({
   NODE_ENV: 'development',
   NEXUS_ENV: 'local',
-  DATABASE_URL: 'postgres://user:pass@localhost:5432/nexus',
+  DATABASE_URL: 'postgres://user:pass@localhost:5432/raven',
   REDIS_URL: 'redis://localhost:6379',
   S3_ENDPOINT: 'http://localhost:9000',
-  S3_BUCKET: 'nexus',
+  S3_BUCKET: 'raven',
   S3_ACCESS_KEY_ID: 'minio',
   S3_SECRET_ACCESS_KEY: 'minio123',
   AUTH_SECRET: SECRET,

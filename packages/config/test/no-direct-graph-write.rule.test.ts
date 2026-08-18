@@ -8,7 +8,7 @@ const { rule } = require('../eslint/rules/no-direct-graph-write.cjs') as { rule:
 
 const tester = new RuleTester({ languageOptions: { ecmaVersion: 2023, sourceType: 'module' } });
 
-describe('nexus/no-direct-graph-write', () => {
+describe('raven/no-direct-graph-write', () => {
   it('allows the domain doc module and the helper API, and rejects direct writes', () => {
     tester.run('no-direct-graph-write', rule, {
       valid: [

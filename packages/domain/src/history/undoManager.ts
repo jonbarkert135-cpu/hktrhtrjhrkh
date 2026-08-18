@@ -48,7 +48,7 @@ interface StackItemMeta {
   set(key: string, value: unknown): void;
 }
 
-const LABEL_KEY = 'nexus:label';
+const LABEL_KEY = 'raven:label';
 
 const emptyState = (): HistoryState => ({
   canUndo: false,

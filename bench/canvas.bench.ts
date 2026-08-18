@@ -6,7 +6,7 @@ import type { Metric, MetricKey } from './harness.ts';
 import { BUDGETS, median, percentile } from './harness.ts';
 
 /** Contract the app exposes for benchmarking; implemented by the canvas surface. */
-export interface NexusBench {
+export interface RavenBench {
   /** ms from navigation start to the surface being interactive. */
   readonly readyAt: number;
   /** Nodes currently in the scene — the P1 placeholder has none. */
@@ -18,7 +18,7 @@ export interface NexusBench {
 
 declare global {
   interface Window {
-    __nexusBench?: NexusBench;
+    __ravenBench?: RavenBench;
   }
 }
 
@@ -28,7 +28,7 @@ const WARMUP_FRAMES = 30;
 
 /** Scripted 10 s pan + zoom, executed in-page so no test-harness latency is measured. */
 async function panZoom(page: import('@playwright/test').Page): Promise<number[]> {
-  await page.evaluate(() => window.__nexusBench?.reset());
+  await page.evaluate(() => window.__ravenBench?.reset());
   const box = await page.locator('canvas').first().boundingBox();
   if (box === null) return [];
   const cx = box.x + box.width / 2;
@@ -40,7 +40,7 @@ async function panZoom(page: import('@playwright/test').Page): Promise<number[]>
   }
   await page.mouse.up();
   for (let i = 0; i < 10; i += 1) await page.mouse.wheel(0, i % 2 === 0 ? -120 : 120);
-  const frames = await page.evaluate(() => window.__nexusBench?.frameTimes() ?? []);
+  const frames = await page.evaluate(() => window.__ravenBench?.frameTimes() ?? []);
   return frames.slice(WARMUP_FRAMES);
 }
 
@@ -50,9 +50,9 @@ export async function runCanvasBenches(): Promise<Partial<Record<MetricKey, Metr
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await page.goto(URL_UNDER_TEST, { waitUntil: 'load' });
     const bench = await page.evaluate(() =>
-      window.__nexusBench === undefined
+      window.__ravenBench === undefined
         ? null
-        : { readyAt: window.__nexusBench.readyAt, nodeCount: window.__nexusBench.nodeCount },
+        : { readyAt: window.__ravenBench.readyAt, nodeCount: window.__ravenBench.nodeCount },
     );
     if (bench === null) {
       return {
@@ -60,7 +60,7 @@ export async function runCanvasBenches(): Promise<Partial<Record<MetricKey, Metr
           value: null,
           unit: 'ms',
           budget: BUDGETS['first-interactive-5000'],
-          note: `window.__nexusBench is not exposed at ${URL_UNDER_TEST}`,
+          note: `window.__ravenBench is not exposed at ${URL_UNDER_TEST}`,
         },
       };
     }

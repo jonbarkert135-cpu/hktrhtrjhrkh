@@ -12,7 +12,7 @@ const tester = new RuleTester({
   languageOptions: { ecmaVersion: 2023, sourceType: 'module' },
 });
 
-describe('nexus/no-hardcoded-design-values', () => {
+describe('raven/no-hardcoded-design-values', () => {
   it('accepts tokens and rejects raw design values', () => {
     tester.run('no-hardcoded-design-values', rule, {
       valid: [

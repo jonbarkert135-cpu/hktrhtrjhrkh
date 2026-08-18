@@ -32,7 +32,7 @@ Source-only package (no build step); consumers compile `./src/*.ts`.
 boot. Add the flag name to `FLAG_NAMES` and record owner + expiry in `docs/flags.md`
 (19_DEPLOYMENT.md §9).
 
-## The `nexus/no-hardcoded-design-values` rule
+## The `raven/no-hardcoded-design-values` rule
 
 Reports, in string literals, template literals and JSX `style={{ … }}` objects:
 
@@ -45,10 +45,10 @@ Use `@nexus/ui` tokens instead: `var(--color-surface-1)`, `var(--space-4)`, `var
 Opting out:
 
 - **A file** — pass its path fragment in the rule options:
-  `'nexus/no-hardcoded-design-values': ['error', { allowFiles: ['packages/ui/src/tokens/'] }]`
+  `'raven/no-hardcoded-design-values': ['error', { allowFiles: ['packages/ui/src/tokens/'] }]`
   (each entry is a regex source matched against the filename). Token definitions and the generated
   Tailwind preset are the legitimate cases.
-- **One line** — `// eslint-disable-next-line nexus/no-hardcoded-design-values` with a comment
+- **One line** — `// eslint-disable-next-line raven/no-hardcoded-design-values` with a comment
   saying why.
 
 ## Tests

@@ -1,4 +1,4 @@
-# NEXUS — Advanced Research & Intelligence Canvas
+# Raven OSINT — Advanced Research & Intelligence Canvas
 
 > An infinite canvas over a typed knowledge graph, for authorized OSINT and research work.
 > Collect anything, link everything, enrich it with open-source tooling, export a defensible report.
@@ -12,7 +12,7 @@
 Prerequisites: **Node 22** (`nvm use`), **pnpm 9** (`corepack enable`), **Docker** with Compose.
 
 ```bash
-git clone <repo-url> nexus && cd nexus
+git clone <repo-url> raven && cd raven
 cp .env.example .env                     # dummy values work for local development
 pnpm install
 docker compose -f infra/docker-compose.yml up -d postgres redis minio
@@ -60,8 +60,8 @@ the graph without provenance, and no AI or tool output is applied without a revi
 proposal.
 
 Full reasoning, rejected alternatives and the measured constraints behind each choice:
-[`NEXUS-SPEC/00_MASTER.md`](NEXUS-SPEC/00_MASTER.md) §2 and
-[`NEXUS-SPEC/02_ARCHITECTURE.md`](NEXUS-SPEC/02_ARCHITECTURE.md).
+[`RAVEN-SPEC/00_MASTER.md`](RAVEN-SPEC/00_MASTER.md) §2 and
+[`RAVEN-SPEC/02_ARCHITECTURE.md`](RAVEN-SPEC/02_ARCHITECTURE.md).
 
 ## Repository layout
 
@@ -72,7 +72,7 @@ Full reasoning, rejected alternatives and the measured constraints behind each c
 | `infra/`                         | `docker-compose.yml`, `docker/*.Dockerfile`, `caddy/Caddyfile`, `egress/envoy.yaml` |
 | `scripts/`                       | CI gate scripts (no dependencies beyond Node builtins)                              |
 | `bench/`, `e2e/`                 | Canvas benchmark harness; Playwright journeys and the axe sweep                     |
-| [`NEXUS-SPEC/`](NEXUS-SPEC/)     | The complete product + engineering specification (21 documents)                     |
+| [`RAVEN-SPEC/`](RAVEN-SPEC/)     | The complete product + engineering specification (21 documents)                     |
 
 Internal packages are **source-only**: they export `./src/*.ts` and are compiled by whoever
 consumes them (Vite, tsx, vitest). Only `@nexus/ui` (Tailwind preset) and `@nexus/db`
@@ -80,9 +80,9 @@ consumes them (Vite, tsx, vitest). Only `@nexus/ui` (Tailwind preset) and `@nexu
 
 ## Where the spec lives, and how phases work
 
-1. [`NEXUS-SPEC/00_MASTER.md`](NEXUS-SPEC/00_MASTER.md) — **start here.** Frozen architecture
+1. [`RAVEN-SPEC/00_MASTER.md`](RAVEN-SPEC/00_MASTER.md) — **start here.** Frozen architecture
    decisions, product principles, the ten non-negotiables (N1–N10), the seven-check quality gate.
-2. [`NEXUS-SPEC/20_ROADMAP.md`](NEXUS-SPEC/20_ROADMAP.md) — one self-contained implementation
+2. [`RAVEN-SPEC/20_ROADMAP.md`](RAVEN-SPEC/20_ROADMAP.md) — one self-contained implementation
    prompt per phase, P1…P16.
 3. Pick the lowest un-ticked phase, branch `phase/p<nn>-<slug>`, implement exactly that phase,
    open one PR titled `P<nn> — <name>`.
@@ -105,11 +105,11 @@ engine paints a stable surface.
 
 ## Legal & ethical scope
 
-NEXUS is built for **authorized research**: your own assets, public information, and engagements you
+Raven is built for **authorized research**: your own assets, public information, and engagements you
 have permission to run. Every tool run records a consent scope and is written to the append-only
 audit log; all outbound traffic leaves through an allowlist-only egress proxy. Using it to profile
 people or systems you have no permission to investigate is outside the product's intended use and
-may be illegal in your jurisdiction. See [`NEXUS-SPEC/15_SECURITY.md`](NEXUS-SPEC/15_SECURITY.md) §9.
+may be illegal in your jurisdiction. See [`RAVEN-SPEC/15_SECURITY.md`](RAVEN-SPEC/15_SECURITY.md) §9.
 
 ## CI workflow file
 

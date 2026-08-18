@@ -33,7 +33,7 @@ listNodes(doc); // validated, z-ordered plain objects
 ## Writing to the document
 
 Every mutation goes through `src/doc` — `tx(doc, origin, fn)` plus the helpers above. Nothing else
-may call `doc.transact` or touch a content root; the `nexus/no-direct-graph-write` ESLint rule
+may call `doc.transact` or touch a content root; the `raven/no-direct-graph-write` ESLint rule
 enforces it. One user gesture is one transaction, which makes it one undo step.
 
 ## Origins and undo
@@ -46,7 +46,7 @@ a label per step for the "Undo: move 12 nodes" affordance.
 
 ## Export / import
 
-`exportBoard(doc)` produces `nexus.board.v1` (`08_DATA_MODEL.md` §8.1) with sorted arrays and
+`exportBoard(doc)` produces `raven.board.v1` (`08_DATA_MODEL.md` §8.1) with sorted arrays and
 `serializeBoardExport` writing deterministic JSON — the same document always yields the same bytes.
 `importBoard(json, { mode })` validates with zod, runs the migration chain, remaps ids
 (`restore` keeps them, `copy` and `merge-into` remap) and returns a report of what was created,
@@ -65,7 +65,7 @@ mismatches and missing provenance; repairs run with origin `system:gc`.
 `packages/domain/src/nodes` holds the node type registry (`06_NODE_SYSTEM.md` §3). A type is data:
 `defineNodeType({ type, label, schema, glyph, defaults, capabilities, componentId, inspector,
 identityKeys, searchFields, validate?, capture?, io })`. Adding a type means adding one file under
-`nodes/types/` and one line in `registerBuiltins()`; the `nexus/no-node-type-switch` lint rule keeps
+`nodes/types/` and one line in `registerBuiltins()`; the `raven/no-node-type-switch` lint rule keeps
 every other package from branching on `node.type`.
 
 `builtinNodeTypes()` returns the populated registry. `createNode` / `updateNodeData` / `setNodeTags`

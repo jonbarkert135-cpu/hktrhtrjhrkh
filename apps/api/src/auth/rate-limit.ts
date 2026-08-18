@@ -84,10 +84,10 @@ export const signupKey = (ip: string): string => `signup:${ip}`;
  * variable can never weaken a real deployment.
  */
 export function resolveSignupRule(
-  nexusEnv: 'local' | 'preview' | 'staging' | 'production',
+  ravenEnv: 'local' | 'preview' | 'staging' | 'production',
   raw: string | undefined,
 ): RateLimitRule {
-  if (nexusEnv === 'production' || raw === undefined) return SIGNUP_RULE;
+  if (ravenEnv === 'production' || raw === undefined) return SIGNUP_RULE;
   const limit = Number(raw);
   if (!Number.isInteger(limit) || limit <= 0) return SIGNUP_RULE;
   return { limit, windowMs: SIGNUP_RULE.windowMs };

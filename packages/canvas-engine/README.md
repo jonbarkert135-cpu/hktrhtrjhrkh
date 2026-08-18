@@ -1,12 +1,12 @@
 # @nexus/canvas-engine
 
-The rendering and interaction core of the NEXUS canvas. It is **framework-free**: no React import,
+The rendering and interaction core of the Raven canvas. It is **framework-free**: no React import,
 no DOM global read at module scope, no `localStorage`, no network. A host injects everything that
 touches the platform — the render target, the clock, the resolved design tokens, the DOM overlay —
 and the engine paints frames and emits _intents_. The host applies intents to the document (P3 wires
 them to Yjs), which is what keeps offline/CRDT editing possible later.
 
-Specification: `NEXUS-SPEC/05_CANVAS_ENGINE.md`, phase brief `NEXUS-SPEC/20_ROADMAP.md` § "P2".
+Specification: `RAVEN-SPEC/05_CANVAS_ENGINE.md`, phase brief `RAVEN-SPEC/20_ROADMAP.md` § "P2".
 
 ## Public API
 

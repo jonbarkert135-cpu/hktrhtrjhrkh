@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@nexus/config/env', () => ({
   loadServerEnv: () => ({
     NODE_ENV: 'test',
-    DATABASE_URL: 'postgresql://u:p@localhost:5432/nexus',
+    DATABASE_URL: 'postgresql://u:p@localhost:5432/raven',
     DATABASE_POOL_MAX: 5,
     LOG_LEVEL: 'error',
   }),

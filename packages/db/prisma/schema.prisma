@@ -1,4 +1,4 @@
-// NEXUS — P1 schema. Only the tables P1 needs (20_ROADMAP.md P1 §5.5); the graph projection,
+// Raven — P1 schema. Only the tables P1 needs (20_ROADMAP.md P1 §5.5); the graph projection,
 // integrations and AI tables land in their own phases (08_DATA_MODEL.md §4).
 //
 // Conventions:
@@ -39,7 +39,7 @@ model Organization {
   @@map("organizations")
 }
 
-/// Better-Auth owns email/emailVerified/name/image; the rest is NEXUS profile data.
+/// Better-Auth owns email/emailVerified/name/image; the rest is Raven profile data.
 model User {
   id            String    @id
   email         String    @unique @db.VarChar(320)

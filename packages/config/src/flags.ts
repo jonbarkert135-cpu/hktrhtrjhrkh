@@ -1,5 +1,5 @@
 /**
- * Build/deploy feature flags — NEXUS-SPEC/19_DEPLOYMENT.md §9.
+ * Build/deploy feature flags — RAVEN-SPEC/19_DEPLOYMENT.md §9.
  * Closed union: an unknown name in FEATURE_FLAGS is a configuration error, not a no-op.
  * Flags gate unfinished surfaces only, never a security control.
  */

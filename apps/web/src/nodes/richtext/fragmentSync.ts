@@ -25,7 +25,7 @@ export interface FragmentSyncOptions {
 }
 
 export const FragmentSync = Extension.create<FragmentSyncOptions>({
-  name: 'nexusFragmentSync',
+  name: 'ravenFragmentSync',
 
   addOptions() {
     return { fragment: null };

@@ -1,4 +1,4 @@
-# NEXUS — 11 — GITHUB INTEGRATION & REPOSITORY ANALYSIS AGENT
+# Raven — 11 — GITHUB INTEGRATION & REPOSITORY ANALYSIS AGENT
 
 ## Scope
 
@@ -56,7 +56,7 @@ mode via project settings.
 - Available: public repo metadata, README, releases, contributors (first page), languages,
   topics, license, public issues/PRs, raw files from `raw.githubusercontent.com`.
 - Not available: private repos, org membership, higher throughput, `GET /rate_limit` accuracy per
-  user (the whole NEXUS instance shares one IP budget).
+  user (the whole Raven instance shares one IP budget).
 - Because the budget is shared, unauthenticated mode is **best-effort**: the Repository Analysis
   Agent is capped at `ANALYSIS_MAX_REQUESTS_UNAUTH = 12` requests per repository and skips
   optional steps (see §5.9).
@@ -912,7 +912,7 @@ Guardrails for step J (see `14_AI_AGENT.md` §6 for the shared rules):
 
 ## 6. Integration Proposal (repository → candidate manifest)
 
-An analysis of a _tool-like_ repository can be turned into a draft NEXUS integration manifest
+An analysis of a _tool-like_ repository can be turned into a draft Raven integration manifest
 (`10_INTEGRATIONS.md` §3 manifest schema). This is the roadmap requirement §14 item 11.
 
 ### 6.1 Eligibility
@@ -1066,7 +1066,7 @@ not merged automatically. Instead:
 2. Confidence is raised, and only as a **suggestion**, when corroborating fields match:
    `+0.15` display-name match (normalized), `+0.15` avatar perceptual-hash match,
    `+0.15` a URL in the GitHub profile matching another node on the board. Cap `0.9`.
-   NEXUS never emits `1.0` for identity equivalence between platforms — see `13_SHERLOCK.md` §4
+   Raven never emits `1.0` for identity equivalence between platforms — see `13_SHERLOCK.md` §4
    (never assert attribution).
 3. Enrichment writes to the existing node only through the Proposal diff view: added fields appear
    green, changed fields amber with the old value shown.
@@ -1155,15 +1155,15 @@ used in telemetry.
 | Code                  | Trigger           | Title                             | Body                                                                                                                    | Primary action                                           |
 | --------------------- | ----------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | `GH_RATE_PRIMARY`     | remaining = 0     | "GitHub rate limit reached"       | "Your GitHub quota resets at 14:32 (in 22 min). Cached data is still shown."                                            | "Connect an account" (anon) / "Notify me when it resets" |
-| `GH_RATE_SECONDARY`   | 403/429 secondary | "GitHub is throttling requests"   | "Too many requests in a short time. NEXUS paused GitHub calls for 2 min and will resume automatically."                 | "Retry now" (disabled until timer)                       |
+| `GH_RATE_SECONDARY`   | 403/429 secondary | "GitHub is throttling requests"   | "Too many requests in a short time. Raven paused GitHub calls for 2 min and will resume automatically."                 | "Retry now" (disabled until timer)                       |
 | `GH_NOT_FOUND`        | 404               | "Repository not accessible"       | "github.com/{o}/{r} returned 404 — it may be private, renamed or deleted. The data from {date} is still on the canvas." | "Open on GitHub"                                         |
 | `GH_FORBIDDEN`        | 403 non-rate      | "Access denied by GitHub"         | "Your GitHub connection lacks access to this resource. Private repositories need the `repo` scope."                     | "Reconnect with private access"                          |
 | `GH_AUTH_REVOKED`     | 401               | "GitHub connection expired"       | "Your GitHub authorization was revoked or expired. Existing data is intact."                                            | "Reconnect"                                              |
 | `GH_NETWORK`          | timeout/DNS       | "Could not reach GitHub"          | "The request timed out after 15 s. This is usually temporary."                                                          | "Retry"                                                  |
-| `GH_PARSE`            | malformed payload | "Unexpected response from GitHub" | "NEXUS could not read GitHub's response for this panel. The raw payload was saved for diagnostics."                     | "Report issue" (attaches run id)                         |
-| `GH_TOO_LARGE`        | file > cap        | "File too large to preview"       | "This file is 12.4 MB; NEXUS previews up to 256 KB."                                                                    | "Open on GitHub"                                         |
+| `GH_PARSE`            | malformed payload | "Unexpected response from GitHub" | "Raven could not read GitHub's response for this panel. The raw payload was saved for diagnostics."                     | "Report issue" (attaches run id)                         |
+| `GH_TOO_LARGE`        | file > cap        | "File too large to preview"       | "This file is 12.4 MB; Raven previews up to 256 KB."                                                                    | "Open on GitHub"                                         |
 | `GH_ANALYSIS_PARTIAL` | completeness < 1  | "Partial analysis"                | "4 of 10 steps were skipped because of the anonymous request budget."                                                   | "Connect GitHub and re-run"                              |
-| `GH_TRUNCATED_TREE`   | tree truncated    | "Large repository"                | "This repository's file tree exceeds GitHub's single-response limit; NEXUS analyzed the {n} most relevant directories." | "See what was analyzed"                                  |
+| `GH_TRUNCATED_TREE`   | tree truncated    | "Large repository"                | "This repository's file tree exceeds GitHub's single-response limit; Raven analyzed the {n} most relevant directories." | "See what was analyzed"                                  |
 
 Quota UX states (`03_UX.md` state table format):
 
