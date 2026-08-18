@@ -18,6 +18,7 @@ packages/domain/src/index.ts
 packages/domain/src/nodes/index.ts
 packages/domain/src/edges/index.ts
 packages/domain/src/edges/routing/index.ts
+packages/canvas-engine/src/index.ts
 
 # Browser bootstrap: finds #root and calls createRoot, so it can only run against a real document
 # root. Everything it composes (AppProviders, AppRoutes) is covered by unit tests; the file itself
