@@ -23,7 +23,7 @@ export type { AppRouter } from './trpc/router.ts';
 
 export async function buildServer(env: ServerEnv): Promise<FastifyInstance> {
   const logger: FastifyBaseLogger = createLogger({
-    service: 'nexus-api',
+    service: 'raven-api',
     env: env.NEXUS_ENV,
     version: process.env['NEXUS_VERSION'] ?? '0.1.0',
     level: env.LOG_LEVEL,
@@ -47,7 +47,7 @@ export async function buildServer(env: ServerEnv): Promise<FastifyInstance> {
     max: USER_API_RULE.limit,
     timeWindow: USER_API_RULE.windowMs,
     // Per user when signed in, per IP otherwise. `Retry-After` is sent by the plugin.
-    keyGenerator: (req) => req.cookies['nexus.session_token'] ?? req.ip,
+    keyGenerator: (req) => req.cookies['raven.session_token'] ?? req.ip,
   });
 
   // Better-Auth owns /auth/* (sign-up, sign-in, OAuth callbacks, sign-out).

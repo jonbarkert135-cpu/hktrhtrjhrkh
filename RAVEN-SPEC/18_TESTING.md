@@ -1,8 +1,8 @@
-# NEXUS — 18 — TESTING STRATEGY
+# Raven — 18 — TESTING STRATEGY
 
 ## Scope
 
-Defines how NEXUS is tested at every level: unit, property, canvas-engine (headless), component,
+Defines how Raven is tested at every level: unit, property, canvas-engine (headless), component,
 e2e, visual, performance, accessibility, security and integration-adapter contract tests.
 Specifies fixtures, factories, seeding, coverage targets, flaky-test policy and the per-phase test
 checklist that the quality gate in `00_MASTER.md` §8.7 requires as evidence.
@@ -701,10 +701,10 @@ await page.addStyleTag({
 });
 await page.clock.setFixedTime(new Date('2026-01-01T12:00:00Z')); // relative timestamps freeze
 await page.evaluate(() => document.fonts.ready);
-await page.waitForFunction(() => (window as any).__nexus.engine.idle === true); // no pending rAF
+await page.waitForFunction(() => (window as any).__raven.engine.idle === true); // no pending rAF
 ```
 
-`__nexus.engine.idle` is exposed only when `import.meta.env.MODE !== 'production'`.
+`__raven.engine.idle` is exposed only when `import.meta.env.MODE !== 'production'`.
 
 ### 8.3 Masking and thresholds
 
@@ -1047,7 +1047,7 @@ the PR pipeline depend on third-party availability.
 
 1. **One retry maximum** in CI. Retries hide bugs; the retry exists only to keep the queue moving.
 2. Any test that passes on retry is recorded by the reporter into `flaky-report.json` and posted to
-   the `#nexus-ci` channel with its trace.
+   the `#raven-ci` channel with its trace.
 3. A test that flakes **twice within 14 days** is auto-quarantined by a bot: moved to the
    `@flaky` tag (excluded from the required check), and an issue is opened with the traces,
    assigned to the owning code area, with a **7-day** fix SLA.

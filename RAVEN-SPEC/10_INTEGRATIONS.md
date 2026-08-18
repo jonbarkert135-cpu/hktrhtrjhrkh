@@ -1,4 +1,4 @@
-# NEXUS — 10 — INTEGRATION FRAMEWORK
+# Raven — 10 — INTEGRATION FRAMEWORK
 
 ## Scope
 
@@ -895,7 +895,7 @@ export const manifest: IntegrationManifest = zIntegrationManifest.parse({
   name: 'Sherlock — username enumeration',
   version: '1.0.0',
   toolVersion: '0.16.0',
-  publisher: { name: 'NEXUS core', url: 'https://nexus.local', verified: true },
+  publisher: { name: 'Raven core', url: 'https://raven.local', verified: true },
   icon: 'integrations/sherlock',
   repository: 'https://github.com/sherlock-project/sherlock',
   license: 'MIT',
@@ -1136,7 +1136,7 @@ grants in `19_DEPLOYMENT.md` §5.2).
   impossible.
 - Digests are refreshed by a weekly CI job (`.github/workflows/pin-images.yml`) that resolves each
   manifest's `image:toolVersion` tag to a digest and opens a PR. Humans approve; no auto-merge.
-- An image not present in the org's allowed registry list (`NEXUS_ALLOWED_REGISTRIES`) is refused
+- An image not present in the org's allowed registry list (`Raven_ALLOWED_REGISTRIES`) is refused
   with `IMAGE_REGISTRY_DENIED`.
 - Digest mismatch after pull → `IMAGE_DIGEST_MISMATCH`, run fails, security audit event emitted.
 
@@ -1155,17 +1155,17 @@ docker run --rm
   --mount type=tmpfs,destination=/run/secrets,tmpfs-size=1m,tmpfs-mode=0400
   --cap-drop ALL
   --security-opt no-new-privileges
-  --security-opt seccomp=/etc/nexus/seccomp-tool.json
-  --security-opt apparmor=nexus-tool
+  --security-opt seccomp=/etc/raven/seccomp-tool.json
+  --security-opt apparmor=raven-tool
   --pids-limit <pids>
   --memory <memoryMiB>m --memory-swap <memoryMiB>m
   --cpus <cpuMillicores/1000>
   --ulimit nofile=1024:1024 --ulimit fsize=<maxOutputBytes>
-  --network nexus-egress                   # isolated bridge, only the proxy is reachable
+  --network raven-egress                   # isolated bridge, only the proxy is reachable
   --dns 127.0.0.53 --dns-opt ndots:1       # stub resolver that only answers for the proxy
   --env HTTP_PROXY=http://egress:3128 --env HTTPS_PROXY=http://egress:3128
   --env NO_PROXY=""
-  --label nexus.run_id=<runId> --label nexus.org_id=<orgId>
+  --label raven.run_id=<runId> --label raven.org_id=<orgId>
   --stop-timeout 5
   <image>@<digest> <entrypoint...> <command...>
 ```
@@ -1788,7 +1788,7 @@ Each `ResolvedTarget` gets a scope:
 
 | Scope              | Definition                                                                                                     | Default policy                                                                                                                          |
 | ------------------ | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `owned-asset`      | domain/IP verified by the org via DNS TXT `nexus-verify=<token>` or an uploaded authorization letter reference | always allowed                                                                                                                          |
+| `owned-asset`      | domain/IP verified by the org via DNS TXT `raven-verify=<token>` or an uploaded authorization letter reference | always allowed                                                                                                                          |
 | `public-index`     | lookups against public indexes about an identifier (username on public sites, WHOIS, public repos)             | allowed                                                                                                                                 |
 | `third-party-host` | direct requests to infrastructure the org does not own (port/vuln-style scanning)                              | **blocked by default**; an org admin must enable it per project and record an engagement reference (free-text, stored in the audit log) |
 
@@ -1812,8 +1812,8 @@ concurrency:<orgId>                → concurrentRunsPerOrg                     
 ```
 
 Plus the global egress rate cap enforced in the proxy (§6.4). `perTargetPerDay` is the key
-anti-abuse control: it makes NEXUS unusable as a mass-scanning engine even by a legitimate account.
-Buckets are also written to metrics (`nexus_integration_ratelimit_hits_total{code,integration}`) and
+anti-abuse control: it makes Raven unusable as a mass-scanning engine even by a legitimate account.
+Buckets are also written to metrics (`raven_integration_ratelimit_hits_total{code,integration}`) and
 alert at > 50 hits/hour for one org (`19_DEPLOYMENT.md` §8).
 
 ### 12.4 Audit logging
@@ -1846,7 +1846,7 @@ defensible (`15_SECURITY.md` §7.3).
    snapshot `ParsedDocument`s; fixtures are committed raw tool output, never hand-written.
 3. **Pipeline property test** — for random `ParsedDocument`s, `extract → map → propose → apply →
 undo` returns the document to a deep-equal prior state (N3, N9).
-4. **Sandbox tests** (`e2e/runner/`) — a purpose-built `nexus/test-hostile` image asserts: write to
+4. **Sandbox tests** (`e2e/runner/`) — a purpose-built `raven/test-hostile` image asserts: write to
    `/` fails, exec from `/work` fails, connect to `169.254.169.254` fails, fork bomb hits the pid
    cap, 1 GiB allocation is OOM-killed, 10 GiB stdout is capped, secrets do not appear in `ps`.
 5. **Egress proxy tests** — DNS rebinding corpus (hostile URL corpus shared with N7 tests).

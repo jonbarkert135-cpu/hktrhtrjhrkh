@@ -1,9 +1,9 @@
-# NEXUS — 02 ARCHITECTURE
+# Raven — 02 ARCHITECTURE
 
 ## Layer contracts, module boundaries, runtime topology, key sequences
 
 **Scope**
-This document is the structural contract of NEXUS. It fixes the runtime topology (which process
+This document is the structural contract of Raven. It fixes the runtime topology (which process
 owns what), the nine internal layers and their public API surfaces, the monorepo package graph and
 its machine-enforced dependency rules, the read and write data-flow paths, the canonical sequence
 diagrams, the projection design (Yjs binary → Postgres rows), multi-tenancy, error taxonomy,
@@ -201,7 +201,7 @@ export function detectDuplicates(g: GraphView, opts: DedupeOpts): DuplicateClust
 ```
 
 - **Invariant N4 enforcement:** `applyProposal` is the _only_ exported symbol that writes graph
-  structure. ESLint rule `nexus/no-direct-graph-write` forbids `ydoc.getMap('nodes').set(...)`
+  structure. ESLint rule `raven/no-direct-graph-write` forbids `ydoc.getMap('nodes').set(...)`
   outside `packages/domain/src/write/**`.
 
 ### L4 — Data Layer (client)
@@ -422,12 +422,12 @@ publishes the `dot` graph as a build artifact for review.
 
 | Rule                                  | Enforces                                                                                         |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `nexus/no-direct-graph-write`         | N4 — Yjs graph maps mutated only inside `packages/domain/src/write/**`                           |
-| `nexus/no-hardcoded-design-value`     | `00_MASTER.md` §10.6 — bans hex colors, raw px in `style=`, raw ms in transitions outside tokens |
-| `nexus/no-layout-animation-in-canvas` | bans `motion` imports under `apps/web/src/canvas/**`                                             |
-| `nexus/require-zod-at-boundary`       | every tRPC procedure and REST handler declares an input schema                                   |
-| `nexus/no-unbounded-query`            | every Prisma `findMany` in `packages/db` has `take`                                              |
-| `nexus/ssrf-guarded-fetch`            | outbound `fetch` in `apps/worker` must go through `platform/ssrf.safeFetch`                      |
+| `raven/no-direct-graph-write`         | N4 — Yjs graph maps mutated only inside `packages/domain/src/write/**`                           |
+| `raven/no-hardcoded-design-value`     | `00_MASTER.md` §10.6 — bans hex colors, raw px in `style=`, raw ms in transitions outside tokens |
+| `raven/no-layout-animation-in-canvas` | bans `motion` imports under `apps/web/src/canvas/**`                                             |
+| `raven/require-zod-at-boundary`       | every tRPC procedure and REST handler declares an input schema                                   |
+| `raven/no-unbounded-query`            | every Prisma `findMany` in `packages/db` has `take`                                              |
+| `raven/ssrf-guarded-fetch`            | outbound `fetch` in `apps/worker` must go through `platform/ssrf.safeFetch`                      |
 
 ---
 
@@ -723,7 +723,7 @@ export type ErrorClass =
   | 'capacity' // queue/pool exhausted — retry with backoff
   | 'internal'; // our bug — retry once, then surface
 
-export interface NexusError {
+export interface RavenError {
   class: ErrorClass;
   code: string; // stable machine code e.g. 'UNFURL_PRIVATE_RANGE'
   message: string; // developer-facing
@@ -824,7 +824,7 @@ projectBoard(tx, boardId, ydoc, version):
   8. refresh derived: tsvector columns are generated columns (no extra step);
        embeddings enqueued only for nodes whose text_hash changed (queue: ai:embed)
   9. UPDATE boards SET projected_version=$version, projected_at=now(), projected_hash=$h
- 10. emit metric nexus_projection_rows{op} and nexus_projection_lag_seconds
+ 10. emit metric raven_projection_rows{op} and raven_projection_lag_seconds
 ```
 
 Complexity: O(changed) writes, O(board size) reads of `(id, content_hash)` — for a 5 000-node board
@@ -835,14 +835,14 @@ the changed-key set is unavailable (e.g. after a cold room load).
 
 ### 7.4 Replay and backfill
 
-- `pnpm nexus projection:replay --board <id> [--from-snapshot <version>]` — loads the snapshot,
+- `pnpm raven projection:replay --board <id> [--from-snapshot <version>]` — loads the snapshot,
   reconstructs the doc in a headless Yjs instance, runs `projectBoard` with `force=true`
   (bypasses G2 by taking the snapshot's version), and reports a row-level diff before applying
   when `--dry-run`.
 - `projection:backfill --org <id> --concurrency 4` — iterates boards where
   `projected_version < doc_version` or `projected_at < now() - interval '1 day'`.
 - A nightly maintenance job (`maintenance:projection-audit`) samples 2% of boards, recomputes the
-  projection hash in memory and compares; mismatch raises `nexus_projection_mismatch_total` and
+  projection hash in memory and compares; mismatch raises `raven_projection_mismatch_total` and
   auto-enqueues a replay for that board.
 - Projection code version is stamped in `boards.projector_version`; bumping it (schema change in
   the derived rows) triggers a rolling backfill instead of a big-bang migration.
@@ -880,8 +880,8 @@ Also org-scoped: files, runs, integrations credentials, exports, audit, AI budge
    argument, and every query includes the scope column. `packages/db` exposes no raw `prisma`
    outside `packages/db/src/**`.
 4. **Database** — Postgres RLS enabled on `nodes`, `edges`, `files`, `runs`, `exports`, `audit`
-   with policy `org_id = current_setting('nexus.org_id')::uuid`; the connection sets
-   `nexus.org_id` per transaction. RLS is a backstop, not the primary control.
+   with policy `org_id = current_setting('raven.org_id')::uuid`; the connection sets
+   `raven.org_id` per transaction. RLS is a backstop, not the primary control.
 5. **Room** — Hocuspocus `onAuthenticate` maps `documentName` (`board:<uuid>`) to the board, checks
    membership, and attaches `context.role`; `onBeforeHandleMessage` rejects writes for `viewer`.
 6. **Object storage** — keys are prefixed `org/{orgId}/…`; presigned URLs are issued only after the
@@ -1002,21 +1002,21 @@ from files in prod (k8s Secret → env). See `19_DEPLOYMENT.md` §3.
 
 ## 11. Observability signals per layer
 
-Conventions: metrics are Prometheus-style `nexus_<area>_<name>_<unit>`; traces are OpenTelemetry
+Conventions: metrics are Prometheus-style `raven_<area>_<name>_<unit>`; traces are OpenTelemetry
 with `txId` propagated from the client as `traceparent`; logs are pino JSON with a mandatory
 `{txId, orgId, userId?, boardId?, service}` base.
 
 | Layer       | Key metrics                                                                                                                                                                   | Key spans                                    | Key log events                                  |
 | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ----------------------------------------------- |
-| L1 UI       | `nexus_ui_route_render_ms`, `nexus_ui_interaction_latency_ms{action}`, `nexus_ui_error_boundary_total`                                                                        | `ui.boardOpen`, `ui.commandPalette`          | unhandled rejection, error boundary trip        |
-| L2 Canvas   | `nexus_canvas_frame_ms{p50,p95}`, `nexus_canvas_nodes_drawn`, `nexus_canvas_overlay_mounts_total`, `nexus_canvas_index_query_ms`                                              | `canvas.frame` (sampled 1%), `canvas.layout` | dropped-frame burst (> 5 frames > 33 ms)        |
-| L3 Domain   | `nexus_domain_scene_build_ms`, `nexus_domain_proposal_apply_ms`, `nexus_domain_validation_fail_total{schema}`                                                                 | `domain.applyProposal`                       | proposal rejected with reason                   |
-| L4 Data     | `nexus_sync_status_seconds{status}`, `nexus_doc_update_bytes`, `nexus_idb_write_ms`, `nexus_ws_reconnects_total`                                                              | `data.openBoard`, `data.transact`            | offline enter/exit, queue high-water            |
-| L5 API      | `nexus_http_request_ms{route,code}`, `nexus_trpc_call_ms{procedure}`, `nexus_ratelimit_block_total{rule}`                                                                     | one span per request                         | 4xx with `class`, all 5xx                       |
-| L6 Persist  | `nexus_db_query_ms{repo}`, `nexus_projection_lag_seconds`, `nexus_projection_rows_total{op}`, `nexus_projection_mismatch_total`, `nexus_snapshot_bytes`                       | `db.tx`, `projection.board`                  | projection retry, DLQ entry                     |
-| L7 Exec     | `nexus_job_wait_ms{queue}`, `nexus_job_run_ms{queue}`, `nexus_job_fail_total{queue,code}`, `nexus_run_duration_ms{integration}`, `nexus_runner_container_kills_total{reason}` | `job.<name>`, `runner.exec`                  | run start/end with exit code, sandbox violation |
-| L8 AI       | `nexus_ai_tokens_total{dir,model}`, `nexus_ai_cost_usd_total{org}`, `nexus_ai_latency_ms`, `nexus_ai_proposal_accept_ratio`                                                   | `ai.complete`                                | budget exhausted, schema-invalid completion     |
-| L9 Platform | `nexus_auth_failures_total{reason}`, `nexus_ssrf_block_total{reason}`, `nexus_flag_eval_total{key}`, `nexus_build_info`                                                       | —                                            | authz denial, config load                       |
+| L1 UI       | `raven_ui_route_render_ms`, `raven_ui_interaction_latency_ms{action}`, `raven_ui_error_boundary_total`                                                                        | `ui.boardOpen`, `ui.commandPalette`          | unhandled rejection, error boundary trip        |
+| L2 Canvas   | `raven_canvas_frame_ms{p50,p95}`, `raven_canvas_nodes_drawn`, `raven_canvas_overlay_mounts_total`, `raven_canvas_index_query_ms`                                              | `canvas.frame` (sampled 1%), `canvas.layout` | dropped-frame burst (> 5 frames > 33 ms)        |
+| L3 Domain   | `raven_domain_scene_build_ms`, `raven_domain_proposal_apply_ms`, `raven_domain_validation_fail_total{schema}`                                                                 | `domain.applyProposal`                       | proposal rejected with reason                   |
+| L4 Data     | `raven_sync_status_seconds{status}`, `raven_doc_update_bytes`, `raven_idb_write_ms`, `raven_ws_reconnects_total`                                                              | `data.openBoard`, `data.transact`            | offline enter/exit, queue high-water            |
+| L5 API      | `raven_http_request_ms{route,code}`, `raven_trpc_call_ms{procedure}`, `raven_ratelimit_block_total{rule}`                                                                     | one span per request                         | 4xx with `class`, all 5xx                       |
+| L6 Persist  | `raven_db_query_ms{repo}`, `raven_projection_lag_seconds`, `raven_projection_rows_total{op}`, `raven_projection_mismatch_total`, `raven_snapshot_bytes`                       | `db.tx`, `projection.board`                  | projection retry, DLQ entry                     |
+| L7 Exec     | `raven_job_wait_ms{queue}`, `raven_job_run_ms{queue}`, `raven_job_fail_total{queue,code}`, `raven_run_duration_ms{integration}`, `raven_runner_container_kills_total{reason}` | `job.<name>`, `runner.exec`                  | run start/end with exit code, sandbox violation |
+| L8 AI       | `raven_ai_tokens_total{dir,model}`, `raven_ai_cost_usd_total{org}`, `raven_ai_latency_ms`, `raven_ai_proposal_accept_ratio`                                                   | `ai.complete`                                | budget exhausted, schema-invalid completion     |
+| L9 Platform | `raven_auth_failures_total{reason}`, `raven_ssrf_block_total{reason}`, `raven_flag_eval_total{key}`, `raven_build_info`                                                       | —                                            | authz denial, config load                       |
 
 Four SLOs are alerted on: board open p95 < 2.5 s; sync ack p95 < 2 s; projection lag p95 < 2 s;
 API 5xx rate < 0.5% over 15 min. RED dashboards per service, USE dashboards for Postgres/Redis.

@@ -1,4 +1,4 @@
-# NEXUS — 17 — PLUGIN SDK
+# Raven — 17 — PLUGIN SDK
 
 ## Scope
 
@@ -42,7 +42,7 @@ packages/plugin-sdk/
 │  │  └─ host.ts        runs in the host page
 │  ├─ api/{graph,selection,commands,ui,storage,net,files,events}.ts
 │  └─ testkit/          in-memory host for unit tests (§8.3)
-├─ bin/create-nexus-plugin.ts     scaffold CLI (§8.1)
+├─ bin/create-raven-plugin.ts     scaffold CLI (§8.1)
 └─ README.md
 
 apps/web/src/plugins/
@@ -1024,7 +1024,7 @@ wayback-snapshots-1.0.0.nexplug
 
 Build output is deterministic (fixed mtimes, sorted entries) so `bundle.entryHash` is verifiable.
 Signature: Ed25519 over the tar digest; the publisher's public key is registered with the registry.
-Self-hosted installs of unsigned local files are allowed only with `NEXUS_ALLOW_UNSIGNED_PLUGINS=1`
+Self-hosted installs of unsigned local files are allowed only with `Raven_ALLOW_UNSIGNED_PLUGINS=1`
 and are marked "Unsigned — development only" everywhere in the UI.
 
 ### 7.2 Install
@@ -1097,7 +1097,7 @@ Semver rules:
 
 Host compatibility: the host implements SDK versions per `apiVersion`; a plugin whose range no
 longer matches after a host upgrade is auto-disabled with
-"_Wayback Snapshots_ needs a newer version of NEXUS API (^1.x, this host provides 2.0). The plugin
+"_Wayback Snapshots_ needs a newer version of Raven API (^1.x, this host provides 2.0). The plugin
 is off until the publisher updates it." Node-type schema changes across a major require a
 `migrations` map in the manifest (`{ "1.x→2.0": "server/migrate.js" }`) whose function transforms
 stored node props; it runs as a **proposal**, never silently.
@@ -1175,7 +1175,7 @@ wayback-snapshots/
 ├─ src/index.ts          definePlugin({activate})
 ├─ test/plugin.test.ts   uses @nexus/plugin-sdk/testkit
 ├─ vite.config.ts        library build, IIFE, no externals, deterministic output
-├─ nexus.dev.json        dev-loop config (host URL, dev token)
+├─ raven.dev.json        dev-loop config (host URL, dev token)
 └─ package.json          scripts: dev, build, test, validate, package, publish
 ```
 
@@ -1188,7 +1188,7 @@ never fails review for something a machine could have caught.
 npm run dev     # vite build --watch + a local dev server on :5199 serving the bundle + manifest
 ```
 
-In NEXUS: Settings → Plugins → **Load dev plugin** → `http://localhost:5199`. The host then:
+In Raven: Settings → Plugins → **Load dev plugin** → `http://localhost:5199`. The host then:
 
 1. Fetches the manifest on every focus and on a `manifest-changed` SSE from the dev server.
 2. Skips signature verification (dev plugins are visibly badged **DEV** in every surface).
@@ -1526,13 +1526,13 @@ review checks for it (§9.2 item 7).
 
 Three channels, all supported by the same install path (§7.2):
 
-1. **Public registry** (`registry.nexus.*`): signed artifacts, semver index, publisher accounts with
+1. **Public registry** (`registry.raven.*`): signed artifacts, semver index, publisher accounts with
    verified email + domain proof for the `verified` badge. Serves a static JSON index plus artifacts
    from object storage; no server-side code execution.
-2. **Private/org registry**: an org can point `NEXUS_PLUGIN_REGISTRY` at its own index URL
+2. **Private/org registry**: an org can point `Raven_PLUGIN_REGISTRY` at its own index URL
    (same schema); useful for internal plugins in air-gapped self-host deployments.
 3. **Direct artifact upload** by an org admin (`.nexplug` file). Signature still verified unless
-   `NEXUS_ALLOW_UNSIGNED_PLUGINS=1`.
+   `Raven_ALLOW_UNSIGNED_PLUGINS=1`.
 
 Registry index entry:
 
@@ -1602,9 +1602,9 @@ Rejection reasons are published to the publisher verbatim; there is no silent re
 
 ## 10. Observability and support
 
-- Per-plugin metrics: `nexus_plugin_rpc_total{plugin,ns,method,outcome}`,
-  `nexus_plugin_rpc_duration_seconds`, `nexus_plugin_fetch_total{plugin,host,decision}`,
-  `nexus_plugin_frame_crashes_total{plugin}`, `nexus_plugin_card_budget_exceeded_total{plugin}`.
+- Per-plugin metrics: `raven_plugin_rpc_total{plugin,ns,method,outcome}`,
+  `raven_plugin_rpc_duration_seconds`, `raven_plugin_fetch_total{plugin,host,decision}`,
+  `raven_plugin_frame_crashes_total{plugin}`, `raven_plugin_card_budget_exceeded_total{plugin}`.
 - Settings → Plugins → _Activity_ shows, per plugin: RPC calls (24 h), hosts contacted, proposals
   created/applied, errors, storage used. This is the user-visible answer to "what is this plugin
   doing?", and it is a hard requirement, not a nicety.

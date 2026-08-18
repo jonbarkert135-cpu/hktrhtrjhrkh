@@ -10,7 +10,7 @@
 import type { CameraState, EngineClock, Rect } from '../types';
 import { rectsIntersect, viewportWorldRect } from './coords';
 
-export const VIEWPORT_KEY_PREFIX = 'nexus.viewport.';
+export const VIEWPORT_KEY_PREFIX = 'raven.viewport.';
 export const VIEWPORT_WRITE_THROTTLE_MS = 400;
 export const VIEWPORT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 

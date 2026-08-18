@@ -13,7 +13,7 @@ export const SNAPSHOT_OPERATION_INTERVAL = 200;
 export const SNAPSHOT_TIME_INTERVAL_MS = 5 * 60 * 1000;
 export const SNAPSHOT_RETENTION = 20;
 
-const DB_NAME = 'nexus-snapshots';
+const DB_NAME = 'raven-snapshots';
 const STORE = 'snapshots';
 
 export interface SnapshotRecord {

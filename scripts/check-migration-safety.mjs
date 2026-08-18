@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // 19_DEPLOYMENT.md §7: expand/contract only. Destructive or lock-taking DDL must be labelled.
 // Labels are line comments inside the migration SQL:
-//   -- nexus:contract  retires <expand-migration-name>   → allows DROP/RENAME/ALTER TYPE
-//   -- nexus:no-transaction                              → required for CREATE INDEX CONCURRENTLY
+//   -- raven:contract  retires <expand-migration-name>   → allows DROP/RENAME/ALTER TYPE
+//   -- raven:no-transaction                              → required for CREATE INDEX CONCURRENTLY
 // Any other justification uses `-- safe: <reason>` on the line above the statement.
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
@@ -30,9 +30,9 @@ for (const dir of readdirSync(MIGRATIONS, { withFileTypes: true })) {
   if (!exists(file)) continue;
   const sql = readFileSync(file, 'utf8');
   const lines = sql.split('\n');
-  const contract = /--\s*nexus:contract\b/.test(sql);
-  const retires = /--\s*nexus:contract\b.*\bretires\s+\S+/i.test(sql);
-  const noTransaction = /--\s*nexus:no-transaction\b/.test(sql);
+  const contract = /--\s*raven:contract\b/.test(sql);
+  const retires = /--\s*raven:contract\b.*\bretires\s+\S+/i.test(sql);
+  const noTransaction = /--\s*raven:no-transaction\b/.test(sql);
 
   lines.forEach((rawLine, i) => {
     const at = `${rel(file)}:${i + 1}`;
@@ -44,10 +44,10 @@ for (const dir of readdirSync(MIGRATIONS, { withFileTypes: true })) {
       if (!re.test(line) || justified) continue;
       if (!contract)
         violations.push(
-          `${at}: ${what} without a "-- nexus:contract" label or a "-- safe:" justification`,
+          `${at}: ${what} without a "-- raven:contract" label or a "-- safe:" justification`,
         );
       else if (!retires)
-        violations.push(`${at}: "-- nexus:contract" must name the expand migration it retires`);
+        violations.push(`${at}: "-- raven:contract" must name the expand migration it retires`);
     }
 
     if (/\bCREATE\s+(UNIQUE\s+)?INDEX\b/i.test(line) && !/CONCURRENTLY/i.test(line) && !justified) {
@@ -56,13 +56,13 @@ for (const dir of readdirSync(MIGRATIONS, { withFileTypes: true })) {
       const fresh = target != null && new RegExp(`CREATE TABLE[^;]*\\b${target}\\b`, 'i').test(sql);
       if (!fresh) {
         violations.push(
-          `${at}: blocking CREATE INDEX — use CONCURRENTLY (plus "-- nexus:no-transaction") or "-- safe:"`,
+          `${at}: blocking CREATE INDEX — use CONCURRENTLY (plus "-- raven:no-transaction") or "-- safe:"`,
         );
       }
     }
     if (/CONCURRENTLY/i.test(line) && !noTransaction) {
       violations.push(
-        `${at}: CREATE INDEX CONCURRENTLY requires "-- nexus:no-transaction" in this file`,
+        `${at}: CREATE INDEX CONCURRENTLY requires "-- raven:no-transaction" in this file`,
       );
     }
     if (

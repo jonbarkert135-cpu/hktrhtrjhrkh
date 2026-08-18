@@ -1,8 +1,8 @@
-# NEXUS — 15 — SECURITY
+# Raven — 15 — SECURITY
 
 ## Scope
 
-The complete security specification for NEXUS: threat model and attack trees, authentication
+The complete security specification for Raven: threat model and attack trees, authentication
 (Better-Auth), authorization (org/project/board RBAC with enforcement points and Postgres tenant
 isolation), boundary input validation and HTML sanitization, SSRF defense for unfurl/fetch, file
 security, the tool sandbox, secrets management, headers/CSP/supply chain, the audit log, data
@@ -33,7 +33,7 @@ protection, and acceptable-use enforcement. Binding on every phase; §4 (SSRF) s
 | ---------------------------------- | ------------------------------------ | --------------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | **T1 Curious user**                | authenticated, low privilege         | can call any API with own session, can guess ids, can read client bundle          | see other projects, escalate role                            |
 | **T2 Malicious collaborator**      | invited editor/viewer in one project | full API surface for that project, can upload files, can invite? (no), can export | exfiltrate, sabotage, plant misleading evidence              |
-| **T3 Hostile fetched content**     | data                                 | crafted HTML/PDF/SVG/JSON that NEXUS parses, renders or sends to the model        | XSS, SSRF, parser RCE, prompt injection, resource exhaustion |
+| **T3 Hostile fetched content**     | data                                 | crafted HTML/PDF/SVG/JSON that Raven parses, renders or sends to the model        | XSS, SSRF, parser RCE, prompt injection, resource exhaustion |
 | **T4 Malicious plugin**            | third-party code, user-installed     | plugin manifest permissions, host API calls                                       | steal graph data, exfiltrate credentials, abuse egress       |
 | **T5 Compromised tool image**      | container we execute                 | arbitrary code inside the sandbox                                                 | escape, exfiltrate, crypto-mine, pivot                       |
 | **T6 Network attacker**            | on-path or same cluster              | intercept, DNS spoof, connect to internal services                                | credential theft, SSRF pivot                                 |
@@ -88,7 +88,7 @@ Goal: run JS in a victim's session on the app origin
 **AT-3 — SSRF to cloud metadata / internal service (T2, T3)**
 
 ```
-Goal: make NEXUS fetch http://169.254.169.254/… or an internal admin panel
+Goal: make Raven fetch http://169.254.169.254/… or an internal admin panel
 ├─ Direct private IP URL                            → [C-12] parsed-host + resolved-IP denylist
 ├─ Hostname resolving to 127.0.0.1 / RFC1918        → [C-12] DNS resolution check before connect
 ├─ DNS rebinding (TTL 0, second resolution differs) → [C-13] connect to the pinned validated IP, not to the hostname
@@ -214,14 +214,14 @@ export const auth = betterAuth({
   },
   advanced: {
     useSecureCookies: true,
-    cookiePrefix: '__Host-nexus',
+    cookiePrefix: '__Host-raven',
     defaultCookieAttributes: { httpOnly: true, sameSite: 'lax', secure: true, path: '/' },
     ipAddress: { ipAddressHeaders: ['cf-connecting-ip', 'x-forwarded-for'] }, // trusted proxy only
   },
   rateLimit: { enabled: true, window: 60, max: 20, storage: 'secondary-storage' }, // Redis
   plugins: [
     twoFactor({
-      issuer: 'NEXUS',
+      issuer: 'Raven',
       skipVerificationOnEnable: false,
       backupCodes: { amount: 10, length: 10 },
     }),
@@ -255,9 +255,9 @@ and the config must be adjusted to satisfy it, not the other way round.
 
 | Cookie                       | Flags                                             | Purpose                                      |
 | ---------------------------- | ------------------------------------------------- | -------------------------------------------- |
-| `__Host-nexus.session_token` | HttpOnly, Secure, SameSite=Lax, Path=/, no Domain | session                                      |
-| `__Host-nexus.csrf`          | Secure, SameSite=Lax, Path=/, **not** HttpOnly    | double-submit token for non-tRPC POST routes |
-| `nexus.theme`                | not HttpOnly, SameSite=Lax                        | UI preference only, never security-relevant  |
+| `__Host-raven.session_token` | HttpOnly, Secure, SameSite=Lax, Path=/, no Domain | session                                      |
+| `__Host-raven.csrf`          | Secure, SameSite=Lax, Path=/, **not** HttpOnly    | double-submit token for non-tRPC POST routes |
+| `raven.theme`                | not HttpOnly, SameSite=Lax                        | UI preference only, never security-relevant  |
 
 `__Host-` prefix forbids a `Domain` attribute and requires `Secure` + `Path=/`, which removes
 subdomain-injection cookie shadowing. Storage/preview origins never receive the session cookie
@@ -270,10 +270,10 @@ Layered:
 1. `SameSite=Lax` blocks cross-site POSTs from a plain form/link.
 2. **Origin/Referer check** on every state-changing request (`POST/PUT/PATCH/DELETE` and all tRPC
    mutations): `Origin` must equal `PUBLIC_APP_URL`; missing `Origin` on a mutation → reject.
-3. tRPC mutations require the header `x-nexus-client: web` (a custom header cannot be set by a
+3. tRPC mutations require the header `x-raven-client: web` (a custom header cannot be set by a
    simple cross-site form; it forces a preflight, which CORS denies).
 4. Non-tRPC REST routes used by browsers additionally validate the double-submit token
-   (`x-csrf-token` header == `__Host-nexus.csrf` cookie, constant-time compare).
+   (`x-csrf-token` header == `__Host-raven.csrf` cookie, constant-time compare).
 5. Plugin/webhook REST API (machine clients) uses bearer API keys and is exempt from CSRF but is
    **not** cookie-authenticated — cookies are ignored on `/api/v1/*` entirely, which is what makes
    the exemption safe.
@@ -404,16 +404,16 @@ ALTER TABLE ai_chunks        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_runs          ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_isolation ON nodes
-  USING (project_id = current_setting('nexus.project_id', true)::uuid)
-  WITH CHECK (project_id = current_setting('nexus.project_id', true)::uuid);
+  USING (project_id = current_setting('raven.project_id', true)::uuid)
+  WITH CHECK (project_id = current_setting('raven.project_id', true)::uuid);
 -- identical policy per table; boards/files/... use their own project_id column
 ```
 
 Every request runs its queries inside a transaction that first executes
-`SELECT set_config('nexus.project_id', $1, true)` (transaction-local). The Prisma client is wrapped by
+`SELECT set_config('raven.project_id', $1, true)` (transaction-local). The Prisma client is wrapped by
 `withProject(projectId, fn)` in `packages/db/src/tenant.ts`; a raw `prisma.$queryRaw` outside that
 wrapper is blocked by an ESLint rule. Cross-project reads (global search, admin) use a separate
-`nexus_admin` role with `BYPASSRLS` and are limited to three audited code paths, each of which filters
+`raven_admin` role with `BYPASSRLS` and are limited to three audited code paths, each of which filters
 by the caller's membership list explicitly.
 
 Additional invariants:
@@ -669,7 +669,7 @@ export async function safeFetch(rawUrl: string, o: SafeFetchOpts): Promise<SafeR
       path: url.pathname + url.search,
       method: 'GET',
       headers: {
-        'user-agent': UA, // identifies NEXUS + a contact URL
+        'user-agent': UA, // identifies Raven + a contact URL
         accept: o.acceptTypes?.join(', ') ?? '*/*',
         'accept-encoding': 'gzip, br',
         // never forward cookies, auth, or internal headers
@@ -877,15 +877,15 @@ docker run \
   --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m \
   --cap-drop ALL \
   --security-opt no-new-privileges \
-  --security-opt seccomp=/etc/nexus/seccomp-tool.json \
-  --security-opt apparmor=nexus-tool \
+  --security-opt seccomp=/etc/raven/seccomp-tool.json \
+  --security-opt apparmor=raven-tool \
   --pids-limit 256 \
   --memory 1g --memory-swap 1g --cpus 1.0 \
   --ulimit nofile=512:512 --ulimit fsize=536870912 \
-  --network nexus-egress \                       # only route: the egress proxy
+  --network raven-egress \                       # only route: the egress proxy
   --env-file /run/secrets/<runId>.env \          # tmpfs-backed, 0400, deleted after start
   --stop-timeout 5 \
-  --label nexus.run=<runId> \
+  --label raven.run=<runId> \
   sherlock/sherlock@sha256:<pinned-digest> \
   <argv from the manifest, never containing secrets>
 ```
@@ -905,7 +905,7 @@ spec:
     spec:
       runtimeClassName: gvisor            # user-space kernel: the primary escape mitigation
       automountServiceAccountToken: false
-      serviceAccountName: nexus-tool-runner   # zero RBAC verbs
+      serviceAccountName: raven-tool-runner   # zero RBAC verbs
       hostNetwork: false
       hostPID: false
       hostIPC: false
@@ -927,7 +927,7 @@ spec:
             requests: { cpu: "250m", memory: "256Mi" }
             limits:   { cpu: "1",    memory: "1Gi", ephemeral-storage: "1Gi" }
           env:
-            - { name: HTTPS_PROXY, value: "http://egress-proxy.nexus.svc:3128" }
+            - { name: HTTPS_PROXY, value: "http://egress-proxy.raven.svc:3128" }
             - { name: NO_PROXY,    value: "" }
           volumeMounts:
             - { name: work, mountPath: /work }
@@ -947,7 +947,7 @@ services and asserts failure.
 - Start from the container runtime's default seccomp (blocks ~44 syscalls incl. `mount`,
   `kexec_load`, `bpf`, `ptrace`, `userfaultfd`), then subtract further: `clone` with new namespace
   flags, `unshare`, `setns`, `pivot_root`, `perf_event_open`, `add_key`, `keyctl`, `io_uring_*`.
-- AppArmor profile `nexus-tool`: deny `/proc/*/mem`, `/sys/**` write, `/dev` except `null zero random
+- AppArmor profile `raven-tool`: deny `/proc/*/mem`, `/sys/**` write, `/dev` except `null zero random
 urandom tty`, deny `mount`, deny ptrace of other pids, allow read of the image rootfs and rw of
   `/work` + `/tmp` only.
 - gVisor is the production requirement; the compose reference documents that without gVisor the
@@ -991,7 +991,7 @@ Enforcement details:
 ```text
 1. API decrypts the credential (envelope, §8) only in the run-scheduling code path.
 2. It writes it to a per-run in-memory volume file /run/secrets/<name> mode 0400 owned by 65532.
-3. The manifest maps names → env vars via a wrapper: NEXUS_SECRET_FILE_GITHUB_TOKEN=/run/secrets/gh
+3. The manifest maps names → env vars via a wrapper: Raven_SECRET_FILE_GITHUB_TOKEN=/run/secrets/gh
    and the entrypoint shim exports the value only into the child's environment.
 4. Never in argv (visible via /proc), never in the image, never in the job spec as a plain value
    (k8s: the value comes from a per-run Secret with ttl, deleted with the Job).
@@ -1187,7 +1187,7 @@ CREATE TABLE audit_events (
 CREATE INDEX audit_org_ts   ON audit_events (org_id, ts DESC);
 CREATE INDEX audit_proj_ts  ON audit_events (project_id, ts DESC);
 CREATE INDEX audit_action   ON audit_events (action, ts DESC);
-REVOKE UPDATE, DELETE ON audit_events FROM nexus_app;   -- append-only for the app role
+REVOKE UPDATE, DELETE ON audit_events FROM raven_app;   -- append-only for the app role
 ```
 
 ### 10.2 What is logged (non-exhaustive but mandatory)
@@ -1398,7 +1398,7 @@ Hard refusals, implemented as absent features (not as prompts or warnings):
    credential databases, no built-in breach-data lookup.
 4. No stalking affordances: no "monitor this person continuously" scheduler for person-type targets
    (scheduled monitoring exists only for domains/repos/own assets).
-5. No hidden or covert operation: the user agent identifies NEXUS with a contact URL, `robots.txt` and
+5. No hidden or covert operation: the user agent identifies Raven with a contact URL, `robots.txt` and
    crawl-delay are honored by the unfurl fetcher, and there is no proxy-rotation or CAPTCHA-solving
    feature.
 6. No execution of arbitrary user-supplied code: only digest-pinned, manifest-declared tool images
@@ -1460,7 +1460,7 @@ A phase cannot pass the gate (`00_MASTER.md` §8 item 5) without its row above.
 6. **Audit chain protects against post-hoc edits, not against a compromised app at write time.** An
    attacker with code execution in the API can write false events. Mitigation: external head
    publication, restricted DB grants, and infrastructure-level logging outside the app's reach.
-7. **Scope enforcement depends on honest scope entries.** NEXUS cannot verify that a written
+7. **Scope enforcement depends on honest scope entries.** Raven cannot verify that a written
    permission is genuine. Mitigation: evidence file attachment, immutable audit of scope changes, and
    the report appendix that exposes the claimed basis to any reviewer.
 8. **Share links are bearer credentials.** Anyone with the URL has the granted access until expiry.

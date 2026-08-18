@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * Server configuration. Reproduced from NEXUS-SPEC/19_DEPLOYMENT.md §1.1.
+ * Server configuration. Reproduced from RAVEN-SPEC/19_DEPLOYMENT.md §1.1.
  * The process refuses to start on an invalid or missing required variable.
  */
 export const serverEnv = z
@@ -31,7 +31,7 @@ export const serverEnv = z
     AI_API_KEY: z.string().optional(),
     AI_MONTHLY_BUDGET_USD: z.coerce.number().default(50),
     OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
-    OTEL_SERVICE_NAME: z.string().default('nexus-api'),
+    OTEL_SERVICE_NAME: z.string().default('raven-api'),
     LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error']).default('info'),
     NEXUS_TEST_ENDPOINTS: z.coerce.boolean().default(false),
     NEXUS_INTEGRATIONS_MODE: z.enum(['real', 'stub']).default('real'),

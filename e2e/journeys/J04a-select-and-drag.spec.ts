@@ -62,13 +62,13 @@ test.describe('J04a — canvas selection and drag', () => {
     await page.keyboard.press('Escape');
     await page.mouse.up();
 
-    const frames = await page.evaluate(() => window.__nexusBench?.frameTimes().length ?? 0);
+    const frames = await page.evaluate(() => window.__ravenBench?.frameTimes().length ?? 0);
     expect(frames).toBeGreaterThan(0);
   });
 });
 
 declare global {
   interface Window {
-    __nexusBench?: { frameTimes(): number[] };
+    __ravenBench?: { frameTimes(): number[] };
   }
 }

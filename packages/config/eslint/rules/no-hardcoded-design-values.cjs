@@ -7,7 +7,7 @@
  *
  * Option `allowFiles`: array of regex source strings; a file whose path matches any of
  * them is skipped (token definition files, generated Tailwind preset, tests).
- * A single line can opt out with `// eslint-disable-next-line nexus/no-hardcoded-design-values`.
+ * A single line can opt out with `// eslint-disable-next-line raven/no-hardcoded-design-values`.
  */
 
 const HEX = /#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/;
@@ -87,6 +87,6 @@ const rule = {
 
 module.exports = {
   rule,
-  // plugin object so configs can reference the rule as `nexus/no-hardcoded-design-values`
+  // plugin object so configs can reference the rule as `raven/no-hardcoded-design-values`
   plugin: { rules: { 'no-hardcoded-design-values': rule } },
 };

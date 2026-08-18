@@ -15,7 +15,7 @@ import { initialSyncStatus, reduceSync, toSyncError, type SyncStatus } from './s
 /** N2's budget: a write must reach IndexedDB within this many milliseconds. */
 export const DURABILITY_BUDGET_MS = 100;
 
-export const boardStoreName = (boardId: string): string => `nexus-board-${boardId}`;
+export const boardStoreName = (boardId: string): string => `raven-board-${boardId}`;
 
 export interface PersistenceHandle {
   /** Resolves once the persisted state has been loaded into the doc (or storage is unusable). */

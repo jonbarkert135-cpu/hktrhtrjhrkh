@@ -1,9 +1,9 @@
 # @nexus/db
 
-Prisma schema, migrations, client singleton and the dev seed for NEXUS.
+Prisma schema, migrations, client singleton and the dev seed for Raven.
 Scope in P1: `organizations`, `users`, `memberships`, `sessions`, `accounts`, `projects`,
 `boards`, `audit_log` (20_ROADMAP.md P1 §5.5). The graph projection (`nodes`, `edges`, …) arrives
-with P3/P8 — see `NEXUS-SPEC/08_DATA_MODEL.md` §4 for the full target schema.
+with P3/P8 — see `RAVEN-SPEC/08_DATA_MODEL.md` §4 for the full target schema.
 
 ## Conventions
 
@@ -56,12 +56,12 @@ prisma/schema.prisma --shadow-database-url $SHADOW_DATABASE_URL --exit-code` mus
 `scripts/check-migration-safety.mjs` rejects, per 19_DEPLOYMENT.md §7:
 
 - `DROP COLUMN` / `DROP TABLE` / `ALTER COLUMN TYPE` / `RENAME` unless the file is labeled
-  `-- nexus:contract` and names the expand migration it retires;
-- non-`CONCURRENTLY` `CREATE INDEX` (a concurrent index also needs `-- nexus:no-transaction`);
+  `-- raven:contract` and names the expand migration it retires;
+- non-`CONCURRENTLY` `CREATE INDEX` (a concurrent index also needs `-- raven:no-transaction`);
 - `ADD COLUMN ... NOT NULL DEFAULT <volatile>`;
 - a missing header comment stating lock impact and estimated duration.
 
-`0001_init` is labeled `-- nexus:initial`: it only creates new objects on an empty database, so its
+`0001_init` is labeled `-- raven:initial`: it only creates new objects on an empty database, so its
 indexes are intentionally non-concurrent. Every later migration follows the rules above.
 Rollback is forward-only — a bad migration is fixed by the next migration.
 
@@ -86,8 +86,8 @@ pnpm --filter @nexus/db seed             # seed only (idempotent, safe to re-run
    as the owner role, after the app role exists:
 
    ```sql
-   REVOKE UPDATE, DELETE, TRUNCATE ON audit_log FROM nexus_app;
-   GRANT  INSERT, SELECT ON audit_log TO nexus_app;
+   REVOKE UPDATE, DELETE, TRUNCATE ON audit_log FROM raven_app;
+   GRANT  INSERT, SELECT ON audit_log TO raven_app;
    ```
 
 A `CHECK (updated_at = created_at)` constraint makes any accidental update fail loudly.

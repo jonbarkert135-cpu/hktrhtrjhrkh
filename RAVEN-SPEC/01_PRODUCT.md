@@ -1,8 +1,8 @@
-# NEXUS — 01 PRODUCT SPECIFICATION
+# Raven — 01 PRODUCT SPECIFICATION
 
 ## Scope
 
-This document defines _what_ NEXUS is, _who_ it is for, and _which_ capabilities ship in which
+This document defines _what_ Raven is, _who_ it is for, and _which_ capabilities ship in which
 phase. It refines `00_MASTER.md` and never re-decides the stack, the layer map or the phase order
 frozen there. It contains: vision, three target users with jobs-to-be-done, anti-personas, the core
 loop, a full mapping of the client's 56 roadmap sections to the spec documents that implement them,
@@ -15,7 +15,7 @@ positioning. Interaction detail lives in `03_UX.md`; data shapes in `08_DATA_MOD
 
 ### 1.1 One paragraph
 
-NEXUS is a desktop-class web workspace where a researcher turns scattered evidence into a defensible
+Raven is a desktop-class web workspace where a researcher turns scattered evidence into a defensible
 answer. Evidence enters in one keystroke (`Ctrl+V`), becomes a typed entity with provenance, is
 linked into a graph, is enriched by sandboxed open-source tooling (GitHub, Sherlock, SpiderFoot) and
 by an AI layer that may only _propose_, and leaves as a report where every claim carries a numbered
@@ -26,9 +26,9 @@ interface for the product, which is a provenance-carrying knowledge graph.
 
 An analyst working a target today runs a browser with 40 tabs, a folder of screenshots, a Markdown
 scratch file, one or two CLI tools whose JSON output nobody re-reads, and a spreadsheet of
-usernames. Four failures follow, and NEXUS is designed against exactly these four:
+usernames. Four failures follow, and Raven is designed against exactly these four:
 
-| Failure                    | Observable symptom                                                    | NEXUS answer                                                                                       |
+| Failure                    | Observable symptom                                                    | Raven answer                                                                                       |
 | -------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | Capture friction           | evidence is not saved because saving costs 20 seconds and breaks flow | paste is the front door; capture ≤ 400 ms, structure later (`03_UX.md` §7)                         |
 | Lost provenance            | three weeks later nobody can say where a claim came from              | every node carries `source`, `tool`, `run_id`, `observed_at`, `confidence` (`08_DATA_MODEL.md` §3) |
@@ -55,7 +55,7 @@ Three claims, each falsifiable, each with an owner document:
 Comparison is deliberately limited to capability classes, not marketing claims: whiteboards
 (Milanote-class) capture but do not type or enrich; note graphs (Obsidian-class) type loosely but
 have no execution or provenance layer; link-analysis suites type strictly but are heavyweight,
-closed and do not accept casual capture. NEXUS occupies the intersection: casual capture, strict
+closed and do not accept casual capture. Raven occupies the intersection: casual capture, strict
 typing, sandboxed execution, self-hostable.
 
 ---
@@ -139,7 +139,7 @@ Explicitly not designed for. Each line names the feature pressure we refuse.
 | Stalker / harasser       | untargeted people-search, "find home address", scraping private accounts | acceptable-use enforcement (§10); no unauthenticated mass-personal-data connectors                       |
 | Growth/lead-gen scraper  | bulk email harvesting, CSV of 100k contacts, CAPTCHA solving             | rate/volume design targets a single analyst; no anti-bot evasion                                         |
 | Casual mood-boarder      | fonts, stickers, freehand drawing, presentation aesthetics as the point  | typed graph overhead is a cost they never repay; whiteboards serve them better                           |
-| Enterprise SIEM buyer    | log ingestion at MB/s, alert correlation, detections                     | NEXUS is an investigation workspace, not a streaming pipeline (§8)                                       |
+| Enterprise SIEM buyer    | log ingestion at MB/s, alert correlation, detections                     | Raven is an investigation workspace, not a streaming pipeline (§8)                                       |
 | Offensive operator       | exploitation, credential stuffing, unauthorized active scanning          | runner egress allowlist + acceptable use; tool manifests declare intrusiveness (`10_INTEGRATIONS.md` §4) |
 | "Autonomous agent" buyer | let the AI run the whole investigation unattended                        | N4 forbids unattended writes; proposals require a human accept                                           |
 
@@ -496,7 +496,7 @@ payloads and screenshots, named by SHA-256), `provenance.json` (the §6.2 DAG), 
 `SHA256SUMS`. Optional detached signature if the deployment configures a signing key
 (`15_SECURITY.md` §7).
 **UX justification.** One command produces the artifact a lawyer, editor or client auditor accepts;
-it also makes NEXUS boards re-importable elsewhere, which is a trust argument for self-hosters.
+it also makes Raven boards re-importable elsewhere, which is a trust argument for self-hosters.
 **Cost.** M (mostly assembly over existing export + hashing).
 **Phase.** P15.
 
@@ -789,7 +789,7 @@ this document is amended first.
 2. **Not a document editor.** Rich text exists inside nodes and the report builder, not as a
    competing document surface with pages and templates.
 3. **Not a task manager.** No assignees, due dates, boards-as-kanban. Comments and mentions only.
-4. **Not a scraper or crawler.** NEXUS fetches URLs the user provides (one page, SSRF-guarded, no
+4. **Not a scraper or crawler.** Raven fetches URLs the user provides (one page, SSRF-guarded, no
    recursive crawling, robots-respecting) and delegates deep collection to tools the operator has
    authorized.
 5. **Not a people-search product.** No aggregated personal-data database, no built-in breach
@@ -851,7 +851,7 @@ enforceable by data, not by code forks**, so any future packaging decision is a 
 
 ### 10.1 Stance
 
-NEXUS is a workspace for **authorized research**: publicly available information, assets the user
+Raven is a workspace for **authorized research**: publicly available information, assets the user
 owns or is contractually permitted to assess, and data lawfully obtained. It is not an
 anonymity-preserving offensive tool, and it does not attempt to help users evade detection or
 access controls.

@@ -23,7 +23,7 @@ function archiveJson(): string {
 
 /** jsdom's File has no `text()`, so the picker's read path is stubbed per file. */
 function fileWith(content: string): File {
-  const file = new File([content], 'board.nexus.json', { type: 'application/json' });
+  const file = new File([content], 'board.raven.json', { type: 'application/json' });
   Object.defineProperty(file, 'text', { value: () => Promise.resolve(content) });
   return file;
 }
@@ -67,7 +67,7 @@ describe('<ImportDialog>', () => {
 
   it('announces that an older archive will be upgraded', async () => {
     const legacy = JSON.stringify({
-      format: 'nexus.board.v0',
+      format: 'raven.board.v0',
       board: { boardId: 'b_old', title: 'Legacy', createdAt: NOW, updatedAt: NOW },
       nodes: [
         {

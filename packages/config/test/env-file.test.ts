@@ -10,7 +10,7 @@ import {
 } from '../src/env-file';
 
 function fakeRepo(files: Record<string, string>): string {
-  const root = mkdtempSync(join(tmpdir(), 'nexus-envfile-'));
+  const root = mkdtempSync(join(tmpdir(), 'raven-envfile-'));
   writeFileSync(join(root, 'pnpm-workspace.yaml'), "packages:\n  - 'packages/*'\n");
   for (const [rel, content] of Object.entries(files)) {
     const abs = join(root, rel);
@@ -48,7 +48,7 @@ describe('findRepoRoot', () => {
   });
 
   it('returns undefined outside a workspace', () => {
-    expect(findRepoRoot(mkdtempSync(join(tmpdir(), 'nexus-noroot-')))).toBeUndefined();
+    expect(findRepoRoot(mkdtempSync(join(tmpdir(), 'raven-noroot-')))).toBeUndefined();
   });
 });
 
@@ -90,7 +90,7 @@ describe('applyEnvFileDefaults', () => {
   });
 
   it('is a no-op outside a workspace', () => {
-    const outside = mkdtempSync(join(tmpdir(), 'nexus-outside-'));
+    const outside = mkdtempSync(join(tmpdir(), 'raven-outside-'));
     const env: NodeJS.ProcessEnv = {};
     expect(applyEnvFileDefaults(env, outside)).toEqual([]);
   });

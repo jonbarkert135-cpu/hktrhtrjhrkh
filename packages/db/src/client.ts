@@ -38,10 +38,10 @@ function createClient(): PrismaClient {
 
 // Dev/test reload (tsx watch, vitest, Vite HMR) re-evaluates modules; without this every reload
 // would open a new pool until Postgres refuses connections.
-const globalForPrisma = globalThis as typeof globalThis & { nexusPrisma?: PrismaClient };
+const globalForPrisma = globalThis as typeof globalThis & { ravenPrisma?: PrismaClient };
 
-export const prisma: PrismaClient = globalForPrisma.nexusPrisma ?? createClient();
+export const prisma: PrismaClient = globalForPrisma.ravenPrisma ?? createClient();
 
 if (env.NODE_ENV !== 'production') {
-  globalForPrisma.nexusPrisma = prisma;
+  globalForPrisma.ravenPrisma = prisma;
 }

@@ -106,7 +106,7 @@ export function fragmentToJson(fragment: Y.XmlFragment): RichTextDocJson {
 
 function jsonToChild(node: RichTextNodeJson): Y.XmlElement | Y.XmlText {
   // Not a board node: this is a ProseMirror JSON node, whose `type` is part of the document format.
-  // eslint-disable-next-line nexus/no-node-type-switch
+  // eslint-disable-next-line raven/no-node-type-switch
   if (node.type === 'text') {
     const text = new Y.XmlText();
     const attributes: Record<string, unknown> = {};
@@ -162,7 +162,7 @@ function inlineText(nodes: readonly RichTextNodeJson[]): string {
   let out = '';
   for (const node of nodes) {
     // ProseMirror JSON node names, not board node types — the lint rule targets the latter.
-    // eslint-disable-next-line nexus/no-node-type-switch
+    // eslint-disable-next-line raven/no-node-type-switch
     if (node.type === 'text') out += node.text ?? '';
     else if (!VOID_NODES.has(node.type)) out += inlineText(node.content ?? []);
   }
@@ -181,7 +181,7 @@ function blockLines(node: RichTextNodeJson): string[] {
       : [`${marker}${lines[0] ?? ''}`, ...lines.slice(1)];
   }
   // A bare text node at block level is its own line; ProseMirror JSON names, not board types.
-  // eslint-disable-next-line nexus/no-node-type-switch
+  // eslint-disable-next-line raven/no-node-type-switch
   const isBareText = node.type === 'text';
   return [inlineText(isBareText ? [node] : (node.content ?? []))];
 }

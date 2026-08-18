@@ -17,7 +17,7 @@ const EXPORT = { appVersion: '1.0.0-test', now: T0 };
 describe('board import', () => {
   it('rejects anything that is not a board export', () => {
     expect(() => parseBoardExport(null)).toThrow(ImportError);
-    expect(() => parseBoardExport('not json')).toThrow(/not a NEXUS board export/);
+    expect(() => parseBoardExport('not json')).toThrow(/not a Raven board export/);
   });
 
   it('reports validation issues instead of importing a broken file', () => {

@@ -1,5 +1,5 @@
 /**
- * `nexus.board.v1` — the portable board archive (08_DATA_MODEL.md §8.1). Every field that enters a
+ * `raven.board.v1` — the portable board archive (08_DATA_MODEL.md §8.1). Every field that enters a
  * document through an import is validated here first (P3 §9): unknown node types are imported as
  * generic cards, unknown keys are preserved, nothing is executed.
  */
@@ -11,14 +11,23 @@ import { AssetSchema, BoardMetaSchema, GroupSchema } from '../entities/group.ts'
 import { NodeSchema } from '../entities/node.ts';
 import { RichTextDocJsonSchema } from './richtext.ts';
 
-export const BOARD_EXPORT_FORMAT = 'nexus.board.v1';
+export const BOARD_EXPORT_FORMAT = 'raven.board.v1';
+
+/**
+ * Archives written before the NEXUS → Raven rename. They are byte-identical apart from the
+ * brand strings, so `normalizeLegacyBrand` (doc/migrations.ts) rewrites them on import and every
+ * pre-rename board keeps opening forever.
+ */
+export const LEGACY_BOARD_EXPORT_FORMATS: readonly string[] = ['nexus.board.v1', 'nexus.board.v0'];
+export const LEGACY_GENERATOR_APP = 'nexus';
+export const GENERATOR_APP = 'raven';
 
 /** Hard ceiling for a single import; rejected before any mutation (P3 §8). */
 export const IMPORT_NODE_LIMIT = 20_000;
 
 export const FileManifestSchema = AssetSchema.omit({ createdAt: true })
   .extend({
-    /** Present only inside a `.nexus` archive; a bare JSON export sets null. */
+    /** Present only inside a `.raven` archive; a bare JSON export sets null. */
     path: z.string().nullable().default(null),
     metadata: z.record(z.unknown()).default({}),
   })
@@ -29,7 +38,7 @@ export const BoardExportV1Schema = z
     format: z.literal(BOARD_EXPORT_FORMAT),
     exportedAt: z.string(),
     generator: z.object({
-      app: z.literal('nexus'),
+      app: z.literal('raven'),
       version: z.string(),
       schemaVersion: z.number().int().min(1),
     }),

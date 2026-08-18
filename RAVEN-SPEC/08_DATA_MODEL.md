@@ -2,7 +2,7 @@
 
 ## Scope
 
-Defines every place NEXUS data lives and how those places stay consistent: the `Y.Doc` schema
+Defines every place Raven data lives and how those places stay consistent: the `Y.Doc` schema
 (shared types, key naming, what is deliberately outside the CRDT, transaction origins, undo scope,
 subdocs, snapshots, GC), the complete PostgreSQL 16 schema as Prisma models plus the resulting SQL
 with every index, constraint and isolation rule, the Yjs→Postgres projection contract
@@ -244,7 +244,7 @@ new Y.UndoManager(
   the explicit, undoable `Clear enrichment` action (`06_NODE_SYSTEM.md` §9.4).
 - `comments` is deliberately **not** in the undo scope: undoing a canvas edit must not delete a
   colleague's comment.
-- Stack depth: `Y.UndoManager` is unbounded by default; NEXUS caps it at 200 items by dropping the
+- Stack depth: `Y.UndoManager` is unbounded by default; Raven caps it at 200 items by dropping the
   oldest on push (custom wrapper), which bounds memory on long sessions.
 - After `undo()`/`redo()`, the affected node ids are collected from the resulting transaction and
   the camera pans to their bounding box only if none of them is visible (`03_UX.md` §9).
@@ -348,8 +348,8 @@ CREATE POLICY nodes_tenant ON nodes
 
 - Every request handler opens its transaction with
   `SET LOCAL app.org_id = $1; SET LOCAL app.user_id = $2;` derived from the authenticated session.
-- The application connects as `nexus_app`, a role **without** `BYPASSRLS`. Migrations run as
-  `nexus_migrate`; the projector runs as `nexus_projector` (also RLS-bound, org id taken from the
+- The application connects as `raven_app`, a role **without** `BYPASSRLS`. Migrations run as
+  `raven_migrate`; the projector runs as `raven_projector` (also RLS-bound, org id taken from the
   board being projected).
 - Project/board level permissions are **not** expressed in RLS (too dynamic); they are enforced in
   the API authorization layer (`09_BACKEND.md` §3) and re-checked in the Hocuspocus `onAuthenticate`
@@ -399,7 +399,7 @@ model User {
 
 Auth records (sessions, accounts, verification tokens) are owned by Better-Auth and live in its own
 tables (`auth_session`, `auth_account`, `auth_verification`), referenced by `user_id`. They are not
-re-modelled here; the only NEXUS constraint is `auth_session.user_id → users.id ON DELETE CASCADE`.
+re-modelled here; the only Raven constraint is `auth_session.user_id → users.id ON DELETE CASCADE`.
 
 ### 4.2 Organization / Membership
 
@@ -1129,7 +1129,7 @@ model WorkspaceSetting {
 }
 ```
 
-`audit_logs` is append-only: `REVOKE UPDATE, DELETE ON audit_logs FROM nexus_app;` and partitioned
+`audit_logs` is append-only: `REVOKE UPDATE, DELETE ON audit_logs FROM raven_app;` and partitioned
 monthly. Known keys for `WorkspaceSetting` include `maxFileSizeMb` (default 200),
 `preserveOriginalExif` (default true), `allowEmbeds`, `aiProvider`, `aiMonthlyBudgetCents`,
 `allowedIntegrationSlugs`, `mapTileTemplate`, `retentionDays`.
@@ -1429,13 +1429,13 @@ was repaired.
 
 ## 8. Export and import
 
-### 8.1 `nexus.board.v1` — JSON schema
+### 8.1 `raven.board.v1` — JSON schema
 
 ```jsonc
 {
-  "format": "nexus.board.v1",
+  "format": "raven.board.v1",
   "exportedAt": "2026-08-17T12:00:00.000Z",
-  "generator": { "app": "nexus", "version": "1.4.2", "schemaVersion": 1 },
+  "generator": { "app": "raven", "version": "1.4.2", "schemaVersion": 1 },
   "board": {
     "id": "01J9ZC8Q9WQK3M0S9M8J8T1A2B",
     "projectId": "01J9ZC8Q9WQK3M0S9M8J8T1A2C",
@@ -1625,7 +1625,7 @@ Rules:
 - Rich text is exported as **ProseMirror JSON**, not as a Yjs update: portable, diffable, and
   reconstructible into a `Y.XmlFragment` deterministically.
 - A JSON Schema (draft 2020-12) for this format is generated from the zod schemas and published at
-  `packages/domain/schemas/nexus.board.v1.json`; the exporter validates against it before writing.
+  `packages/domain/schemas/raven.board.v1.json`; the exporter validates against it before writing.
 
 ### 8.2 Round-trip guarantee (N9)
 
@@ -1675,7 +1675,7 @@ Per board, one file plus an assets folder:
 ```markdown
 # Case 2026-04 — infrastructure
 
-> Exported 2026-08-17 12:00 UTC · 128 nodes · 214 edges · NEXUS 1.4.2
+> Exported 2026-08-17 12:00 UTC · 128 nodes · 214 edges · Raven 1.4.2
 
 ## Summary
 
@@ -1723,15 +1723,15 @@ Per board, one file plus an assets folder:
 Grouping is by node type, ordered by the registry's declaration order; within a type, by `title`.
 Images are written to `assets/` and referenced relatively. Markdown export is one-way (documented).
 
-### 8.5 Project archive (`.nexus.zip`)
+### 8.5 Project archive (`.raven.zip`)
 
 ```text
-manifest.json                 { format: "nexus.project.v1", exportedAt, generator,
+manifest.json                 { format: "raven.project.v1", exportedAt, generator,
                                 project: {...}, boards: [{id, title, file, nodeCount, edgeCount}],
                                 files: [{id, sha256, size, path}], counts, checksum: sha256 of
                                 a canonical listing of all member checksums }
 project.json                  project metadata, tags, saved searches, watchlists (no secrets)
-boards/<boardId>.json         one nexus.board.v1 document per board
+boards/<boardId>.json         one raven.board.v1 document per board
 boards/<boardId>.ydoc         optional: raw Y.Doc update (V2) for exact CRDT restore
 files/<fileId>/original.<ext> file bytes
 files/<fileId>/meta.json      File row fields (name, mime, size, sha256, metadata)
@@ -1752,7 +1752,7 @@ become `missing` media with a repair prompt.
 
 ### 8.6 Schema migration strategy
 
-- `format` string carries the major version (`nexus.board.v1`). `generator.schemaVersion` carries the
+- `format` string carries the major version (`raven.board.v1`). `generator.schemaVersion` carries the
   document schema version (`meta.schemaVersion`).
 - Migrations live in `packages/domain/src/migrations/` as
   `{ from: 1, to: 2, migrateDoc(doc), migrateExport(json) }` and are **forward-only**, pure and

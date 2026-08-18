@@ -38,7 +38,7 @@ export default function LoginPage() {
   return (
     <div className="nx-auth">
       <main className="nx-auth-card nx-stack">
-        <h1>Sign in to NEXUS</h1>
+        <h1>Sign in to Raven OSINT</h1>
         {formError ? (
           <Banner kind="danger" title="Couldn't sign you in">
             {formError}

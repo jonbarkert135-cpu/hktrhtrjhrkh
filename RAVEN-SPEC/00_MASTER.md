@@ -1,17 +1,17 @@
-# NEXUS — Advanced Research & Intelligence Canvas
+# Raven OSINT — Advanced Research & Intelligence Canvas
 
 ## 00 — MASTER SPECIFICATION (single source of truth)
 
 > **Status:** Phase 0 complete (architecture frozen).
-> **Audience:** the coding AI that will implement NEXUS phase by phase, and any human reviewer.
-> **Rule:** every other document in `/NEXUS-SPEC` refines this file. If a document contradicts
+> **Audience:** the coding AI that will implement Raven phase by phase, and any human reviewer.
+> **Rule:** every other document in `/RAVEN-SPEC` refines this file. If a document contradicts
 > `00_MASTER.md`, **this file wins** and the other document must be corrected in the same PR.
 
 ---
 
 ## 1. Executive summary
 
-NEXUS is a **desktop-class web application for visual research**: an infinite canvas where an
+Raven is a **desktop-class web application for visual research**: an infinite canvas where an
 analyst collects URLs, pages, images, documents, notes, identities and repositories, links them
 into a typed graph, runs open-source research tooling against them, and exports the result as a
 defensible investigation report.
@@ -169,7 +169,7 @@ Data Layer may not import Canvas Engine.
 ├─ bench/                  performance harnesses
 ├─ e2e/                    Playwright suites
 ├─ infra/                  docker-compose, k8s, gVisor runtime class, CI
-└─ NEXUS-SPEC/             this specification
+└─ RAVEN-SPEC/             this specification
 ```
 
 Dependency direction: `apps/*` → `packages/*`; `packages/canvas-engine` and `packages/domain`
@@ -263,7 +263,7 @@ touched._ Rewriting a working subsystem without a stated reason is a gate failur
 3. **Never break what works.** If a change forces a breaking refactor, state it in the PR and
    update the affected spec document in the same PR.
 4. **Types and docs are part of the change.** Public API changes update `packages/*/README.md`
-   and the relevant `NEXUS-SPEC` file.
+   and the relevant `RAVEN-SPEC` file.
 5. **No generic errors.** Every failure surfaces _what happened, why, what to do_ (see
    `03_UX.md` §12).
 6. **No hardcoded design values.** Colors, spacing, radii, durations come from tokens only.

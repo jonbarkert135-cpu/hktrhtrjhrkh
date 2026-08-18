@@ -20,7 +20,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { resolveEngineTheme } from './engine-theme';
 
 /** Benchmark contract consumed by bench/canvas.bench.ts. */
-interface NexusBench {
+interface RavenBench {
   readonly readyAt: number;
   readonly nodeCount: number;
   frameTimes(): number[];
@@ -29,7 +29,7 @@ interface NexusBench {
 
 declare global {
   interface Window {
-    __nexusBench?: NexusBench;
+    __ravenBench?: RavenBench;
   }
 }
 
@@ -175,7 +175,7 @@ export function useCanvasEngine(options: UseCanvasEngineOptions = {}): CanvasEng
     let frameTimes: number[] = [];
     const readyAt = win.performance.now();
     const offFrame = created.on('frame', (stats) => frameTimes.push(stats.duration));
-    win.__nexusBench = {
+    win.__ravenBench = {
       readyAt,
       get nodeCount() {
         return created.query.nodeCount;
@@ -206,7 +206,7 @@ export function useCanvasEngine(options: UseCanvasEngineOptions = {}): CanvasEng
     return () => {
       observer.disconnect();
       offFrame();
-      delete win.__nexusBench;
+      delete win.__ravenBench;
       offCamera();
       offIntent();
       offHover();

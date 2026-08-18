@@ -1,4 +1,4 @@
-# NEXUS — 20 — IMPLEMENTATION ROADMAP (phase prompts P1…P16)
+# Raven — 20 — IMPLEMENTATION ROADMAP (phase prompts P1…P16)
 
 ## Scope
 
@@ -74,7 +74,7 @@ shell with a placeholder board surface, and CI enforces the full quality gate on
 
 ## 2 Context (what exists now)
 
-Only `NEXUS-SPEC/` exists. There is no code, no package manager workspace, no database, no CI.
+Only `RAVEN-SPEC/` exists. There is no code, no package manager workspace, no database, no CI.
 Everything in this phase is greenfield; there is nothing to preserve except the specification.
 
 ## 3 Existing architecture to respect
@@ -124,7 +124,7 @@ scripts/{check-no-todo.mjs,check-skips.mjs,check-coverage.mjs,diff-coverage.mjs,
 7. Fastify 5 + tRPC v11 with a typed `Context` carrying `{ user, org, role, req_id, logger }`;
    procedures `publicProcedure`, `protectedProcedure`, `orgProcedure(minRole)`.
 8. `/healthz` (process alive) and `/readyz` (DB + Redis reachable) endpoints; `/metrics` on 9464
-   with at least `nexus_http_requests_total` and `nexus_http_request_duration_seconds`.
+   with at least `raven_http_requests_total` and `raven_http_request_duration_seconds`.
 9. React 19 + Vite 6 SPA with routes `/`, `/login`, `/signup`, `/p/:projectId`, `/b/:boardId`,
    `/settings`; unauthenticated access to app routes redirects to `/login?next=…`.
 10. App shell: top bar (org switcher, board title, sync status placeholder, user menu), left rail
@@ -464,7 +464,7 @@ proved wrong, in the same PR), `16_PERFORMANCE.md` (record measured numbers), tr
 **Status: DONE** — implemented in `phase/p03-document-persistence`. `@nexus/domain` ships the board
 `Y.Doc` schema (eight roots), the `tx(doc, origin, fn)` write path with the `no-direct-graph-write`
 lint rule, zod entity schemas, observers, invariants, forward-only migrations, the origin-scoped
-`Y.UndoManager` wrapper and the `nexus.board.v1` export/import with a lossless round-trip property
+`Y.UndoManager` wrapper and the `raven.board.v1` export/import with a lossless round-trip property
 test. `apps/web` ships `data/{docProvider,persistence,opfs,snapshots,syncStatus}`, the
 document ⇄ engine bindings, the save indicator, undo/redo, version history and the import dialog;
 `e2e/{persistence,undo}` cover kill-tab, offline and the undo matrix.
@@ -527,7 +527,7 @@ e2e/persistence/{kill-tab.spec.ts,offline-basic.spec.ts}, e2e/undo/undo-matrix.s
    remote changes are never undone locally (N3). Undo stack depth ≥ 200 operations.
 5. Undo/redo bound to `⌘/Ctrl+Z` and `⌘/Ctrl+Shift+Z`, disabled-with-reason when the stack is empty,
    and exposed as commands for the future palette.
-6. Local persistence with `y-indexeddb` per board (`nexus-board-<id>`), attaching before first
+6. Local persistence with `y-indexeddb` per board (`raven-board-<id>`), attaching before first
    render; the app opens a previously visited board with zero network.
 7. Durability: a mutation is written to IndexedDB within 100 ms (N2) — measured by a test that
    mutates, waits 100 ms, kills the provider and re-reads.
@@ -544,7 +544,7 @@ e2e/persistence/{kill-tab.spec.ts,offline-basic.spec.ts}, e2e/undo/undo-matrix.s
     never rewrites history).
 11. Export: `exportBoard(doc) → BoardExportV1` (JSON, stable key order, sorted arrays) including
     nodes, edges, groups, meta, and referenced file manifests (with content hashes; bodies are
-    included only in the `.nexus` zip variant).
+    included only in the `.raven` zip variant).
 12. Import: `importBoard(json)` validates with zod, runs the migration chain from
     `schemaVersion < current`, remaps IDs when importing into a board that already has nodes, and
     returns a report (`created`, `skipped`, `remapped`, `warnings`).
@@ -1347,7 +1347,7 @@ search (server search currently has an empty projection to read from). No WebSoc
 - `00_MASTER.md` §2 (Hocuspocus 4, one room per board, Redis extension, projection in the same
   transaction as the snapshot; projection is idempotent and replayable).
 - `09_BACKEND.md` §7 (sync service), `08_DATA_MODEL.md` §3 (projection tables and upsert rules).
-- `19_DEPLOYMENT.md` §10.2 (`nexus_sync_*` metrics — emit exactly those), §13 (memory budget).
+- `19_DEPLOYMENT.md` §10.2 (`raven_sync_*` metrics — emit exactly those), §13 (memory budget).
 - `03_UX.md` §11 (presence, comments, conflict copy), `18_TESTING.md` §7.6 (collab tests).
 
 ## 4 Files/modules affected
@@ -1376,7 +1376,7 @@ scripts/reproject.ts
    removed ones. The projection is **idempotent** (re-running produces no changes) and **replayable**
    (`scripts/reproject.ts --board=<id>` rebuilds from the snapshot).
 4. Projection failures never block the snapshot write: the snapshot is committed, the projection
-   error is recorded (`nexus_sync_projection_failures_total`) and retried with backoff; a board
+   error is recorded (`raven_sync_projection_failures_total`) and retried with backoff; a board
    whose projection is stale is flagged in the admin view.
 5. Client sync provider composes `y-indexeddb` (P3) with the WebSocket provider; IndexedDB always
    loads first so the board renders before the socket connects.
@@ -1395,7 +1395,7 @@ viewport: rect, activeNodeId? }` throttled to 20 Hz for cursors and 4 Hz for vie
     the doc holds only the anchor id so comment pins move with the node.
 11. Mentions notify by email (rate-limited, digest after 3 in 10 minutes) and in an in-app inbox.
 12. Room eviction: a room with zero connections for 60 s is snapshotted and unloaded; the memory
-    gauge `nexus_sync_doc_memory_bytes` is emitted per room.
+    gauge `raven_sync_doc_memory_bytes` is emitted per room.
 13. Concurrency semantics documented and tested: concurrent node moves converge to one position
     (last writer per field), concurrent rich-text edits merge character-wise, delete-vs-edit yields
     deletion with a recoverable undo for the editing user, and edges to deleted nodes are pruned by
@@ -1482,7 +1482,7 @@ viewport: rect, activeNodeId? }` throttled to 20 Hz for cursors and 4 Hz for vie
 4. A viewer's update is rejected server-side even with a tampered client.
 5. Killing a sync pod mid-edit loses nothing (clients resume on another pod).
 6. Presence cursors, follow mode and comments work with keyboard only.
-7. All `nexus_sync_*` metrics from `19_DEPLOYMENT.md` §10.2 are emitted.
+7. All `raven_sync_*` metrics from `19_DEPLOYMENT.md` §10.2 are emitted.
 
 ## 13 Definition of Done
 

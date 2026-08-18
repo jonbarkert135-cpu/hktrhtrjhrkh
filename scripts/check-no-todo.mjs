@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // N10 (00_MASTER.md §4): no TODO/FIXME/XXX markers in shipped source.
 // Escape hatch for code that legitimately contains the string (this script, its test, a
-// fixture): put `no-todo-check` on the same line. NEXUS-SPEC is never scanned.
+// fixture): put `no-todo-check` on the same line. RAVEN-SPEC is never scanned.
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { repoRoot, walk, rel, report } from './lib.mjs';

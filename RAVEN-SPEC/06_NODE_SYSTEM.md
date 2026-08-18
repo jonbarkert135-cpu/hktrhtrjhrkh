@@ -2,7 +2,7 @@
 
 ## Scope
 
-Defines the node layer of NEXUS: the `NodeTypeDefinition` registry that makes node types data
+Defines the node layer of Raven: the `NodeTypeDefinition` registry that makes node types data
 rather than engine code, the `EntityBase` fields shared by every node, the complete specification
 of all 21 built-in types (zod schema, sizes, LOD appearance, inspector, actions, card states),
 rich text, media/file handling, the create→archive lifecycle including async enrichment, and
@@ -75,7 +75,7 @@ export const ProvenanceKind = z.enum([
   'unfurl', // link unfurl worker
   'tool', // integration run (sherlock/spiderfoot/github/…)
   'ai', // accepted AI proposal
-  'derived', // computed by NEXUS (merge, cluster, analysis)
+  'derived', // computed by Raven (merge, cluster, analysis)
 ]);
 
 export const Provenance = z.object({
@@ -219,7 +219,7 @@ export interface NodeTypeDefinition<TData> {
   };
 
   io: {
-    toExport(n: EntityBase & { data: TData }): unknown; // nexus.board.v1 payload
+    toExport(n: EntityBase & { data: TData }): unknown; // raven.board.v1 payload
     fromExport(raw: unknown): EntityBase & { data: TData }; // must round-trip (N9)
     toMarkdown(n: EntityBase & { data: TData }): string;
     csvColumns: string[];
@@ -485,7 +485,7 @@ export const FileData = z.object({
 ### 4.6 `evidence`
 
 A note that asserts something, with an explicit claim/source pair. This is the OSINT primitive that
-differentiates NEXUS from a whiteboard.
+differentiates Raven from a whiteboard.
 
 ```ts
 export const EvidenceData = z.object({
@@ -973,9 +973,9 @@ CommonMark + GFM tables/task lists.
 | code block              | fenced + lang                 | yes   | ✓                                                                           |
 | table                   | GFM pipe table                | yes   | ✓ (alignment normalized to left)                                            |
 | horizontal rule         | `---`                         | yes   | ✓                                                                           |
-| image                   | `![alt](nexus-file:<fileId>)` | yes   | ✓ within a project archive                                                  |
+| image                   | `![alt](raven-file:<fileId>)` | yes   | ✓ within a project archive                                                  |
 | callout                 | `> [!INFO]` GFM-alert syntax  | yes   | ✓                                                                           |
-| mention                 | `[@Name](nexus-node:<id>)`    | yes   | ✓                                                                           |
+| mention                 | `[@Name](raven-node:<id>)`    | yes   | ✓                                                                           |
 | tag                     | `#tag`                        | yes   | ✓ unless the text legitimately starts with `#` at line start → escaped `\#` |
 | highlight               | `==text==`                    | yes   | ✓ (non-CommonMark; documented extension)                                    |
 
@@ -1083,7 +1083,7 @@ interface BlobStore {
 
 - **OPFS** (`navigator.storage.getDirectory()`) holds: every file the user added on this device
   (originals) until uploaded and acked, plus a cache of `thumb`/`card` renditions for boards the
-  user has opened. Layout: `/nexus/<projectId>/<fileId>/<rendition>`.
+  user has opened. Layout: `/raven/<projectId>/<fileId>/<rendition>`.
 - **S3/MinIO** holds the durable copy; uploads are presigned, multipart above 8 MB, resumable by
   re-requesting the presign with the same `sha256` (server dedupes by hash within the project).
 - Write path: write to OPFS → mark `File.state='local'` → enqueue upload → on ack `state='synced'`
@@ -1122,7 +1122,7 @@ only the per-type matchers. Baseline matcher scores:
 | text with Markdown signals     | text (`format: rich`)           | 0.8   | sticky 0.4  |
 | plain text ≤ 140 chars         | sticky                          | 0.6   | text 0.55   |
 | plain text > 140 chars         | text                            | 0.85  | –           |
-| `nexus/clipboard-v1` JSON      | (internal paste of nodes+edges) | 1.0   | –           |
+| `raven/clipboard-v1` JSON      | (internal paste of nodes+edges) | 1.0   | –           |
 
 Ties within 0.05 surface a paste chooser popover at the drop point (arrow keys + Enter), default
 preselected; the choice is remembered per input class for the session.
@@ -1476,7 +1476,7 @@ note`, `image → image`, `file → file`, `person → person`, `repo → repo`,
 
 ### 13.3 Enforcement
 
-- `nexus/no-node-type-switch` (`packages/config/eslint/rules/no-node-type-switch.cjs`) fails the
+- `raven/no-node-type-switch` (`packages/config/eslint/rules/no-node-type-switch.cjs`) fails the
   build on `switch (node.type)`, `node.type === '…'` and `[…].includes(node.type)` outside
   `packages/domain/src/nodes/` and test files.
 - `NodeTypeRegistry.assertComplete()` fails a type missing a label, `componentId`, colour token,

@@ -43,7 +43,7 @@ export function ImportDialog({ open, onOpenChange, onConfirm }: ImportDialogProp
       open={open}
       onOpenChange={onOpenChange}
       title="Import a board"
-      description="Nodes, edges, groups and notes from a .nexus.json file are added to this board."
+      description="Nodes, edges, groups and notes from a .raven.json file are added to this board."
       footer={
         <>
           <Button variant="secondary" onClick={() => onOpenChange(false)}>

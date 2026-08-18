@@ -51,12 +51,12 @@ describe('metrics plugin', () => {
     await app.close();
 
     const metrics = await registry.metrics();
-    expect(metrics).toContain('nexus_http_requests_total');
-    expect(metrics).toContain('nexus_http_request_duration_seconds');
+    expect(metrics).toContain('raven_http_requests_total');
+    expect(metrics).toContain('raven_http_request_duration_seconds');
     expect(metrics).toMatch(
-      /nexus_http_requests_total\{service="nexus-api",method="GET",route="\/ok",status="200"\}/,
+      /raven_http_requests_total\{service="raven-api",method="GET",route="\/ok",status="200"\}/,
     );
     expect(metrics).toMatch(/route="unmatched",status="404"/);
-    expect(metrics).toMatch(/nexus_http_request_duration_seconds_count\{[^}]*route="\/ok"\} 1/);
+    expect(metrics).toMatch(/raven_http_request_duration_seconds_count\{[^}]*route="\/ok"\} 1/);
   });
 });

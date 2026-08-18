@@ -11,7 +11,7 @@ export interface BlobStore {
   remove(boardId: string, fileId: string): Promise<void>;
 }
 
-const BLOB_DB = 'nexus-blobs';
+const BLOB_DB = 'raven-blobs';
 const BLOB_STORE = 'files';
 
 const keyOf = (boardId: string, fileId: string): string => `boards/${boardId}/${fileId}`;

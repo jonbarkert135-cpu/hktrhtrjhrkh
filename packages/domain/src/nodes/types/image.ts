@@ -1,7 +1,7 @@
 /**
  * `image` — a picture stored as a File row (06_NODE_SYSTEM.md §4.4). EXIF is kept because it is
  * OSINT-relevant, and the GPS flag is surfaced in the UI: an analyst must see that coordinates
- * exist, but NEXUS never turns them into a location node without an explicit action (P4 §7).
+ * exist, but Raven never turns them into a location node without an explicit action (P4 §7).
  */
 
 import { z } from 'zod';

@@ -2,7 +2,7 @@
 # `.trivyignore` from the workspace root). Policy (15_SECURITY.md §9.4):
 #
 #   * only findings we cannot fix ourselves may be listed here;
-#   * every entry states the affected component, why it is not exploitable for NEXUS and the date
+#   * every entry states the affected component, why it is not exploitable for Raven and the date
 #     it must be re-checked (plain `.trivyignore` holds bare IDs, so the review date is a comment);
 #   * anything fixable is fixed in the Dockerfile or the lockfile, never suppressed.
 #

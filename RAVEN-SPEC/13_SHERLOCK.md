@@ -1,4 +1,4 @@
-# NEXUS — 13 — SHERLOCK INTEGRATION (username enumeration)
+# Raven — 13 — SHERLOCK INTEGRATION (username enumeration)
 
 ## Scope
 
@@ -97,7 +97,7 @@ intact (same architecture test as `12_SPIDERFOOT.md` §9.6).
 
 ```
 docker run --rm \
-  --name nexus-sherlock-{runId} \
+  --name raven-sherlock-{runId} \
   --user 65532:65532 \
   --read-only \
   --tmpfs /tmp:rw,noexec,nosuid,size=128m \
@@ -105,11 +105,11 @@ docker run --rm \
   --security-opt no-new-privileges \
   --pids-limit 256 \
   --memory 1g --memory-swap 1g --cpus 1 \
-  --network nexus-egress \
+  --network raven-egress \
   --env HTTP_PROXY=http://egress:3128 \
   --env HTTPS_PROXY=http://egress:3128 \
   --env NO_PROXY= \
-  --mount type=bind,src=/var/nexus/runs/{runId}/out,dst=/out,rw \
+  --mount type=bind,src=/var/raven/runs/{runId}/out,dst=/out,rw \
   {image}@{digest} \
   {argv}
 ```
@@ -171,7 +171,7 @@ copied out by the runner sidecar (`19_DEPLOYMENT.md` §5).
   - deny: all RFC1918, loopback, link-local, IPv6 ULA, and cloud metadata endpoints
     (`169.254.169.254`, `metadata.google.internal`) — enforced at the proxy by resolved IP, after
     DNS, so DNS rebinding cannot bypass it,
-  - deny: any host in the instance's own domain and the NEXUS service hostnames,
+  - deny: any host in the instance's own domain and the Raven service hostnames,
   - cap: `EGRESS_MAX_REQUESTS = 3_000`, `EGRESS_MAX_BYTES = 128 MB` per run,
   - rate: max 10 requests/second aggregate per run.
 - User-supplied `--proxy` is validated by the SSRF guard (N7): must be `http(s)://` or `socks5://`,
@@ -183,11 +183,11 @@ copied out by the runner sidecar (`19_DEPLOYMENT.md` §5).
 
 ### 3.4 Artifact handling
 
-1. Runner creates `/var/nexus/runs/{runId}/out` owned by `65532:65532`, mode `0700`.
+1. Runner creates `/var/raven/runs/{runId}/out` owned by `65532:65532`, mode `0700`.
 2. After exit, the runner:
    - checks the exit code (§3.5),
    - stats the JSON file: missing → `SH_NO_OUTPUT`; > 32 MB → `SH_OUTPUT_TOO_LARGE`,
-   - computes sha256, uploads to `s3://nexus/runs/{runId}/sherlock.json` with 30-day lifecycle,
+   - computes sha256, uploads to `s3://raven/runs/{runId}/sherlock.json` with 30-day lifecycle,
    - uploads `stdout.log`, `stderr.log`, and a `run.json` (argv, image digest, capabilities,
      timings, egress stats),
    - deletes the host directory.
@@ -242,7 +242,7 @@ Rules:
 - `semver === null` is **not** fatal; the parser is shape-driven, not version-driven. The version is
   recorded in provenance so a future shape change is diagnosable.
 - If the probed semver is lower than `0.16.0`, a warning banner appears in Settings: "This image
-  predates the version NEXUS was verified against (v0.16.0). Results may parse differently."
+  predates the version Raven was verified against (v0.16.0). Results may parse differently."
 - `jsonShape` is set to `unknown` at probe time and learned from the first successful run (§4.2),
   then cached per digest.
 
@@ -362,7 +362,7 @@ never a hit. A false negative costs a lead; a false positive costs an accusation
 
 `counts.unreadable` counts records that produced no usable `site`. If
 `unreadable / total > 0.25`, the run is flagged `SH_PARSE_DEGRADED`: results are still shown, with a
-banner "NEXUS could not read 118 of 402 records from this Sherlock build. Import with care." and
+banner "Raven could not read 118 of 402 records from this Sherlock build. Import with care." and
 the raw artifact linked.
 
 `partial` is true when the run was killed by timeout or cancellation, when the egress caps were hit,
@@ -381,7 +381,7 @@ first 4 KB of the artifact, and a link to the digest pinning setting. This is th
 
 ### 5.1 What each status means
 
-| Status      | Meaning NEXUS may state                                            | Meaning NEXUS may NOT state                                                      |
+| Status      | Meaning Raven may state                                            | Meaning Raven may NOT state                                                      |
 | ----------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
 | `claimed`   | "A profile page exists at this URL for this handle."               | "This person has an account here."                                               |
 | `available` | "The service reported no profile at this handle at {time}."        | "This person has no account here." (private/renamed/shadowbanned profiles exist) |
@@ -419,7 +419,7 @@ confidence(site) =
 clamped to [0.15, 0.80]
 ```
 
-`confidence` is **capped at 0.80**. NEXUS never assigns higher confidence to a username-enumeration
+`confidence` is **capped at 0.80**. Raven never assigns higher confidence to a username-enumeration
 result, because the tool cannot distinguish "page exists" from "this person owns it". The curated
 sets live in `packages/integrations/sherlock/site-quality.ts` as data with a comment citing why each
 entry is listed; entries default to neutral (no adjustment) when unknown.
@@ -427,7 +427,7 @@ entry is listed; entries default to neutral (no adjustment) when unknown.
 `available` results are stored with `confidence: 0.5` on the _negative_ claim and are **not**
 imported as nodes by default (§6.4).
 
-### 5.4 What NEXUS must never assert — and the UI copy that enforces it
+### 5.4 What Raven must never assert — and the UI copy that enforces it
 
 Hard rules, encoded as lint-checked copy constants in
 `packages/integrations/sherlock/copy.ts`:
@@ -484,7 +484,7 @@ Derived, opt-in in the import sheet:
 | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | `domain` for `serviceHost` registrable domain | one per distinct service host                                                                                                                                   | off (adds ~N domain nodes with little value) |
 | `link` node for the profile URL               | only when the user wants the page itself as an artifact                                                                                                         | off                                          |
-| `website` unfurl of the profile URL           | requires a separate unfurl job (`06_NODE_SYSTEM.md`) and an extra network fetch **from NEXUS**, which is a different actor than the tool — explicitly consented | off                                          |
+| `website` unfurl of the profile URL           | requires a separate unfurl job (`06_NODE_SYSTEM.md`) and an extra network fetch **from Raven**, which is a different actor than the tool — explicitly consented | off                                          |
 
 ### 6.2 Edges
 
@@ -614,7 +614,7 @@ export interface UsernameWatch {
 4. NSFW site checking is off by default, requires the per-run toggle, and is recorded in the consent
    record.
 5. Minors/sensitive-target policy: the consent dialog requires the analyst to affirm that the target
-   is not a minor and that the research has a lawful basis. NEXUS cannot verify this; recording the
+   is not a minor and that the research has a lawful basis. Raven cannot verify this; recording the
    affirmation is the control.
 6. Bulk enumeration of many handles is not offered in the UI. The API enforces the same per-user
    quota, so scripting around the UI gains nothing.
@@ -656,7 +656,7 @@ handle is available only through the run record, which is ACL'd to the project.
 | Code                    | Title                           | Body                                                                                        | Action                              |
 | ----------------------- | ------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------- |
 | `SH_DISABLED`           | "Sherlock is not enabled"       | "An administrator has not enabled username enumeration on this instance."                   | "Contact admin"                     |
-| `SH_INCOMPATIBLE_IMAGE` | "Unsupported Sherlock image"    | "The configured image ({digest}) does not support `--json`, which NEXUS requires."          | "Open settings"                     |
+| `SH_INCOMPATIBLE_IMAGE` | "Unsupported Sherlock image"    | "The configured image ({digest}) does not support `--json`, which Raven requires."          | "Open settings"                     |
 | `SH_CONSENT_REQUIRED`   | "Confirm authorization"         | "This run contacts ~400 external sites. Confirm you have a lawful basis."                   | "Review and confirm"                |
 | `SH_QUOTA`              | "Run limit reached"             | "You have run 20 username checks this hour. The limit resets at 15:00."                     | "See run history"                   |
 | `SH_RECENT_RUN`         | "Checked recently"              | "@{handle} was checked 4 minutes ago. Re-running now will mostly repeat the same requests." | "Show last result" / "Force re-run" |
@@ -665,7 +665,7 @@ handle is available only through the run record, which is ACL'd to the project.
 | `SH_NONZERO_EXIT`       | "Finished with warnings"        | "The tool reported errors for some sites but produced a full result file."                  | "Show details"                      |
 | `SH_NO_OUTPUT`          | "No results file"               | "The run finished but wrote no JSON output."                                                | "Open run log"                      |
 | `SH_OUTPUT_TOO_LARGE`   | "Result file too large"         | "The output exceeded 32 MB and was not read."                                               | "Download raw"                      |
-| `SH_PARSE`              | "Unreadable results"            | "NEXUS did not recognize the structure of this Sherlock build's JSON output."               | "Download raw" / "Report"           |
+| `SH_PARSE`              | "Unreadable results"            | "Raven did not recognize the structure of this Sherlock build's JSON output."               | "Download raw" / "Report"           |
 | `SH_PARSE_DEGRADED`     | "Some results unreadable"       | "{n} of {total} records could not be read. Import with care."                               | "Continue"                          |
 | `SH_OOM`                | "Ran out of memory"             | "The run exceeded its 1 GB memory limit and was stopped."                                   | "Retry with fewer sites"            |
 | `SH_PROXY_INVALID`      | "Proxy rejected"                | "The proxy address must be a public http, https or socks5 endpoint."                        | "Edit proxy"                        |
@@ -743,9 +743,9 @@ site-list editing UI (the tool's bundled list is used as-is).
 2. **Broad egress is unavoidable.** Sherlock must reach hundreds of third-party hosts, so we cannot
    use a tight allowlist like SpiderFoot's. Mitigation: deny-private-ranges after DNS resolution,
    request/byte caps, per-run rate limiting, and full logging. This is the weakest isolation point
-   in NEXUS and is flagged as such in `15_SECURITY.md`.
+   in Raven and is flagged as such in `15_SECURITY.md`.
 3. **False positives are inherent.** Soft-404s and anti-bot pages cannot be reliably distinguished
-   without fetching and analyzing page content, which NEXUS deliberately does not do (it would turn
+   without fetching and analyzing page content, which Raven deliberately does not do (it would turn
    a metadata check into content scraping). The 0.80 confidence cap and the `lead` verification
    state are the compensating controls.
 4. **The site list quality varies** across the ~400 supported sites; our `CURATED_RELIABLE` and

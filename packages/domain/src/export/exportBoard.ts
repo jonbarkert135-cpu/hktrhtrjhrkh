@@ -52,7 +52,7 @@ export function exportBoard(doc: Y.Doc, options: ExportOptions): BoardExportV1 {
     format: BOARD_EXPORT_FORMAT,
     exportedAt: options.now,
     generator: {
-      app: 'nexus',
+      app: 'raven',
       version: options.appVersion,
       schemaVersion: CURRENT_SCHEMA_VERSION,
     },
@@ -68,7 +68,7 @@ export function exportBoard(doc: Y.Doc, options: ExportOptions): BoardExportV1 {
   });
 }
 
-/** The bytes written to `<board title>.nexus.json`. */
+/** The bytes written to `<board title>.raven.json`. */
 export function serializeBoardExport(value: BoardExportV1): string {
   return stableStringify(value);
 }

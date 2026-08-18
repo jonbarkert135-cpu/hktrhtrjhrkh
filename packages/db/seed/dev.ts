@@ -38,8 +38,8 @@ async function main(): Promise<void> {
 
   await prisma.organization.upsert({
     where: { id: ORG_ID },
-    create: { id: ORG_ID, slug: 'nexus-dev', name: 'NEXUS Dev', updatedAt: now },
-    update: { slug: 'nexus-dev', name: 'NEXUS Dev', updatedAt: now },
+    create: { id: ORG_ID, slug: 'raven-dev', name: 'Raven Dev', updatedAt: now },
+    update: { slug: 'raven-dev', name: 'Raven Dev', updatedAt: now },
   });
 
   const userIds: string[] = [];
@@ -50,12 +50,12 @@ async function main(): Promise<void> {
       where: { id },
       create: {
         id,
-        email: `${u.key}@dev.nexus.local`,
+        email: `${u.key}@dev.raven.local`,
         emailVerified: true,
         name: u.name,
         updatedAt: now,
       },
-      update: { email: `${u.key}@dev.nexus.local`, name: u.name, updatedAt: now },
+      update: { email: `${u.key}@dev.raven.local`, name: u.name, updatedAt: now },
     });
     // ponytail: no credential row is seeded, so seed users cannot password-login yet. Better-Auth
     // owns password hashing (15_SECURITY.md §9) and lives in apps/api; upgrade path is to call its

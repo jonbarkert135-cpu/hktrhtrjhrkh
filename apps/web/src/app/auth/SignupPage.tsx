@@ -55,7 +55,7 @@ export default function SignupPage() {
   return (
     <div className="nx-auth">
       <main className="nx-auth-card nx-stack">
-        <h1>Create your NEXUS account</h1>
+        <h1>Create your Raven OSINT account</h1>
         {formError ? (
           <Banner kind="danger" title="Couldn't create your account">
             {formError}

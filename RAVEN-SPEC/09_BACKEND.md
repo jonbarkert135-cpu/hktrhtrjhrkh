@@ -1,9 +1,9 @@
-# NEXUS — 09 BACKEND
+# Raven — 09 BACKEND
 
 ## Services, APIs, jobs, files, observability
 
 **Scope**
-This document specifies the server side of NEXUS: `apps/api` (Fastify 5 + tRPC v11 + REST/OpenAPI),
+This document specifies the server side of Raven: `apps/api` (Fastify 5 + tRPC v11 + REST/OpenAPI),
 `apps/sync` (Hocuspocus 4 + projection) and `apps/worker` (BullMQ consumers, unfurl, files, AI,
 exports, maintenance). `apps/runner` is specified in `10_INTEGRATIONS.md` §5–§8 and is referenced,
 not duplicated here. It refines `00_MASTER.md` §2 and `02_ARCHITECTURE.md` §1, §6–§11; database
@@ -38,7 +38,7 @@ apps/api/src/
 │  ├─ auth.ts                 // Better-Auth handler mount + session resolution
 │  ├─ context.ts              // AuthContext, txId, RLS session var
 │  ├─ rate-limit.ts           // Redis token buckets
-│  ├─ error.ts                // NexusError mapping (02_ARCHITECTURE.md §6)
+│  ├─ error.ts                // RavenError mapping (02_ARCHITECTURE.md §6)
 │  ├─ otel.ts                 // tracing + metrics
 │  └─ openapi.ts              // spec generation + /api/v1/openapi.json + docs
 ├─ router/                    // tRPC
@@ -76,7 +76,7 @@ same `services/*` function (ADR-006). Controllers contain validation, mapping an
 
 ```ts
 export interface AuthContext {
-  txId: string; // uuid v7, echoed in the `x-nexus-tx` response header
+  txId: string; // uuid v7, echoed in the `x-raven-tx` response header
   user: { id: string; email: string } | null;
   session: { id: string; expiresAt: Date } | null;
   orgId: string | null; // resolved per request from input or the active org cookie
@@ -496,7 +496,7 @@ proposals.reject: mutation({ proposalId: Id, itemIds: z.array(Id).optional(), re
 
 `ai.*` returns a `jobId`; results arrive as `ai:done { proposalId }` on `/events`. All AI output is
 zod-validated before it becomes a proposal; invalid items are dropped and counted in
-`nexus_ai_schema_reject_total`.
+`raven_ai_schema_reject_total`.
 
 ### 3.12 `exports`
 
@@ -559,7 +559,7 @@ Every `admin.*` call writes an audit row: `{actor, action, target, before, after
 
 ```json
 {
-  "type": "https://nexus.dev/errors/UNFURL_PRIVATE_RANGE",
+  "type": "https://raven.dev/errors/UNFURL_PRIVATE_RANGE",
   "title": "URL blocked",
   "status": 422,
   "detail": "The URL resolves to a private IP range.",
@@ -605,8 +605,8 @@ Events: `board.created`, `board.deleted`, `node.created`, `node.updated`, `node.
 `run.succeeded`, `run.failed`, `proposal.created`, `proposal.accepted`, `export.ready`,
 `file.quarantined`.
 
-Delivery: `POST` JSON with headers `X-Nexus-Event`, `X-Nexus-Delivery` (uuid), `X-Nexus-Timestamp`,
-`X-Nexus-Signature: v1=<hex hmac-sha256 of "<timestamp>.<body>">` using the endpoint secret.
+Delivery: `POST` JSON with headers `X-Raven-Event`, `X-Raven-Delivery` (uuid), `X-Raven-Timestamp`,
+`X-Raven-Signature: v1=<hex hmac-sha256 of "<timestamp>.<body>">` using the endpoint secret.
 Receivers must reject timestamps older than 300 s. Node events are **debounced per node at 5 s**
 and coalesced so a drag does not emit 60 webhooks.
 
@@ -648,7 +648,7 @@ const server = Server.configure({
   debounce: 2_000, maxDebounce: 10_000,  // store() cadence → projection cadence
   quiet: true,
   extensions: [
-    new Redis({ host: …, prefix: 'nexus:hp' }),           // multi-pod fanout + awareness
+    new Redis({ host: …, prefix: 'raven:hp' }),           // multi-pod fanout + awareness
     new Database({ fetch, store }),                        // §5.3
     new Logger({ onLoadDocument: false }),
     new ThrottleExtension({ throttle: 200, banTime: 60 }), // messages/s per socket
@@ -705,7 +705,7 @@ store: async ({ documentName, state, document }) => {
 
 Failure handling: a projection failure rolls back the whole transaction (binary included) and the
 update is retried on the next debounce; three consecutive failures push a `projection:repair` job
-and raise `nexus_projection_failures_total`. Because the CRDT state is retained in the room memory
+and raise `raven_projection_failures_total`. Because the CRDT state is retained in the room memory
 and in every connected client's IndexedDB, no data is lost by a rollback (G3).
 
 ### 5.4 Write authorization and guards
@@ -754,7 +754,7 @@ request(url)
  5. ssrf guard:     §6.2 — resolve, filter, pin
  6. fetch:          GET with pinned IP, Host header preserved, timeout 8 s connect / 15 s total,
                     max 5 MB body, max 3 redirects (each re-validated by the guard),
-                    UA "NexusBot/1.0 (+https://<host>/bot)", Accept-Encoding gzip/br
+                    UA "RavenBot/1.0 (+https://<host>/bot)", Accept-Encoding gzip/br
  7. classify:       content-type → html | image | pdf | json | other
  8. extract:        §6.3 (html) | image probe | pdf first-page + metadata | json → pretty preview
  9. derivatives:    favicon fetch, OG image fetch (≤ 5 MB), screenshot (§6.5)
@@ -853,7 +853,7 @@ visible to the analyst (provenance requirement).
 Per registrable domain: max 2 concurrent requests and 1 request per 500 ms (Redis token bucket
 `polite:<domain>`); respect `Retry-After`; obey `robots.txt` for both fetch and screenshot;
 `Crawl-delay` is honored up to a 10 s cap (beyond that the job fails fast with
-`code:'ROBOTS_CRAWL_DELAY_TOO_HIGH'`). NEXUS never follows links found in the page — unfurl is
+`code:'ROBOTS_CRAWL_DELAY_TOO_HIGH'`). Raven never follows links found in the page — unfurl is
 single-URL, never a crawler.
 
 ### 6.7 Failure modes
@@ -945,7 +945,7 @@ executables (`application/x-*executable`, `.dll`, `.so`), `.iso`, `.dmg`, Office
 
 Derivatives are written to `…/{fileId}/thumb.webp` and `…/{fileId}/preview.*`; failures are
 non-fatal (`variants.thumb = null`, the UI falls back to a kind glyph) and are recorded in
-`nexus_file_derivative_fail_total{kind}`.
+`raven_file_derivative_fail_total{kind}`.
 
 ### 7.5 Access and lifecycle
 
@@ -999,9 +999,9 @@ work is a no-op while the job exists. `removeOnComplete: { age: 3600, count: 100
 ### 8.3 Failure handling
 
 - Attempts exhausted → the job moves to the queue's dead-letter set (`<queue>:dead`, a separate
-  BullMQ queue with no worker) with the last error serialized as a `NexusError`.
+  BullMQ queue with no worker) with the last error serialized as a `RavenError`.
 - `admin.jobs.retryDead` re-enqueues selected dead jobs with a fresh deadline.
-- `nexus_job_dead_total{queue,code}` is alerted at > 10 in 15 min.
+- `raven_job_dead_total{queue,code}` is alerted at > 10 in 15 min.
 - Poison detection: three consecutive failures with the same `code` for the same `idempotencyKey`
   stop retrying immediately (no exponential burn).
 - Worker crash → BullMQ stalled-job recovery after `lockDuration` (30 s, renewed every 15 s during
@@ -1019,7 +1019,7 @@ Every consumer must be safe under at-least-once delivery:
 - `ai:*` — a duplicate returns the existing proposal id.
 - `export:build` — unique `(board_id, doc_version, format, options_hash)`; duplicates return the
   existing export.
-- `webhook:deliver` — receivers deduplicate on `X-Nexus-Delivery`; we guarantee at-least-once.
+- `webhook:deliver` — receivers deduplicate on `X-Raven-Delivery`; we guarantee at-least-once.
 
 ---
 
@@ -1087,7 +1087,7 @@ export async function consume(rule: RuleId, key: string, cost = 1): Promise<Rate
 
 Keys are hashed (`sha256(rule|key)[0..16]`) to bound key size. Failure mode: if Redis is
 unavailable, the limiter **fails open for reads and fails closed for writes and runs**, logs
-`nexus_ratelimit_degraded_total`, and the API stays available for viewing. Per-rule configuration
+`raven_ratelimit_degraded_total`, and the API stays available for viewing. Per-rule configuration
 lives in `packages/platform/src/ratelimit.rules.ts` and is overridable per org plan.
 
 ---
@@ -1107,66 +1107,66 @@ non-2xx and 10% for 2xx above 5 ms.
 
 ```text
 # API
-nexus_http_requests_total{service,route,method,code}
-nexus_http_request_duration_ms{service,route,method}       histogram [1,5,10,25,50,100,250,500,1000,2500,5000]
-nexus_trpc_calls_total{procedure,ok}
-nexus_trpc_duration_ms{procedure}
-nexus_ratelimit_block_total{rule}
-nexus_ratelimit_degraded_total
-nexus_auth_failures_total{reason}
-nexus_idempotency_replays_total{route}
+raven_http_requests_total{service,route,method,code}
+raven_http_request_duration_ms{service,route,method}       histogram [1,5,10,25,50,100,250,500,1000,2500,5000]
+raven_trpc_calls_total{procedure,ok}
+raven_trpc_duration_ms{procedure}
+raven_ratelimit_block_total{rule}
+raven_ratelimit_degraded_total
+raven_auth_failures_total{reason}
+raven_idempotency_replays_total{route}
 
 # Sync
-nexus_sync_connections{service}                             gauge
-nexus_sync_rooms_active                                      gauge
-nexus_sync_messages_total{type}
-nexus_sync_update_bytes                                      histogram
-nexus_sync_store_duration_ms
-nexus_sync_auth_denied_total{reason}
+raven_sync_connections{service}                             gauge
+raven_sync_rooms_active                                      gauge
+raven_sync_messages_total{type}
+raven_sync_update_bytes                                      histogram
+raven_sync_store_duration_ms
+raven_sync_auth_denied_total{reason}
 
 # Projection
-nexus_projection_lag_seconds                                 histogram
-nexus_projection_rows_total{op="insert|update|delete"}
-nexus_projection_duration_ms{mode="full|delta"}
-nexus_projection_failures_total{code}
-nexus_projection_mismatch_total
-nexus_snapshot_bytes{kind="incremental|checkpoint"}
+raven_projection_lag_seconds                                 histogram
+raven_projection_rows_total{op="insert|update|delete"}
+raven_projection_duration_ms{mode="full|delta"}
+raven_projection_failures_total{code}
+raven_projection_mismatch_total
+raven_snapshot_bytes{kind="incremental|checkpoint"}
 
 # Jobs
-nexus_job_enqueued_total{queue,name}
-nexus_job_wait_ms{queue}
-nexus_job_duration_ms{queue,name}
-nexus_job_failed_total{queue,name,code}
-nexus_job_dead_total{queue,name,code}
-nexus_queue_depth{queue,state="waiting|active|delayed|failed"}   gauge
+raven_job_enqueued_total{queue,name}
+raven_job_wait_ms{queue}
+raven_job_duration_ms{queue,name}
+raven_job_failed_total{queue,name,code}
+raven_job_dead_total{queue,name,code}
+raven_queue_depth{queue,state="waiting|active|delayed|failed"}   gauge
 
 # Unfurl / files
-nexus_unfurl_total{result="ready|blocked|failed|cached"}
-nexus_unfurl_duration_ms{stage="fetch|parse|screenshot"}
-nexus_unfurl_bytes_fetched
-nexus_ssrf_block_total{reason}
-nexus_browser_pool_size / nexus_browser_pool_busy              gauge
-nexus_file_processed_total{kind,result}
-nexus_file_bytes_total{kind}
-nexus_file_scan_duration_ms
-nexus_file_quarantined_total
-nexus_file_derivative_fail_total{kind}
+raven_unfurl_total{result="ready|blocked|failed|cached"}
+raven_unfurl_duration_ms{stage="fetch|parse|screenshot"}
+raven_unfurl_bytes_fetched
+raven_ssrf_block_total{reason}
+raven_browser_pool_size / raven_browser_pool_busy              gauge
+raven_file_processed_total{kind,result}
+raven_file_bytes_total{kind}
+raven_file_scan_duration_ms
+raven_file_quarantined_total
+raven_file_derivative_fail_total{kind}
 
 # Runs / AI
-nexus_run_total{integration,status}
-nexus_run_duration_ms{integration}
-nexus_runner_container_kills_total{reason="timeout|oom|policy|cancel"}
-nexus_ai_tokens_total{model,dir="in|out"}
-nexus_ai_cost_usd_total{org}
-nexus_ai_latency_ms{feature}
-nexus_ai_schema_reject_total{feature}
-nexus_proposal_items_total{origin="ai|tool|import",status="accepted|rejected|pending"}
+raven_run_total{integration,status}
+raven_run_duration_ms{integration}
+raven_runner_container_kills_total{reason="timeout|oom|policy|cancel"}
+raven_ai_tokens_total{model,dir="in|out"}
+raven_ai_cost_usd_total{org}
+raven_ai_latency_ms{feature}
+raven_ai_schema_reject_total{feature}
+raven_proposal_items_total{origin="ai|tool|import",status="accepted|rejected|pending"}
 
 # Platform
-nexus_build_info{version,commit}                              gauge=1
-nexus_db_pool_in_use{service}                                 gauge
-nexus_webhook_delivery_total{event,code}
-nexus_storage_bytes{org}                                      gauge (hourly)
+raven_build_info{version,commit}                              gauge=1
+raven_db_pool_in_use{service}                                 gauge
+raven_webhook_delivery_total{event,code}
+raven_storage_bytes{org}                                      gauge (hourly)
 ```
 
 ### 12.3 Tracing
@@ -1176,7 +1176,7 @@ sends `traceparent` on tRPC/REST calls; `txId` equals the trace id's low 64 bits
 for human search. Instrumented: HTTP server/client, Prisma, Redis, BullMQ (producer and consumer
 linked via job attributes), S3 SDK, Playwright captures, runner exec. Sampling: 100% of errors and
 of `runs`/`export`/`projection` spans, 5% of routine requests, plus a forced-sample header for
-support (`x-nexus-debug-trace: 1`, admin-only).
+support (`x-raven-debug-trace: 1`, admin-only).
 
 ---
 
@@ -1217,7 +1217,7 @@ and support `--dry-run` through `admin.jobs` for operators.
 | R4  | tRPC and REST drift (ADR-006)                                                               | Plugin breakage                                    | Both call `services/*`; contract parity tests in `18_TESTING.md` §7; OpenAPI generated from the same zod schemas                                            |
 | R5  | Virus scanning is optional in self-host deployments                                         | Malware distribution through a shared board        | `FILES_REQUIRE_SCAN` defaults to true in prod; without a scanner configured, uploads of executable-adjacent kinds are rejected outright                     |
 | R6  | At-least-once job delivery combined with a non-idempotent future consumer                   | Duplicate side effects (double run, double charge) | Idempotency is a review checklist item for every new consumer; `runs` has a DB-level unique key; new queues require an idempotency note in the PR           |
-| R7  | Rate limiter fails open for reads when Redis is down                                        | Load amplification during an incident              | Fail-closed for writes/runs, per-pod in-process fallback limiter (1/10 of the global limit), alert on `nexus_ratelimit_degraded_total`                      |
+| R7  | Rate limiter fails open for reads when Redis is down                                        | Load amplification during an incident              | Fail-closed for writes/runs, per-pod in-process fallback limiter (1/10 of the global limit), alert on `raven_ratelimit_degraded_total`                      |
 | R8  | Idempotency-key store growth and 24 h replay window mismatch with long offline periods      | Duplicate operations after > 24 h offline          | Offline pending intents carry a client-generated key; the client also checks for an existing entity by key before re-submitting (`02_ARCHITECTURE.md` §5.5) |
 | R9  | Blob GC deleting a blob still referenced by an unprojected board version                    | Broken file reference                              | Two-phase GC, 7-day quarantine, reference check against the projection **and** a `projected_version >= doc_version` precondition per board                  |
 | R10 | Archive listing and docx/pdf rendering pull heavy native dependencies into the worker image | Image size, CVE surface                            | Derivative generation isolated in its own worker deployment with a minimal image; failure is non-fatal (glyph fallback)                                     |

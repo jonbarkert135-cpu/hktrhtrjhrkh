@@ -1,8 +1,8 @@
-# NEXUS — 19 — DEPLOYMENT, CI/CD AND OPERATIONS
+# Raven — 19 — DEPLOYMENT, CI/CD AND OPERATIONS
 
 ## Scope
 
-Defines every environment NEXUS runs in and how code reaches them: config matrix, the reference
+Defines every environment Raven runs in and how code reaches them: config matrix, the reference
 `docker-compose.yml` for self-hosting, the Kubernetes manifest set (including the gVisor
 RuntimeClass and runner network isolation), the GitHub Actions pipeline, database migration policy,
 release/versioning, feature flags, backup/restore and DR, the observability stack with concrete
@@ -18,7 +18,7 @@ a demo.
 | -------------- | ------------------------------- | --------------------------------------- | ----------------------------------- | -------------------------------- |
 | Purpose        | development                     | review a PR end-to-end                  | rehearse release, load/DR drills    | users                            |
 | Topology       | docker-compose                  | namespace per PR in the staging cluster | full k8s, 1 replica each            | full k8s, HA                     |
-| Domain         | `localhost`                     | `pr-<n>.preview.nexus.internal`         | `staging.nexus.app`                 | `nexus.app`                      |
+| Domain         | `localhost`                     | `pr-<n>.preview.raven.internal`         | `staging.raven.app`                 | `raven.app`                      |
 | Postgres       | container, ephemeral            | shared cluster, DB per PR               | dedicated, PITR on                  | dedicated HA, PITR on            |
 | Redis          | container                       | shared, DB index per PR                 | dedicated                           | dedicated, replicated            |
 | Object storage | MinIO container                 | MinIO, bucket per PR                    | S3 bucket                           | S3 bucket, versioned             |
@@ -64,7 +64,7 @@ export const serverEnv = z
     AI_API_KEY: z.string().optional(),
     AI_MONTHLY_BUDGET_USD: z.coerce.number().default(50),
     OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
-    OTEL_SERVICE_NAME: z.string().default('nexus-api'),
+    OTEL_SERVICE_NAME: z.string().default('raven-api'),
     LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error']).default('info'),
     NEXUS_TEST_ENDPOINTS: z.coerce.boolean().default(false),
     NEXUS_INTEGRATIONS_MODE: z.enum(['real', 'stub']).default('real'),
@@ -147,17 +147,17 @@ against the filesystem.
 Single-host deployment, the supported self-host path. Runs everything except gVisor (noted below).
 
 ```yaml
-name: nexus
+name: raven
 
 x-node-common: &node-common
   restart: unless-stopped
   environment: &node-env
     NODE_ENV: production
     NEXUS_ENV: production
-    DATABASE_URL: postgres://nexus:${POSTGRES_PASSWORD}@postgres:5432/nexus
+    DATABASE_URL: postgres://nexus:${POSTGRES_PASSWORD}@postgres:5432/raven
     REDIS_URL: redis://redis:6379
     S3_ENDPOINT: http://minio:9000
-    S3_BUCKET: nexus
+    S3_BUCKET: raven
     S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
     S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
     S3_FORCE_PATH_STYLE: 'true'
@@ -183,7 +183,7 @@ services:
     environment:
       POSTGRES_USER: nexus
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: nexus
+      POSTGRES_DB: raven
     command:
       - postgres
       - -c
@@ -200,7 +200,7 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./backups:/backups
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U nexus -d nexus']
+      test: ['CMD-SHELL', 'pg_isready -U nexus -d raven']
       interval: 10s
       timeout: 5s
       retries: 12
@@ -261,7 +261,7 @@ services:
       migrate: { condition: service_completed_successfully }
     environment:
       <<: *node-env
-      OTEL_SERVICE_NAME: nexus-api
+      OTEL_SERVICE_NAME: raven-api
     healthcheck:
       test: ['CMD', 'node', 'dist/healthcheck.js', 'http://127.0.0.1:3001/healthz']
       interval: 15s
@@ -277,7 +277,7 @@ services:
       migrate: { condition: service_completed_successfully }
     environment:
       <<: *node-env
-      OTEL_SERVICE_NAME: nexus-sync
+      OTEL_SERVICE_NAME: raven-sync
     healthcheck:
       test: ['CMD', 'node', 'dist/healthcheck.js', 'http://127.0.0.1:3002/healthz']
       interval: 15s
@@ -292,7 +292,7 @@ services:
       migrate: { condition: service_completed_successfully }
     environment:
       <<: *node-env
-      OTEL_SERVICE_NAME: nexus-worker
+      OTEL_SERVICE_NAME: raven-worker
     networks: [core, egress]
 
   runner:
@@ -300,7 +300,7 @@ services:
     image: ghcr.io/nexus/runner:${NEXUS_VERSION}
     environment:
       <<: *node-env
-      OTEL_SERVICE_NAME: nexus-runner
+      OTEL_SERVICE_NAME: raven-runner
       RUNNER_TOOL_IMAGES: >-
         sherlock=sherlock/sherlock@sha256:${SHERLOCK_DIGEST},
         spiderfoot=ghcr.io/smicallef/spiderfoot@sha256:${SPIDERFOOT_DIGEST}
@@ -368,7 +368,7 @@ docker run --rm
   --workdir /work
   --cap-drop ALL
   --security-opt no-new-privileges
-  --security-opt seccomp=/etc/nexus/seccomp.json
+  --security-opt seccomp=/etc/raven/seccomp.json
   --pids-limit 128
   --memory 512m --memory-swap 512m --cpus 1.0
   --network none                       # egress, when the manifest allows it, is via HTTP(S)_PROXY
@@ -438,17 +438,17 @@ infra/k8s/
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
-metadata: { name: nexus-api, labels: { app: nexus, component: api } }
+metadata: { name: raven-api, labels: { app: raven, component: api } }
 spec:
   replicas: 3
   strategy: { type: RollingUpdate, rollingUpdate: { maxUnavailable: 0, maxSurge: 1 } }
-  selector: { matchLabels: { app: nexus, component: api } }
+  selector: { matchLabels: { app: raven, component: api } }
   template:
     metadata:
-      labels: { app: nexus, component: api }
+      labels: { app: raven, component: api }
       annotations: { prometheus.io/scrape: 'true', prometheus.io/port: '9464' }
     spec:
-      serviceAccountName: nexus-api
+      serviceAccountName: raven-api
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532
@@ -458,7 +458,7 @@ spec:
         - name: api
           image: ghcr.io/nexus/api:v1.4.2 # never :latest; digest pinned by the release automation
           ports: [{ containerPort: 3001 }, { containerPort: 9464, name: metrics }]
-          envFrom: [{ configMapRef: { name: nexus-app } }, { secretRef: { name: nexus-secrets } }]
+          envFrom: [{ configMapRef: { name: raven-app } }, { secretRef: { name: raven-secrets } }]
           resources:
             requests: { cpu: '500m', memory: '512Mi' }
             limits: { cpu: '2', memory: '1Gi' }
@@ -488,7 +488,7 @@ spec:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
           whenUnsatisfiable: ScheduleAnyway
-          labelSelector: { matchLabels: { app: nexus, component: api } }
+          labelSelector: { matchLabels: { app: raven, component: api } }
 ```
 
 Resource requests/limits for the rest:
@@ -510,14 +510,14 @@ Resource requests/limits for the rest:
 
 The runner does **not** mount a container socket in Kubernetes. It creates a `Job` per tool run via
 the API server using a tightly scoped Role (`create/get/list/watch/delete` on `jobs` and `pods/log`
-in the `nexus-runs` namespace only). The Job pod template:
+in the `raven-runs` namespace only). The Job pod template:
 
 ```yaml
 apiVersion: batch/v1
 kind: Job
 metadata:
-  namespace: nexus-runs
-  labels: { app: nexus, component: tool-run, nexus/run-id: '<runId>', nexus/tool: 'sherlock' }
+  namespace: raven-runs
+  labels: { app: raven, component: tool-run, raven/run-id: '<runId>', raven/tool: 'sherlock' }
 spec:
   backoffLimit: 0 # a failed tool run is a domain event, never a silent retry
   activeDeadlineSeconds: 300
@@ -527,7 +527,7 @@ spec:
       runtimeClassName: gvisor
       restartPolicy: Never
       automountServiceAccountToken: false
-      serviceAccountName: nexus-tool-null # zero permissions
+      serviceAccountName: raven-tool-null # zero permissions
       securityContext:
         { runAsNonRoot: true, runAsUser: 65532, seccompProfile: { type: RuntimeDefault } }
       containers:
@@ -535,8 +535,8 @@ spec:
           image: sherlock/sherlock@sha256:<pinned>
           args: ['--json', '/work/out.json', '--timeout', '30', '<username>']
           env:
-            - { name: HTTPS_PROXY, value: 'http://egress-proxy.nexus.svc:3128' }
-            - { name: HTTP_PROXY, value: 'http://egress-proxy.nexus.svc:3128' }
+            - { name: HTTPS_PROXY, value: 'http://egress-proxy.raven.svc:3128' }
+            - { name: HTTP_PROXY, value: 'http://egress-proxy.raven.svc:3128' }
             - { name: NO_PROXY, value: '' }
           resources:
             requests: { cpu: '250m', memory: '256Mi', ephemeral-storage: '128Mi' }
@@ -561,9 +561,9 @@ kind: RuntimeClass
 metadata: { name: gvisor }
 handler: runsc
 scheduling:
-  nodeSelector: { nexus.io/sandbox: 'gvisor' }
+  nodeSelector: { raven.io/sandbox: 'gvisor' }
   tolerations:
-    [{ key: 'nexus.io/sandbox', operator: 'Equal', value: 'gvisor', effect: 'NoSchedule' }]
+    [{ key: 'raven.io/sandbox', operator: 'Equal', value: 'gvisor', effect: 'NoSchedule' }]
 overhead:
   podFixed: { cpu: '100m', memory: '128Mi' }
 ```
@@ -580,25 +580,25 @@ Default deny for the whole namespace:
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
-metadata: { name: default-deny, namespace: nexus }
+metadata: { name: default-deny, namespace: raven }
 spec:
   podSelector: {}
   policyTypes: [Ingress, Egress]
 ```
 
-Runner and tool isolation (`nexus-runs` namespace):
+Runner and tool isolation (`raven-runs` namespace):
 
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
-metadata: { name: tool-run-isolation, namespace: nexus-runs }
+metadata: { name: tool-run-isolation, namespace: raven-runs }
 spec:
   podSelector: { matchLabels: { component: tool-run } }
   policyTypes: [Ingress, Egress]
   ingress: [] # nothing may talk to a tool pod
   egress:
     - to:
-        - namespaceSelector: { matchLabels: { name: nexus } }
+        - namespaceSelector: { matchLabels: { name: raven } }
           podSelector: { matchLabels: { component: egress-proxy } }
       ports: [{ protocol: TCP, port: 3128 }]
     - to:
@@ -853,7 +853,7 @@ Three-phase change for any breaking schema edit:
    write to both old and new shapes from the application, read from old.
 2. **Backfill** (release _n_, background job): chunked backfill (10k rows per batch, throttled to
    keep replication lag < 5 s), idempotent and resumable, with a progress metric
-   `nexus_backfill_rows_total{migration}`.
+   `raven_backfill_rows_total{migration}`.
 3. **Contract** (release _n+2_, after the backfill is verified and _n+1_ has been stable for ≥ 7
    days): read from new, drop the old column, add the `NOT NULL`/`FK` constraint using
    `NOT VALID` + `VALIDATE CONSTRAINT`.
@@ -861,9 +861,9 @@ Three-phase change for any breaking schema edit:
 Hard rules enforced by `scripts/check-migration-safety.mjs`:
 
 - No `DROP COLUMN` / `DROP TABLE` / `ALTER COLUMN TYPE` / `RENAME` in a migration that is not
-  labeled `-- nexus:contract` and accompanied by a comment naming the expand migration it retires.
+  labeled `-- raven:contract` and accompanied by a comment naming the expand migration it retires.
 - No blocking `CREATE INDEX` (must be `CONCURRENTLY`, which also means the migration cannot run in
-  a transaction — the file must declare `-- nexus:no-transaction`).
+  a transaction — the file must declare `-- raven:no-transaction`).
 - No `ALTER TABLE ... ADD COLUMN ... NOT NULL DEFAULT <volatile>`.
 - Every migration has a stated lock impact and an estimated duration in a header comment.
 - Migrations run in a dedicated `migrate` Job **before** new pods roll out; old pods must remain
@@ -890,8 +890,8 @@ without data loss and this is the preferred repair path.
 - **Artifacts:** every merge to `main` builds images tagged `:<sha>`; a release tag `v1.4.2` retags
   the exact digests — images are never rebuilt for a release, so what was tested is what ships.
 - **Deploy flow:** `main` → auto-deploy staging → smoke suite (`e2e --grep @smoke`, 8 specs, ≤ 3 min)
-  → manual approval → production canary 10 % for 30 min (watch `nexus_http_errors_total`,
-  `nexus_frame_p95_ms` from RUM, sync disconnect rate) → 100 %.
+  → manual approval → production canary 10 % for 30 min (watch `raven_http_errors_total`,
+  `raven_frame_p95_ms` from RUM, sync disconnect rate) → 100 %.
 - **Rollback:** `kubectl rollout undo` or retagging the previous digest; target ≤ 5 min. Rollback is
   always safe because schema changes are expand-only within a release window (§7).
 - **Release notes** are generated from changesets plus a "spec documents changed" section, since a
@@ -948,67 +948,67 @@ Concrete names — implementations must use exactly these:
 
 ```text
 # HTTP / API
-nexus_http_requests_total{service,method,route,status}
-nexus_http_request_duration_seconds{service,route}          histogram [.01,.05,.1,.25,.5,1,2,5,10]
-nexus_http_errors_total{service,route,code}
+raven_http_requests_total{service,method,route,status}
+raven_http_request_duration_seconds{service,route}          histogram [.01,.05,.1,.25,.5,1,2,5,10]
+raven_http_errors_total{service,route,code}
 
 # Auth
-nexus_auth_logins_total{result}
-nexus_auth_failed_logins_total{reason}
+raven_auth_logins_total{result}
+raven_auth_failed_logins_total{reason}
 
 # Sync
-nexus_sync_connections{board_scope}                          gauge
-nexus_sync_rooms_open                                        gauge
-nexus_sync_update_bytes_total{direction}
-nexus_sync_broadcast_latency_seconds                         histogram
-nexus_sync_projection_duration_seconds                       histogram
-nexus_sync_projection_failures_total{reason}
-nexus_sync_doc_memory_bytes{quantile}                        gauge
-nexus_sync_awareness_clients                                 gauge
+raven_sync_connections{board_scope}                          gauge
+raven_sync_rooms_open                                        gauge
+raven_sync_update_bytes_total{direction}
+raven_sync_broadcast_latency_seconds                         histogram
+raven_sync_projection_duration_seconds                       histogram
+raven_sync_projection_failures_total{reason}
+raven_sync_doc_memory_bytes{quantile}                        gauge
+raven_sync_awareness_clients                                 gauge
 
 # Documents
-nexus_board_snapshot_bytes                                   histogram
-nexus_board_nodes                                            histogram
-nexus_undo_operations_total{result}
+raven_board_snapshot_bytes                                   histogram
+raven_board_nodes                                            histogram
+raven_undo_operations_total{result}
 
 # Jobs
-nexus_queue_depth{queue}                                     gauge
-nexus_job_duration_seconds{queue,job}                        histogram
-nexus_job_failures_total{queue,job,reason}
-nexus_job_retries_total{queue,job}
+raven_queue_depth{queue}                                     gauge
+raven_job_duration_seconds{queue,job}                        histogram
+raven_job_failures_total{queue,job,reason}
+raven_job_retries_total{queue,job}
 
 # Runner
-nexus_runs_total{tool,status}                                 status=success|failed|timeout|resource_limit|blocked
-nexus_run_duration_seconds{tool}                              histogram [1,5,15,30,60,120,300]
-nexus_run_output_bytes{tool}                                  histogram
-nexus_runner_concurrent_runs                                  gauge
-nexus_runner_sandbox_violations_total{kind}                   kind=network|filesystem|caps|pids
+raven_runs_total{tool,status}                                 status=success|failed|timeout|resource_limit|blocked
+raven_run_duration_seconds{tool}                              histogram [1,5,15,30,60,120,300]
+raven_run_output_bytes{tool}                                  histogram
+raven_runner_concurrent_runs                                  gauge
+raven_runner_sandbox_violations_total{kind}                   kind=network|filesystem|caps|pids
 
 # Egress / SSRF
-nexus_egress_requests_total{host,allowed}
-nexus_ssrf_blocks_total{reason}
+raven_egress_requests_total{host,allowed}
+raven_ssrf_blocks_total{reason}
 
 # Files
-nexus_upload_bytes_total
-nexus_upload_rejected_total{reason}
-nexus_storage_objects                                         gauge
+raven_upload_bytes_total
+raven_upload_rejected_total{reason}
+raven_storage_objects                                         gauge
 
 # AI
-nexus_ai_requests_total{provider,model,result}
-nexus_ai_tokens_total{provider,model,direction}
-nexus_ai_cost_usd_total{org_id}
-nexus_ai_budget_remaining_usd{org_id}                         gauge
+raven_ai_requests_total{provider,model,result}
+raven_ai_tokens_total{provider,model,direction}
+raven_ai_cost_usd_total{org_id}
+raven_ai_budget_remaining_usd{org_id}                         gauge
 
 # Client RUM (pushed via /api/rum, sampled 5 %)
-nexus_client_frame_p95_ms{board_size_bucket}
-nexus_client_first_interactive_ms
-nexus_client_errors_total{kind}
-nexus_client_offline_seconds_total
+raven_client_frame_p95_ms{board_size_bucket}
+raven_client_first_interactive_ms
+raven_client_errors_total{kind}
+raven_client_offline_seconds_total
 
 # Database
-nexus_db_pool_in_use{service}                                 gauge
-nexus_db_query_duration_seconds{op}                           histogram
-nexus_migration_pending                                       gauge (0/1)
+raven_db_pool_in_use{service}                                 gauge
+raven_db_query_duration_seconds{op}                           histogram
+raven_migration_pending                                       gauge (0/1)
 ```
 
 ### 10.3 Logs
@@ -1031,22 +1031,22 @@ content, no node text, no URLs beyond host.
 
 | Alert                     | Expression (5 m windows)                                                                                           | Severity | Runbook                                                                |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------ | -------- | ---------------------------------------------------------------------- |
-| `ApiErrorRateHigh`        | `sum(rate(nexus_http_errors_total{status=~"5.."}[5m])) / sum(rate(nexus_http_requests_total[5m])) > 0.02` for 10 m | page     | `runbooks/api-errors.md`                                               |
-| `ApiLatencyHigh`          | `histogram_quantile(0.95, nexus_http_request_duration_seconds) > 1` for 10 m                                       | ticket   | `runbooks/api-latency.md`                                              |
-| `SyncProjectionFailing`   | `rate(nexus_sync_projection_failures_total[5m]) > 0` for 5 m                                                       | page     | `runbooks/projection.md` (repair: `db:reproject`)                      |
-| `SyncBroadcastSlow`       | `histogram_quantile(0.95, nexus_sync_broadcast_latency_seconds) > 1` for 10 m                                      | ticket   | `runbooks/sync.md`                                                     |
-| `SyncMemoryHigh`          | `nexus_sync_doc_memory_bytes > 1.5e9`                                                                              | ticket   | `runbooks/sync-memory.md` (evict idle docs)                            |
-| `QueueBacklog`            | `nexus_queue_depth > 500` for 15 m                                                                                 | ticket   | `runbooks/queues.md`                                                   |
-| `RunFailureRate`          | `sum(rate(nexus_runs_total{status!="success"}[15m])) / sum(rate(nexus_runs_total[15m])) > 0.3`                     | ticket   | `runbooks/runs.md`                                                     |
-| `SandboxViolation`        | `increase(nexus_runner_sandbox_violations_total[5m]) > 0`                                                          | **page** | `runbooks/sandbox-violation.md` (isolate node pool, freeze tool image) |
-| `SsrfBlockSpike`          | `increase(nexus_ssrf_blocks_total[10m]) > 50`                                                                      | ticket   | `runbooks/ssrf.md` (possible abuse)                                    |
-| `AuthBruteForce`          | `increase(nexus_auth_failed_logins_total[5m]) > 100`                                                               | ticket   | `runbooks/auth.md`                                                     |
-| `DbPoolSaturation`        | `nexus_db_pool_in_use / DATABASE_POOL_MAX > 0.9` for 10 m                                                          | page     | `runbooks/db.md`                                                       |
-| `MigrationPending`        | `nexus_migration_pending == 1` for 15 m                                                                            | page     | `runbooks/migrations.md`                                               |
-| `AiBudgetExhausted`       | `nexus_ai_budget_remaining_usd < 5`                                                                                | ticket   | `runbooks/ai-budget.md`                                                |
-| `BackupMissing`           | `time() - nexus_backup_last_success_timestamp > 93600` (26 h)                                                      | **page** | `runbooks/backup.md`                                                   |
+| `ApiErrorRateHigh`        | `sum(rate(raven_http_errors_total{status=~"5.."}[5m])) / sum(rate(raven_http_requests_total[5m])) > 0.02` for 10 m | page     | `runbooks/api-errors.md`                                               |
+| `ApiLatencyHigh`          | `histogram_quantile(0.95, raven_http_request_duration_seconds) > 1` for 10 m                                       | ticket   | `runbooks/api-latency.md`                                              |
+| `SyncProjectionFailing`   | `rate(raven_sync_projection_failures_total[5m]) > 0` for 5 m                                                       | page     | `runbooks/projection.md` (repair: `db:reproject`)                      |
+| `SyncBroadcastSlow`       | `histogram_quantile(0.95, raven_sync_broadcast_latency_seconds) > 1` for 10 m                                      | ticket   | `runbooks/sync.md`                                                     |
+| `SyncMemoryHigh`          | `raven_sync_doc_memory_bytes > 1.5e9`                                                                              | ticket   | `runbooks/sync-memory.md` (evict idle docs)                            |
+| `QueueBacklog`            | `raven_queue_depth > 500` for 15 m                                                                                 | ticket   | `runbooks/queues.md`                                                   |
+| `RunFailureRate`          | `sum(rate(raven_runs_total{status!="success"}[15m])) / sum(rate(raven_runs_total[15m])) > 0.3`                     | ticket   | `runbooks/runs.md`                                                     |
+| `SandboxViolation`        | `increase(raven_runner_sandbox_violations_total[5m]) > 0`                                                          | **page** | `runbooks/sandbox-violation.md` (isolate node pool, freeze tool image) |
+| `SsrfBlockSpike`          | `increase(raven_ssrf_blocks_total[10m]) > 50`                                                                      | ticket   | `runbooks/ssrf.md` (possible abuse)                                    |
+| `AuthBruteForce`          | `increase(raven_auth_failed_logins_total[5m]) > 100`                                                               | ticket   | `runbooks/auth.md`                                                     |
+| `DbPoolSaturation`        | `raven_db_pool_in_use / DATABASE_POOL_MAX > 0.9` for 10 m                                                          | page     | `runbooks/db.md`                                                       |
+| `MigrationPending`        | `raven_migration_pending == 1` for 15 m                                                                            | page     | `runbooks/migrations.md`                                               |
+| `AiBudgetExhausted`       | `raven_ai_budget_remaining_usd < 5`                                                                                | ticket   | `runbooks/ai-budget.md`                                                |
+| `BackupMissing`           | `time() - raven_backup_last_success_timestamp > 93600` (26 h)                                                      | **page** | `runbooks/backup.md`                                                   |
 | `RestoreDrillOverdue`     | drill timestamp older than 35 d                                                                                    | ticket   | `runbooks/dr-drill.md`                                                 |
-| `ClientFrameBudgetBreach` | `nexus_client_frame_p95_ms{board_size_bucket="5000+"} > 20` for 30 m                                               | ticket   | `runbooks/canvas-perf.md`                                              |
+| `ClientFrameBudgetBreach` | `raven_client_frame_p95_ms{board_size_bucket="5000+"} > 20` for 30 m                                               | ticket   | `runbooks/canvas-perf.md`                                              |
 | `CertExpiry`              | `< 14 d`                                                                                                           | ticket   | `runbooks/tls.md`                                                      |
 
 Every alert must link to a runbook containing: what it means, the three most likely causes, the
@@ -1071,7 +1071,7 @@ Redis holding no durable state is a deliberate design constraint: BullMQ jobs ar
 from `runs` rows with status `queued`, and Hocuspocus fanout is stateless. If this ever stops being
 true, this table is wrong and must be revised in the same PR.
 
-Backup jobs export `nexus_backup_last_success_timestamp` and `nexus_backup_bytes`; the
+Backup jobs export `raven_backup_last_success_timestamp` and `raven_backup_bytes`; the
 `BackupMissing` alert is the only proof that backups work day-to-day.
 
 ### 11.2 Restore runbook (`runbooks/backup.md`)
@@ -1082,7 +1082,7 @@ Backup jobs export `nexus_backup_last_success_timestamp` and `nexus_backup_bytes
 2. Choose the recovery target: latest consistent (default) or PITR to a timestamp before the
    corrupting event.
 3. Provision a restore instance:
-     pgbackrest --stanza=nexus --type=time --target="2026-06-01 12:34:56+00" restore
+     pgbackrest --stanza=raven --type=time --target="2026-06-01 12:34:56+00" restore
    Start Postgres in recovery, wait for "consistent recovery state reached".
 4. Verify on the restore instance (do NOT point production at it yet):
      - row counts for orgs, projects, boards, nodes, edges within 1 % of the last known good
@@ -1103,7 +1103,7 @@ Backup jobs export `nexus_backup_last_success_timestamp` and `nexus_backup_bytes
 Monthly, on staging, restoring **production** backups into an isolated namespace (data is
 anonymized on restore by `scripts/anonymize.sql`, which nulls emails, names, node text and file
 bodies). The drill is scripted (`infra/dr/drill.sh`) and measured: it must complete within the RTO
-with zero manual steps beyond approvals. The drill records `nexus_dr_drill_timestamp` and its
+with zero manual steps beyond approvals. The drill records `raven_dr_drill_timestamp` and its
 duration; `RestoreDrillOverdue` fires if a drill is skipped. Failure to meet RTO twice in a row is
 a blocking production readiness item.
 
@@ -1137,7 +1137,7 @@ planning numbers, not guarantees):
 - **Board memory in `sync`**: a 5,000-node/10,000-edge `Y.Doc` with history ≈ 40–70 MB resident.
   Budget 80 MB per open board. A `sync` pod with a 2 GB limit therefore holds ~20 concurrently open
   large boards, or ~200 typical (200-node) boards. Scale `sync` by _open boards_, not by users;
-  the HPA metric is `nexus_sync_rooms_open` with a target of 120 per pod.
+  the HPA metric is `raven_sync_rooms_open` with a target of 120 per pod.
 - **Idle eviction**: a room with zero clients for 60 s is snapshotted and evicted from memory.
 - **Postgres**: ~2.5 KB per node row (jsonb payload included), ~0.4 KB per edge row, plus snapshot
   binaries at roughly 15–25 % of the live doc size per retained snapshot (keep 10 per board + one
@@ -1154,7 +1154,7 @@ planning numbers, not guarantees):
 - **Egress proxy**: unfurl bursts dominate (paste of 50 URLs). Rate limit: 10 unfurls/s per org,
   burst 30, queued not dropped.
 
-Growth triggers: add a read replica when `nexus_db_query_duration_seconds` p95 for read ops exceeds
+Growth triggers: add a read replica when `raven_db_query_duration_seconds` p95 for read ops exceeds
 150 ms; move search to a dedicated instance when FTS queries exceed 20 % of DB CPU; split `worker`
 queues onto separate deployments when one queue's backlog starves another (BullMQ groups first,
 separate deployments second).
@@ -1231,7 +1231,7 @@ Must be fully ticked before GA (this is P16's exit criteria in `20_ROADMAP.md`):
    Mitigation: isolate behind the adapter, keep the manual CSV import fallback, and be prepared to
    drop the integration without touching the core (it is manifest-driven by design).
 4. **Sync memory model unvalidated at scale.** The 80 MB/board budget is an estimate; if real docs
-   are heavier, `sync` cost grows fastest. Mitigation: `nexus_sync_doc_memory_bytes` is measured
+   are heavier, `sync` cost grows fastest. Mitigation: `raven_sync_doc_memory_bytes` is measured
    from day one, eviction is aggressive, and the HPA metric can switch from rooms to bytes.
 5. **Single-writer Postgres.** Vertical scaling has a ceiling and failover is manual. Acceptable at
    the planned scale; revisit with a managed HA offering before 10k active orgs.

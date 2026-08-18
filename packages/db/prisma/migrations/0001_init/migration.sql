@@ -1,4 +1,4 @@
--- nexus:initial
+-- raven:initial
 -- Migration: 0001_init — P1 foundation schema (orgs, users, auth, projects, boards, audit).
 -- Lock impact: none. Creates new objects only; no existing table is touched.
 -- Estimated duration: < 100 ms on an empty database.
@@ -143,8 +143,8 @@ ALTER TABLE "boards"
 --   1. code: packages/db exports only recordAudit(); no update/delete helper exists.
 --   2. grants: the application role gets INSERT/SELECT only. Run once per environment, as the
 --      owner role, after the app role exists (it is not created by this migration):
---        REVOKE UPDATE, DELETE, TRUNCATE ON audit_log FROM nexus_app;
---        GRANT  INSERT, SELECT ON audit_log TO nexus_app;
+--        REVOKE UPDATE, DELETE, TRUNCATE ON audit_log FROM raven_app;
+--        GRANT  INSERT, SELECT ON audit_log TO raven_app;
 CREATE TABLE "audit_log" (
     "id"          TEXT         NOT NULL,
     "org_id"      TEXT         NOT NULL,

@@ -9,6 +9,11 @@
 
 import type * as Y from 'yjs';
 
+import {
+  GENERATOR_APP,
+  LEGACY_BOARD_EXPORT_FORMATS,
+  LEGACY_GENERATOR_APP,
+} from '../export/schema.v1.ts';
 import { CURRENT_SCHEMA_VERSION, boardRoots } from './schema.ts';
 import { tx } from './transactions.ts';
 
@@ -53,7 +58,7 @@ const v0ToV1: Migration = {
     const board = { ...asRecord(json.board), schemaVersion: 1 };
     return {
       ...json,
-      format: 'nexus.board.v1',
+      format: 'raven.board.v1',
       board,
       nodes: migratedNodes,
       edges: Array.isArray(json.edges) ? json.edges : [],
@@ -63,7 +68,12 @@ const v0ToV1: Migration = {
       files: Array.isArray(json.files) ? json.files : [],
       comments: Array.isArray(json.comments) ? json.comments : [],
       extensions: asRecord(json.extensions),
-      generator: { app: 'nexus', version: '0', schemaVersion: 1, ...asRecord(json.generator) },
+      generator: {
+        app: GENERATOR_APP,
+        version: '0',
+        schemaVersion: 1,
+        ...asRecord(json.generator),
+      },
     };
   },
   migrateDoc(doc, now) {
@@ -116,11 +126,30 @@ export interface MigrationResult {
   applied: string[];
 }
 
+/**
+ * Rewrites the brand strings of a pre-rename archive (`nexus.board.*`, `generator.app: 'nexus'`)
+ * to the current ones. Runs before validation and before any schema migration, so an old file is
+ * indistinguishable from a current one by the time the schema sees it.
+ */
+export function normalizeLegacyBrand(json: Record<string, unknown>): Record<string, unknown> {
+  const format = json.format;
+  const generator = asRecord(json.generator);
+  const legacyFormat = typeof format === 'string' && LEGACY_BOARD_EXPORT_FORMATS.includes(format);
+  const legacyApp = generator.app === LEGACY_GENERATOR_APP;
+  if (!legacyFormat && !legacyApp) return json;
+  return {
+    ...json,
+    ...(legacyFormat ? { format: format.replace(/^nexus\./, 'raven.') } : {}),
+    ...(legacyApp ? { generator: { ...generator, app: GENERATOR_APP } } : {}),
+  };
+}
+
 export function migrateExportJson(json: Record<string, unknown>): MigrationResult {
+  json = normalizeLegacyBrand(json);
   const version = exportSchemaVersion(json);
   if (version > CURRENT_SCHEMA_VERSION) {
     throw new Error(
-      `This file was written by a newer version of NEXUS (document schema ${String(version)}). Update the app to open it.`,
+      `This file was written by a newer version of Raven (document schema ${String(version)}). Update the app to open it.`,
     );
   }
   let current = json;
@@ -139,7 +168,7 @@ export function migrateDocument(doc: Y.Doc, now: string): string[] {
   const version = typeof raw === 'number' ? raw : 0;
   if (version > CURRENT_SCHEMA_VERSION) {
     throw new Error(
-      `This board was written by a newer version of NEXUS (document schema ${String(version)}); it can only be opened read-only.`,
+      `This board was written by a newer version of Raven (document schema ${String(version)}); it can only be opened read-only.`,
     );
   }
   const chain = migrationsFrom(version);

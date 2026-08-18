@@ -26,7 +26,7 @@ afterEach(() => {
 
 describe('local persistence', () => {
   it('names one IndexedDB store per board', () => {
-    expect(boardStoreName('b_1')).toBe('nexus-board-b_1');
+    expect(boardStoreName('b_1')).toBe('raven-board-b_1');
   });
 
   it('writes a mutation to IndexedDB inside the durability budget and reloads it', async () => {

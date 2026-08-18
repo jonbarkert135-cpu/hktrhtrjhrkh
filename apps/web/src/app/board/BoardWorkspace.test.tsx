@@ -64,7 +64,7 @@ function archiveJson(): unknown {
 
 function fileWith(value: unknown): File {
   const text = JSON.stringify(value);
-  const file = new File([text], 'board.nexus.json', { type: 'application/json' });
+  const file = new File([text], 'board.raven.json', { type: 'application/json' });
   Object.defineProperty(file, 'text', { value: () => Promise.resolve(text) });
   return file;
 }
