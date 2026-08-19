@@ -6,3 +6,4 @@ export * from './score.ts';
 export * from './router.ts';
 export * from './planner.ts';
 export { createCatalogRegistry } from './catalog/index.ts';
+export * from './sdk/index.ts';

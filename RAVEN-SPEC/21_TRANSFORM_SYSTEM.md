@@ -367,6 +367,70 @@ Everything in `15_SECURITY.md` applies unchanged, plus:
 
 ---
 
+## 12a. Transform SDK (L4.2, shipped)
+
+`packages/transforms/src/sdk` is the contract a third-party engine implements, plus the host driver
+that runs it and the conformance harness that gates its installation. Import surface:
+`@nexus/transforms/sdk`, testkit at `@nexus/transforms/sdk/testkit`.
+
+### 12a.1 The interface
+
+```ts
+interface TransformEngine {
+  metadata(): EngineMetadata; // must agree with the shipped manifest
+  initialize?(ctx: EngineContext): Promise<void> | void;
+  validateInput(input: TransformInput): InputVerdict; // pure, no I/O
+  execute(input, ctx): AsyncIterable<RawChunk>; // always a stream
+  normalize(chunks, input): EngineOutput; // pure: entities + relationships + evidence
+  healthCheck?(ctx): Promise<EngineHealth>;
+  cleanup?(): Promise<void> | void;
+}
+```
+
+Three narrowings of the brief's sketch (§78), each with a reason:
+
+1. **`execute` is always a stream.** Merging `execute` and `streamResults` removes the class of bug
+   where the streaming and non-streaming paths return different data.
+2. **`buildRelationships` folded into `normalize`.** Entities and their relationships come from the
+   same raw chunks; two passes over the same data drift apart.
+3. **`normalize` is synchronous and pure.** No I/O after `execute` means the host can re-run it on
+   cached raw chunks and get the same graph — this is what makes replay (L4.3) trustworthy.
+
+An engine has no ambient capabilities: network goes through the host `ctx.fetch`, secrets through
+`ctx.credential(key)` (never logged, never in a cache key), cancellation through `ctx.signal`.
+
+### 12a.2 What the host owns, not the engine
+
+`runEngine` (`sdk/run.ts`) enforces the deadline, cancellation, truncation to `maxResults`,
+output validation and `cleanup`. It never throws; every failure is a `RunOutcome`:
+
+| Outcome     | Meaning                                                         |
+| ----------- | --------------------------------------------------------------- |
+| `completed` | the stream ended by itself, output valid                        |
+| `partial`   | timeout or engine error after at least one chunk — results kept |
+| `cancelled` | the user stopped it; collected results kept (brief §82–83)      |
+| `failed`    | invalid input, immediate error, or a contract violation         |
+
+A contract violation (`violations` non-empty) discards the output entirely: a malformed proposal
+never reaches the graph, not even partially. `exhaustive: false` on any chunk propagates to the
+outcome so the router may still try a fallback engine on an empty result (§5).
+
+### 12a.3 Conformance harness
+
+`runConformance(engine, { manifest, fixtures, invalidInputs })` returns a report of named checks and
+is the gate in §12.4 ("no auto-install"). It asserts: metadata matches the manifest; declared input
+and output kinds exist; invalid inputs are rejected with a reason and without a single request;
+fixtures complete with valid output; produced kinds stay inside the declared ones; `normalize` is
+deterministic; `maxResults` truncation holds; a pre-aborted run reports `cancelled`; `execute`
+settles within 200 ms of an abort; `healthCheck` returns a boolean plus a parsable timestamp.
+
+The harness runs the production driver against a deterministic host (`createTestHost`) where an
+unmocked URL throws — a conformance pass therefore says something about the real call shapes, not
+about a mock. `createDohResolver` (`sdk/engines/doh-resolver.ts`) is both the worked example for
+engine authors and the engine the harness is proven against.
+
+---
+
 ## 13. Acceptance criteria for the layer
 
 Mirrors brief §110. The layer is done when an analyst can: create a username node, press **Expand**,
