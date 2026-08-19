@@ -9,9 +9,6 @@
 import {
   countEntities,
   deleteNode,
-  getEdge,
-  getNode,
-  hasEdge,
   duplicateNode,
   exportBoard,
   importBoard,
@@ -29,11 +26,9 @@ import { useBoardDoc } from '../../data/docProvider.tsx';
 import { restoreSnapshot } from '../../data/snapshots.ts';
 import { CanvasHost } from '../canvas/CanvasHost';
 import { applyIntent, connectToEmpty, createNoteNode } from '../canvas/bindings/applyIntents.ts';
-import { ConnectionOverlay, type ConnectionDrop } from '../../edges/ConnectionOverlay.tsx';
-import { EdgeContextMenu } from '../../edges/EdgeContextMenu.tsx';
-import { EdgeInspector } from '../../edges/EdgeInspector.tsx';
+import { EdgeLayer, pendingFromIntent, type PendingEdgeUi } from '../../edges/EdgeLayer.tsx';
+import { BoardInspector } from './BoardInspector.tsx';
 import { patchesFromChange, sceneFromDoc } from '../canvas/bindings/sceneFromDoc.ts';
-import { Inspector } from '../../nodes/inspector/Inspector.tsx';
 import { NodeHosts } from '../../nodes/NodeHosts.tsx';
 import { createNodeStore } from '../../nodes/nodeStore.ts';
 import { SyncStatus } from '../shell/SyncStatus.tsx';
@@ -42,16 +37,6 @@ import { ImportDialog, type ImportPreview } from './ImportDialog.tsx';
 import { VersionHistory } from './VersionHistory.tsx';
 
 const APP_VERSION = '0.3.0';
-
-/** Endpoint titles for the relationship inspector; deleted endpoints read as such, never blank. */
-function endpointTitles(doc: Parameters<typeof getEdge>[0], edgeId: string) {
-  const edge = getEdge(doc, edgeId);
-  if (edge === undefined) return undefined;
-  return {
-    source: getNode(doc, edge.source.nodeId)?.title ?? 'Deleted node',
-    target: getNode(doc, edge.target.nodeId)?.title ?? 'Deleted node',
-  };
-}
 
 export function BoardWorkspace() {
   const { boardId, doc, history, status, snapshots, snapshotStore, ready, storageWarning, retry } =
@@ -80,22 +65,15 @@ export function BoardWorkspace() {
     () => ({ doc, history, now, makeId: (): string => newId.board(), onNotice: report }),
     [doc, history, now, report],
   );
-  // `pendingIntent` is a ref-free trick: the screen position of a canvas event is only available
-  // inside the render prop, so the intent handler stores world coordinates and the menu converts.
-  const [pendingMenu, setPendingMenu] = useState<{
-    kind: 'edge' | 'drop';
-    id: string;
-    world: { x: number; y: number };
-  } | null>(null);
+  // The relationship menus open at a world point; the screen position is only available inside the
+  // canvas render prop, so the intent handler stores world coordinates and `EdgeLayer` converts.
+  const [pendingMenu, setPendingMenu] = useState<PendingEdgeUi | null>(null);
 
   const onIntent = useCallback(
     (intent: Intent) => {
-      if (intent.t === 'context-menu' && intent.target.t === 'edge') {
-        setPendingMenu({ kind: 'edge', id: intent.target.id, world: intent.at });
-        return;
-      }
-      if (intent.t === 'connect-to-empty') {
-        setPendingMenu({ kind: 'drop', id: intent.from, world: intent.at });
+      const pending = pendingFromIntent(intent);
+      if (pending !== null) {
+        setPendingMenu(pending);
         return;
       }
       applyIntent(intent, intentContext());
@@ -164,8 +142,8 @@ export function BoardWorkspace() {
   }, [doc, history, engine]);
 
   const finishDrop = useCallback(
-    (pending: ConnectionDrop) => {
-      connectToEmpty(intentContext(), pending.from, pending.at);
+    (from: string, at: { x: number; y: number }) => {
+      connectToEmpty(intentContext(), from, at);
       setPendingMenu(null);
     },
     [intentContext],
@@ -213,12 +191,6 @@ export function BoardWorkspace() {
     },
     [doc, snapshotStore],
   );
-
-  // A single selected relationship swaps the node inspector for the relationship one (P5 §5.11).
-  const selectedEdgeId =
-    selectedIds.length === 1 && selectedIds[0] !== undefined && hasEdge(doc, selectedIds[0])
-      ? selectedIds[0]
-      : null;
 
   return (
     <section className="nx-board" aria-label="Board">
@@ -275,54 +247,32 @@ export function BoardWorkspace() {
                   deleteNode(doc, id, { now: new Date().toISOString() });
                 }}
               />
-              {pendingMenu?.kind === 'edge' && hasEdge(doc, pendingMenu.id) ? (
-                <EdgeContextMenu
-                  doc={doc}
-                  edgeId={pendingMenu.id}
-                  context={context}
-                  at={screenOf(pendingMenu.world)}
-                  onClose={() => setPendingMenu(null)}
-                  onEditLabel={(id) => setSelectedIds([id])}
-                  onResult={(result) => {
-                    if (result.message !== null) setNotice(result.message);
-                  }}
-                />
-              ) : null}
-              {pendingMenu?.kind === 'drop' ? (
-                <ConnectionOverlay
-                  drop={{
-                    from: pendingMenu.id,
-                    at: pendingMenu.world,
-                    screen: screenOf(pendingMenu.world),
-                  }}
-                  onCreate={finishDrop}
-                  onCancel={() => setPendingMenu(null)}
-                />
-              ) : null}
+              <EdgeLayer
+                doc={doc}
+                context={context}
+                pending={pendingMenu}
+                screenOf={screenOf}
+                onClose={() => setPendingMenu(null)}
+                onConnectToEmpty={finishDrop}
+                onEditLabel={(id) => setSelectedIds([id])}
+                onResult={(result) => {
+                  if (result.message !== null) setNotice(result.message);
+                }}
+              />
             </>
           )}
         </CanvasHost>
 
-        {selectedEdgeId === null ? (
-          <Inspector
-            doc={doc}
-            store={store}
-            selectedIds={selectedIds}
-            width={inspectorWidth}
-            onWidthChange={setInspectorWidth}
-            onClose={() => setSelectedIds([])}
-          />
-        ) : (
-          <EdgeInspector
-            doc={doc}
-            edgeId={selectedEdgeId}
-            context={context}
-            endpoints={endpointTitles(doc, selectedEdgeId)}
-            width={inspectorWidth}
-            onClose={() => setSelectedIds([])}
-            onDeleted={() => setSelectedIds([])}
-          />
-        )}
+        <BoardInspector
+          doc={doc}
+          store={store}
+          selectedIds={selectedIds}
+          context={context}
+          width={inspectorWidth}
+          onWidthChange={setInspectorWidth}
+          onClose={() => setSelectedIds([])}
+          onEdgeDeleted={() => setSelectedIds([])}
+        />
       </div>
 
       <VersionHistory
