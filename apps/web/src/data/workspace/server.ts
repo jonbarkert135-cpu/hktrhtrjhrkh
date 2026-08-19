@@ -75,6 +75,9 @@ export function createServerWorkspaceRepository(api: WorkspaceApi): WorkspaceRep
     createProject: (input) => rethrow(async () => project(await api.createProject(input))),
     listBoards: (projectId) =>
       rethrow(async () => (await api.listBoards({ projectId })).map(board)),
-    createBoard: (input) => rethrow(async () => board(await api.createBoard(input))),
+    // The optional `id` is a local-mode affordance; the server mints its own ids, so it is dropped
+    // here rather than sent to a router that would reject the unknown key.
+    createBoard: ({ projectId, title }) =>
+      rethrow(async () => board(await api.createBoard({ projectId, title }))),
   };
 }

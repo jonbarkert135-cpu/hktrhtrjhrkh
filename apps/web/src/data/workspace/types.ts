@@ -33,7 +33,15 @@ export interface WorkspaceRepository {
   listProjects: () => Promise<WorkspaceProject[]>;
   createProject: (input: { name: string }) => Promise<WorkspaceProject>;
   listBoards: (projectId: string) => Promise<WorkspaceBoard[]>;
-  createBoard: (input: { projectId: string; title: string }) => Promise<WorkspaceBoard>;
+  /**
+   * `id` is optional and only honoured by the local implementation: first-run bootstrap adopts the
+   * scratch document instead of minting a second board (see bootstrap.ts).
+   */
+  createBoard: (input: {
+    projectId: string;
+    title: string;
+    id?: string | undefined;
+  }) => Promise<WorkspaceBoard>;
 }
 
 /** Thrown by both implementations, already phrased for the user (03_UX.md §12.1). */

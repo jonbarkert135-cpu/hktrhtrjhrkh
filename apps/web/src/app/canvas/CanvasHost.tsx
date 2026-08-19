@@ -22,14 +22,34 @@ export interface CanvasHostProps {
   onIntent?: ((intent: Intent) => void) | undefined;
   /** Called once the engine exists, so the page can push scene patches into it. */
   onEngine?: ((engine: Engine | null) => void) | undefined;
+  /**
+   * Authoritative node count from the document. The host tracks the engine's own count, but a page
+   * that pushes scene patches (the board) knows the truth first — without this the teaching hint
+   * stays on top of the first note the user creates.
+   */
+  nodeCount?: number | undefined;
 }
 
-export function CanvasHost({ scene, onIntent, onEngine, children }: CanvasHostProps) {
-  const { canvasRef, overlayRef, engineRef, zoom, nodeCount, slotOf } = useCanvasEngine({
+export function CanvasHost({
+  scene,
+  onIntent,
+  onEngine,
+  children,
+  nodeCount: nodeCountProp,
+}: CanvasHostProps) {
+  const {
+    canvasRef,
+    overlayRef,
+    engineRef,
+    zoom,
+    nodeCount: engineNodeCount,
+    slotOf,
+  } = useCanvasEngine({
     ...(scene === undefined ? {} : { scene }),
     ...(onIntent === undefined ? {} : { onIntent }),
   });
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const nodeCount = nodeCountProp ?? engineNodeCount;
 
   // The engine is created in an effect inside the hook, so it exists on the first commit.
   useEffect(() => {

@@ -305,6 +305,9 @@ describe('applyIntent', () => {
     createNoteNode(ctx, { x: 0, y: 0 });
     const moved = createNoteNode(ctx, { x: 100, y: 0 });
     expect(ctx.history?.state.undoDepth).toBe(2);
+    // The second note is nudged off the first one, so the drag assertions start from where it
+    // actually landed rather than from the aim.
+    const placedX = getNode(doc, moved)?.x ?? 0;
 
     const drag = (phase: 'update' | 'end'): void => {
       applyIntent({ t: 'move-nodes', deltas: [{ id: moved, dx: 10, dy: 0 }], phase }, ctx);
@@ -314,12 +317,34 @@ describe('applyIntent', () => {
     drag('end');
     // Three interim commits, one gesture, one extra undo step.
     expect(ctx.history?.state.undoDepth).toBe(3);
-    expect(getNode(doc, moved)?.x).toBe(100 - 280 / 2 + 30);
+    expect(getNode(doc, moved)?.x).toBe(placedX + 30);
 
     ctx.history?.undo();
-    expect(getNode(doc, moved)?.x).toBe(100 - 280 / 2);
+    expect(getNode(doc, moved)?.x).toBe(placedX);
     ctx.history?.undo();
     expect(listNodes(doc)).toHaveLength(1);
+  });
+
+  it('never stacks two notes on the same spot', () => {
+    const doc = createBoardDoc({ boardId: 'b_stack', now: NOW });
+    const ctx: IntentContext = { doc, history: createBoardHistory(doc), now: () => NOW };
+
+    const ids = [0, 1, 2].map(() => createNoteNode(ctx, { x: 500, y: 300 }));
+    const boxes = ids.map((id) => getNode(doc, id));
+    for (let i = 0; i < boxes.length; i += 1) {
+      for (let j = i + 1; j < boxes.length; j += 1) {
+        const a = boxes[i];
+        const b = boxes[j];
+        const hit =
+          a !== undefined &&
+          b !== undefined &&
+          a.x < b.x + b.w &&
+          b.x < a.x + a.w &&
+          a.y < b.y + b.h &&
+          b.y < a.y + a.h;
+        expect(hit).toBe(false);
+      }
+    }
   });
 
   it('mints ids on its own when none are injected', () => {

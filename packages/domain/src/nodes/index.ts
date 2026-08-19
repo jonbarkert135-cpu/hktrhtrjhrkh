@@ -7,6 +7,7 @@ export * from './define.ts';
 export * from './tags.ts';
 export * from './lifecycle.ts';
 export * from './capture.ts';
+export * from './placement.ts';
 export * from './types/website.ts';
 export * from './types/link.ts';
 export * from './types/text.ts';
