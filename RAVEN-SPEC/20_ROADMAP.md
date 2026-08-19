@@ -97,7 +97,7 @@ the area spec plus the code. Read `AGENTS.md` first.
 | P6 Capture         | #22                | `packages/domain/src/{capture,net}`, `apps/web/src/capture`, `apps/api/.../unfurl.ts` — §5.12/§5.14 still open                   | `09_BACKEND.md`, `15_SECURITY.md`  |
 | Agent memory       | #18                | `AGENTS.md`, `.mcp.json`                                                                                                         | —                                  |
 
-Open phases in this file: **P7**, **P8**, **P17**, **L4.4–L4.7**. P9–P16 have
+Open phases in this file: **P7**, **P8**, **P17**, **L4.4–L4.7**, plus the two deferred P6 items. P9–P16 have
 no prompt yet; write one in this format when their turn comes.
 
 ---
@@ -116,165 +116,18 @@ no prompt yet; write one in this format when their turn comes.
 - Web ⇄ unfurl wiring: in `APP_MODE=local` there is no server to ask, so no capture path calls it
   (N2). Connecting the website card to `unfurl.fetch` belongs with the server-mode work.
 
-## 1 Objective
+## Remaining requirements (the only P6 work left)
 
-Make collection frictionless: a paste pipeline that always produces the right node type, drag-and-
-drop from the OS and other browser tabs, a server-side unfurl service with SSRF protection, a quick-
-add command, and the browser-extension hook endpoint.
-
-## 2 Context (what exists now)
-
-P4 defined node types including `website` with a `status: pending` state and `fetchedAt`; P5 gives
-edges. Nothing populates website metadata yet; there is no clipboard handling and no outbound HTTP
-from the server other than auth/OAuth.
-
-## 3 Existing architecture to respect
-
-- `03_UX.md` §3 (paste as the front door), `06_NODE_SYSTEM.md` (target node shapes).
-- `09_BACKEND.md` §5 (unfurl job, queue, caching), `15_SECURITY.md` §4 (SSRF rules — mandatory).
-- `00_MASTER.md` §4 N7 (SSRF-safe URL handling with DNS pinning, denylist, redirect cap).
-- `18_TESTING.md` §11.1 (the SSRF corpus that must pass), §7.4 (fixture web server for e2e).
-
-## 4 Files/modules affected
-
-```text
-packages/domain/src/capture/{detect.ts,parse.ts,plan.ts}      clipboard payload → node plan
-packages/domain/src/net/{safeFetch.ts,urlValidator.ts,dnsPin.ts}
-apps/web/src/capture/{usePaste.ts,useDropZone.ts,QuickAdd.tsx,PasteToast.tsx}
-apps/api/src/trpc/routers/unfurl.ts, apps/api/src/rest/extension.ts
-apps/worker/src/jobs/unfurl.ts, apps/worker/src/jobs/screenshot.ts (optional, flagged off)
-packages/domain/test/{ssrf.corpus.test.ts,capture.detect.test.ts}
-e2e/fixtures-server/**
-```
-
-## 5 Exact requirements (numbered, testable)
-
-1. Paste detection order (first match wins), implemented as a pure function over `DataTransfer`:
-   files → image bitmap → `text/html` (with a URL or rich content) → `text/uri-list` → plain text
-   that parses as one or more URLs → plain text → nothing (show "Nothing to paste").
-2. Multi-URL paste (a list of N URLs, up to 50) creates N nodes laid out in a grid at the cursor,
-   with a single undo entry and a single toast ("Added 12 links — Undo").
-3. Pasted plain text ≤ 280 chars creates a `text` node sized to content; longer creates a `note`.
-4. Pasted images become `image` nodes with an immediate local preview (OPFS) while the upload runs.
-5. Drag-and-drop supports: OS files (multiple), an image dragged from another tab, a link dragged
-   from the address bar or a page, and internal node re-parenting into groups (P15 wires groups).
-6. A drop shows a live insertion indicator at the cursor and an outline of the drop zone.
-7. Unfurl service: `POST /trpc/unfurl.fetch { url }` enqueues a job (or returns cache), the worker
-   fetches with `safeFetch`, extracts `title`, `description`, `siteName`, `canonicalUrl`, `favicon`,
-   `ogImage`, `publishedAt`, `author`, and stores favicon/og-image as files.
-8. Unfurl cache: keyed by normalized URL, TTL 7 days, negative cache 1 h for failures; a manual
-   "Refresh" action bypasses the cache.
-9. `safeFetch` (the only outbound HTTP path in the product, all services): scheme allowlist
-   (`http`, `https`), port allowlist (80, 443, 8080, 8443), DNS resolution + private/link-local/
-   CGNAT/loopback/unique-local denylist, **connect to the resolved and validated IP** (pinning, no
-   re-resolution), redirect cap 5 with re-validation at every hop, 10 s total timeout, 10 MB body
-   cap, `Content-Type` allowlist, no credentials/cookies forwarded, and a distinct error code per
-   rejection reason.
-10. The URL validator additionally rejects userinfo in the authority, IDN homograph confusables
-    (normalize to punycode and reject mixed-script labels), and non-normalized encodings.
-11. Quick-add: `N` creates a note at the cursor, `L` opens a one-field URL input, `⌘/Ctrl+V` pastes,
-    and a "+" button opens the same menu for pointer users.
 12. Browser-extension hook: `POST /api/v1/capture` accepting `{ url, title?, selection?, imageUrl?,
-boardId? }` authenticated by a scoped API token; it creates a node in the target board's inbox
+    boardId? }` authenticated by a scoped API token; it creates a node in the target board's inbox
     area (a reserved region 2,000 px left of the origin) and returns the node id. Rate limit 60/min.
-13. Every captured node records provenance: `source: 'paste'|'drop'|'extension'|'quick-add'`, the
-    original URL, and `observedAt`.
-14. Screenshot capture of a website node is implemented behind the `capture.screenshot` feature flag
-    (off by default) because it requires a headless browser in the worker; when off, the UI does not
-    offer it (no dead controls).
+14. Screenshot capture of a website node behind the `capture.screenshot` feature flag (off by
+    default); when off the UI does not offer it (no dead controls).
 
-## 6 UX requirements
-
-- Paste feedback within 100 ms: the node appears immediately in a `loading` state; metadata fills in
-  when the unfurl returns. Never block the paste on the network.
-- Paste position: at the pointer if it is over the canvas, else at the viewport center; multi-item
-  pastes lay out in a grid with 24 px gaps, avoiding overlaps with existing nodes.
-- A toast summarizes what happened with an Undo action for 8 s.
-- Unfurl failure: the node stays as a `link` node with the URL, a "Couldn't fetch this page —
-  the site blocked the request" message, and a Retry action. Blocked-by-policy shows a distinct
-  message: "This address is not reachable from the server (private network)".
-- Drop zone: a full-canvas dashed overlay with the count and types of files being dropped.
-- Quick-add URL input validates as you type and shows the detected node type before confirming.
-- Clipboard permission denied (Safari/Firefox variations) → a fallback modal with a paste target
-  field and a clear explanation.
-
-## 7 Technical requirements
-
-- Detection is a pure function tested with synthetic `DataTransfer` fixtures; the React hook is a
-  thin wrapper.
-- Unfurl parsing uses a streaming HTML parser with a 512 KB head limit — the full body is never
-  buffered for metadata.
-- Favicon resolution order: `link[rel=icon]` variants → `/favicon.ico` → domain fallback glyph.
-- Job dedupe: concurrent unfurls of the same URL collapse into one job (BullMQ job id = URL hash).
-- The extension endpoint is REST + OpenAPI (`00_MASTER.md` §2), versioned under `/api/v1`.
-- All capture paths create nodes through the same domain function `createNodesFromPlan`, so paste,
-  drop and extension cannot diverge in behavior.
-
-## 8 Edge cases
-
-- Paste of 500 URLs → capped at 50 with a message offering "Import as a list" (creates one node
-  containing the list) — no silent truncation.
-- Paste of an image plus text (e.g. from a document) → image wins, text is attached as the node's
-  `alt`/caption.
-- A URL that redirects to a private IP → blocked at the hop with the policy message (SSRF e2e).
-- A page with no title → the node title falls back to the domain + path.
-- A 30-second-slow server → aborted at 10 s, node stays as `link` with a retry.
-- Duplicate paste of an existing URL → the node is still created, but a subtle badge offers "3
-  nodes share this URL — review duplicates" (dedupe UI is P13).
-- Offline paste → nodes are created locally in `pending` state; unfurl jobs are enqueued when
-  connectivity returns (queued in the doc as a `pendingFetch` flag).
-- File dropped while offline → stored in OPFS, uploaded on reconnect.
-
-## 9 Security requirements
-
-- The SSRF corpus (`18_TESTING.md` §11.1) must pass in full; every new URL consumer must call
-  `safeFetch` (ESLint bans direct `fetch` with a non-literal URL in server packages).
-- The unfurl worker runs with egress through the allowlisting proxy (`19_DEPLOYMENT.md` §3), so a
-  bypass of `safeFetch` still cannot reach internal services.
-- Extracted metadata is treated as untrusted: sanitized, length-capped (title 300, description 1,000),
-  and never rendered as HTML.
-- Extension API tokens are scoped (`capture:write` only), hashed at rest, revocable, and last-used
-  timestamps are recorded.
-- Uploaded remote images pass the same sniffing and size rules as user uploads (P4 §9).
-
-## 10 Performance requirements
-
-- Paste-to-visible-node ≤ 100 ms for up to 20 items.
-- Unfurl p95 end-to-end ≤ 3 s for a responsive site; the queue sustains 10 unfurls/s per org.
-- A 50-URL paste completes all unfurls within 20 s at default concurrency.
-
-## 11 Tests to write (named)
-
-- `packages/domain/test/capture.detect.test.ts` (full `DataTransfer` matrix).
-- `packages/domain/test/ssrf.corpus.test.ts` + `net/dnsPin.test.ts` (rebinding, redirect chain).
-- `apps/worker/test/unfurl.test.ts` (fixture server: OG tags, no title, slow, 404, oversized).
-- `apps/api/test/extension.capture.test.ts` (token scopes, rate limit, board authz).
-- `e2e/journeys/J02-paste-url.spec.ts`, `J03-drop-file.spec.ts` (extended).
-- `e2e/security/ssrf-redirect.spec.ts` (redirect to 127.0.0.1 is blocked and messaged).
-- `e2e/persistence/offline-paste.spec.ts`.
-
-## 12 Acceptance criteria (checkable)
-
-1. Pasting any of: URL, multiple URLs, image, text, HTML, file — produces the correct node type.
-2. Website nodes fill in title/description/favicon within 3 s on a normal site.
-3. Every hostile URL in the corpus is refused with the correct reason code.
-4. Offline paste works and completes its unfurl after reconnect.
-5. The extension endpoint creates a node with correct provenance and respects board permissions.
-6. All capture actions are undoable as a single step per paste/drop.
-
-## 13 Definition of Done
-
-Acceptance criteria pass; `09_BACKEND.md` documents the unfurl job and cache; `15_SECURITY.md` §4
-documents `safeFetch` as shipped; the OpenAPI document includes `/api/v1/capture`; tracker ticked.
-
-## 14 What NOT to break
-
-Offline-first (P3): no capture path may require the network to create a node. N1: a 50-node paste
-must not stall the frame loop (create nodes in one transaction, not 50).
-
-## 15 Documentation to update
-
-`09_BACKEND.md`, `15_SECURITY.md`, `03_UX.md` §3 (final paste copy), OpenAPI spec, tracker.
+Do both together with the phase that brings scoped API tokens and `apps/worker`. Everything else
+from the original P6 prompt is shipped in PR #22 — read `packages/domain/src/{capture,net}`,
+`apps/web/src/capture`, `apps/api/src/trpc/routers/unfurl.ts` plus `09_BACKEND.md` and
+`15_SECURITY.md` instead of the deleted prompt.
 
 ---
 

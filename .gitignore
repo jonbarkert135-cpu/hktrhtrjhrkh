@@ -8,3 +8,6 @@ bench-results.json
 playwright-report/
 test-results/
 *.tsbuildinfo
+
+# local worktrees
+.worktrees/
