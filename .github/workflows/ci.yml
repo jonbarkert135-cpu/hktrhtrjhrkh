@@ -147,12 +147,14 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    # Browsers come from the Playwright image; `playwright install --with-deps` on a bare runner
+    # hangs on the apt mirror and burns the whole timeout (same reason as e2e/visual).
+    container: mcr.microsoft.com/playwright:v1.49.1-jammy
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/bootstrap
       - uses: actions/download-artifact@v4
         with: { name: dist, path: apps }
-      - run: pnpm exec playwright install --with-deps chromium
       # bench/canvas.bench.ts drives a real browser against the production build; nothing else in
       # this job starts a server, so the preview server is started here and awaited explicitly.
       - name: Serve the production web build on :5173
