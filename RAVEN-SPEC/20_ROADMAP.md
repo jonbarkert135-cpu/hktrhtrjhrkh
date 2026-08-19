@@ -1,4 +1,4 @@
-# Raven — 20 — IMPLEMENTATION ROADMAP (phase prompts P1…P16)
+# Raven — 20 — IMPLEMENTATION ROADMAP (phase prompts P1…P16, plus P17)
 
 ## Scope
 
@@ -7,6 +7,9 @@ from `00_MASTER.md` §7, each with the same 15 sections, written so a fresh codi
 of previous sessions can execute it by reading only this prompt plus the spec sections it names.
 It also defines how to use the prompts, the branch/PR convention, the quality-gate reminder, a
 progress tracker and the phase dependency graph.
+Phases P1–P16 come from `00_MASTER.md` §7. Phases numbered P17 and above are added later from the
+briefs in `prompts/`, in the same 15-section format; P17 comes from
+`prompts/PROMPT_2_UNIFIED_INTELLIGENCE_PLATFORM_RU.md`.
 Nothing here may contradict `00_MASTER.md`; if it does, `00_MASTER.md` wins.
 
 ---
@@ -1525,6 +1528,206 @@ move the source of truth to Postgres; the CRDT remains authoritative.
 
 `09_BACKEND.md`, `08_DATA_MODEL.md` (projection tables), `03_UX.md` §11, `19_DEPLOYMENT.md` §13
 (measured memory), runbooks, tracker.
+
+---
+
+# P17 — Unified query & orchestration layer
+
+**Status: NOT STARTED.** Depends on P9 (integration framework: manifests, runner sandbox, run
+history). Independent of, but designed to consume, the L4 transform/provider registry
+(`21_TRANSFORM_SYSTEM.md`, `packages/transforms`, delivered from
+`prompts/PROMPT_4_MALTEGO_ECOSYSTEM_RU.md`; see `24_UNIFIED_QUERY.md` §12). Ships no new engines of
+its own — it is the layer that decides which engines run, with what budget, and how their output
+becomes one coherent graph.
+
+## 1 Objective
+
+Turn one analyst question into one answer: type/paste anything into a single query bar, have Raven
+decide which registered capabilities can help, plan them into stages under an explicit budget, run
+them concurrently with streaming partial results, normalize every engine's output into the canonical
+domain model, deduplicate and resolve entities, derive links, attach provenance and legal posture to
+everything produced, and present it in one review surface the analyst accepts onto the board.
+
+## 2 Context (what exists now)
+
+P9 gives manifest-declared integrations, a runner sandbox and run history, but each integration is
+invoked individually by the user and returns its own shape into its own proposal panel. There is no
+entity typing of free input, no router, no plan, no budget, no cross-engine dedupe, no confidence,
+no provenance vocabulary, and no query object. `22_ECOSYSTEM_AUDIT.md` fixes which engines are
+allowed to exist behind the router; `24_UNIFIED_QUERY.md` is the design this phase implements.
+
+## 3 Existing architecture to respect
+
+- `24_UNIFIED_QUERY.md` — primary reference, all sections.
+- `22_ECOSYSTEM_AUDIT.md` §7 (BYOK rules) and §8 (what we build ourselves).
+- `10_INTEGRATIONS.md` (manifest schema, runner sandbox, proposal/accept flow — reuse, do not fork).
+- `08_DATA_MODEL.md` (entity/relation model, CRDT-safe merge/un-merge), `07_EDGE_SYSTEM.md`
+  (derived-edge rendering), `03_UX.md` (command palette, review surfaces),
+  `15_SECURITY.md` (`safeFetch`, SSRF, sandbox, credential storage), `16_PERFORMANCE.md` (budgets).
+- `docs/adr/ADR-001-local-first.md` — the router's mode gate is the enforcement point of that ADR.
+
+## 4 Files/modules affected
+
+```text
+packages/domain/src/query/{capability.ts,selectors.ts,plan.ts,provenance.ts,confidence.ts,identity.ts}
+packages/query-engine/src/{router.ts,planner.ts,executor.ts,budget.ts,cache.ts,events.ts}
+packages/query-engine/src/normalize/{mapper.ts,registry.ts}
+packages/query-engine/src/resolve/{blocking.ts,score.ts,merge.ts}
+packages/query-engine/src/derive/{cooccurrence.ts,rules.ts}
+packages/query-engine/src/adapters/{integration-registry.ts,transform-registry.ts}
+apps/web/src/features/query/{QueryBar.tsx,PlanReview.tsx,ResultStream.tsx,ReviewQueue.tsx,RunReport.tsx}
+apps/web/src/data/workspace/query.ts            (local + server repository methods)
+apps/api/src/routes/query/{plan.ts,run.ts}      (server mode only)
+bench/query/{router.bench.ts,dedupe.bench.ts}
+```
+
+## 5 Exact requirements (numbered, testable)
+
+1. `CapabilityDescriptor` exactly as in `24_UNIFIED_QUERY.md` §2, validated by zod at registration;
+   an invalid descriptor fails registration loudly and the engine stays unavailable.
+2. Descriptors are derived from integration manifests by one adapter, and projected from
+   `@nexus/transforms` manifests by a second adapter; no descriptor is hand-written twice, and both
+   projections are contract-tested against their source.
+3. Selectors for domain (IDN/punycode), URL, IPv4/IPv6/CIDR, e-mail, E.164 phone, username handle,
+   hash, BTC/ETH address, LEI, company name, free text — pure, offline, ≤ 1 ms, fully unit-tested
+   including hostile inputs.
+4. Ambiguous input returns ranked candidates; the UI disambiguates once per session per string.
+5. The router applies the eight filter stages in `24` §4 in that order and records a machine-readable
+   reason for every dropped capability.
+6. The router is a pure function: given the same registry, mode, credentials, budget and policy it
+   returns the same plan. No I/O, no clock reads outside an injected clock.
+7. Plans are staged; stage 0 contains only offline/cache steps and always exists.
+8. Budgets (`wallMs`, `requests`, `credits`, `maxNodes`, `maxDepth`) are enforced by the executor,
+   not by adapters; exceeding any of them ends the run as `partial`, never as an error.
+9. Any paid step, any `active-probe` step, or any posture riskier than `public-api` requires explicit
+   approval before the run starts; the threshold is a workspace setting.
+10. Execution is concurrent per stage under a global semaphore and per-engine rate limits, with
+    timeout, bounded retry (idempotent failures only), circuit breaker, and cooperative cancellation
+    that also kills child processes.
+11. `QueryEvent`s stream to the UI; the first stage-0 result renders before any network step finishes.
+12. Every produced entity/relation carries provenance: capability id, engine + version, run id, input,
+    timestamp, cache hit or live, legal posture, licence ref, confidence.
+13. Normalization mappers are pure, versioned and tested against recorded fixtures of real engine
+    output; canonicalization lives in `packages/domain`, not in mappers.
+14. Deduplication: exact `identityKey` auto-merges; probabilistic scoring with the thresholds in
+    `24` §7.3; merges are events with a full audit trail and exact un-merge.
+15. Confidence combines declared precision, corroboration (noisy-OR, `upstream`-aware) and age decay.
+16. Derived links are typed, carry `derivedBy` + evidence, render distinctly and are individually
+    rejectable.
+17. Run modes Local-only / Zero-credential / Free-tier / Full behave exactly as `24` §8; local mode
+    defaults to Zero-credential and the active mode is always visible on the query bar.
+18. In Local-only, a capability declaring `offline: true` that opens a socket is blocked by the
+    sandbox and the run is marked `contract-violation`; a test proves the block.
+19. Results are proposals: nothing enters the board graph without an explicit accept (N-rule from
+    `17_PLUGIN_SDK.md` P1).
+20. A run is persisted as a `QueryRun`; a saved query is a canvas node; re-running produces a diff
+    (new / changed / disappeared), never duplicate subgraphs.
+21. Cache keys include descriptor and engine versions; cached results are labelled as cached.
+22. `packages/query-engine` imports only `packages/domain` and `@nexus/transforms`; the reverse
+    direction is forbidden and dependency-cruiser enforces both.
+
+## 6 UX requirements
+
+- One query bar, reachable from `Ctrl+K` and from an empty canvas; it accepts anything.
+- The plan is shown before an approved run: stages, engines, estimated time, estimated cost, and a
+  collapsed "N capabilities hidden — why" list with one-click remedies (connect a key, allow network,
+  raise the budget).
+- Results stream into a side surface grouped by entity type, with accept / accept-all / reject and a
+  duplicate-review queue; the canvas only changes on accept.
+- Empty, loading, partial, degraded, error and cancelled states are all designed — "partial" and
+  "degraded" are first-class, not an error toast.
+- Cost and quota burn are visible during the run; crossing a threshold pauses and asks.
+- Every node's inspector shows its provenance chain in one click, including posture and confidence.
+- Keyboard-complete: plan approval, accept/reject, and review-queue navigation need no mouse.
+
+## 7 Technical requirements
+
+- The planner and router run on the main thread (they are microsecond-scale); normalization,
+  dedupe scoring and derivation run in a worker.
+- Streaming uses the existing event transport; in local mode it never leaves the device.
+- All outbound HTTP goes through `safeFetch`; child processes run in the P9 runner sandbox.
+- Deterministic replay: plan + seed + recorded responses reproduce the graph byte-for-byte.
+- No `any` at boundaries; zod at every ingress including adapter output.
+
+## 8 Edge cases
+
+- Zero capabilities match (offline, no keys) → an honest empty state naming what would unlock it.
+- One engine returns 50,000 entities → truncation by score at `maxNodes`, visibly reported.
+- Two engines disagree on the same fact → both retained, conflict flagged, no silent winner.
+- An engine returns valid JSON with a subtly wrong shape → mapper rejects, engine quarantined.
+- A capability declares `offline` but needs a model download on first use → treated as network.
+- Re-run after an engine's descriptor version changed → cache invalidated, diff explains why.
+- Cancellation mid-merge → the merge is atomic; either it happened and is auditable, or it did not.
+- The transform registry is absent → no `transform` capabilities exist and everything else works.
+
+## 9 Security requirements
+
+- Credentials never appear in plans, events, run history, exports, logs or error messages.
+- `active-probe` requires a recorded per-target authorization acknowledgement.
+- `licensed-data` output is flagged `redistribution: restricted` and excluded from exports without
+  an explicit override.
+- LLM-driven browsing capabilities run only inside the egress-allow-listed sandbox; page content is
+  untrusted input and can never become instructions.
+- Adapter output size caps and parse timeouts prevent a hostile engine response from wedging the app.
+
+## 10 Performance requirements
+
+All numbers from `24_UNIFIED_QUERY.md` §13, benchmarked in `bench/query/`: intake ≤ 1 ms, plan for a
+40-capability registry ≤ 15 ms, first result ≤ 200 ms p95, orchestration overhead ≤ 2 % of a network
+run, normalize + dedupe of 1,000 entities ≤ 400 ms, no dropped frame > 16 ms while streaming 1,000
+entities, ≤ 150 MB worker memory for a 10,000-entity run.
+
+## 11 Tests to write (named)
+
+- `packages/domain/test/query.selectors.test.ts` (valid, hostile and ambiguous inputs).
+- `packages/query-engine/test/router.purity.test.ts`, `router.filters.test.ts` (one case per stage,
+  asserting the drop reason).
+- `packages/query-engine/test/planner.stages.test.ts`, `planner.budget.test.ts`.
+- `packages/query-engine/test/executor.failures.test.ts` (timeout, 429, auth, contract violation,
+  circuit breaker, cancellation).
+- `packages/query-engine/test/normalize.fixtures.test.ts` (recorded output of ≥ 5 real engines).
+- `packages/query-engine/test/resolve.merge.property.test.ts` (merge→un-merge is identity).
+- `packages/query-engine/test/confidence.corroboration.test.ts` (shared `upstream` does not boost).
+- `packages/query-engine/test/mode.local-only.test.ts` (socket attempt is blocked and reported).
+- `e2e/query/one-query-many-engines.spec.ts`, `e2e/query/partial-failure.spec.ts`,
+  `e2e/query/rerun-diff.spec.ts`, `e2e/query/paid-approval.spec.ts`.
+- `bench/query/router.bench.ts`, `bench/query/dedupe.bench.ts`.
+
+## 12 Acceptance criteria (checkable)
+
+1. Pasting a domain with no keys and no network still produces results from stage 0 within 200 ms.
+2. A single query fans out to ≥ 3 engines concurrently and renders results as they arrive.
+3. Killing one engine mid-run yields a `degraded` result containing every other engine's output.
+4. The same entity found by three engines appears once, with three provenance records and a higher
+   confidence than any single source.
+5. Two engines sharing an upstream do not raise confidence above a single source's.
+6. A paid capability never runs without explicit approval, and the spend reported after the run
+   matches the estimate's unit accounting.
+7. In Local-only mode, no socket is opened during a full run (asserted at the sandbox level).
+8. Re-running a saved query after a change produces a diff, not duplicates.
+9. Every node on the board can name the run, engine, input, time, posture and confidence that made it.
+10. `pnpm check:gates` and dependency-cruiser pass with `packages/query-engine` depending only on
+    `packages/domain`.
+
+## 13 Definition of Done
+
+Acceptance criteria pass; coverage ≥ 85 % lines on `packages/query-engine` and `packages/domain`
+query modules; benchmarks recorded in `16_PERFORMANCE.md`; `24_UNIFIED_QUERY.md` updated with the
+numbers actually measured and the §15 open questions resolved; both trackers ticked.
+
+## 14 What NOT to break
+
+The local-first guarantee (N2) — the query bar must work fully with no network, no account and no
+keys. The propose-never-write rule — no engine output may mutate the board without an accept. Undo
+semantics — accepting a batch of results is one undoable operation. Existing per-integration flows
+from P9 keep working; this layer sits above them and does not fork the manifest or the runner.
+
+## 15 Documentation to update
+
+`24_UNIFIED_QUERY.md` (measured numbers, resolved open questions), `22_ECOSYSTEM_AUDIT.md` (any
+engine added or re-tiered), `10_INTEGRATIONS.md` (the descriptor-derivation contract),
+`03_UX.md` (query bar, plan review, review queue), `15_SECURITY.md` (posture vocabulary as shipped),
+`08_DATA_MODEL.md` (`QueryRun`, merge audit), `16_PERFORMANCE.md`, both trackers.
 
 ---
 
