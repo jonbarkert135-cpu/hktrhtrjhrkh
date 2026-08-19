@@ -113,6 +113,9 @@ consumes them (Vite, tsx, vitest). Only `@nexus/ui` (Tailwind preset) and `@nexu
 
 ## Where the spec lives, and how phases work
 
+Working on this with an AI agent? Point it at [`AGENTS.md`](AGENTS.md) first: invariants, commands,
+reading order and the graph-query workflow, so it does not re-read the tree to orient itself.
+
 1. [`RAVEN-SPEC/00_MASTER.md`](RAVEN-SPEC/00_MASTER.md) — **start here.** Frozen architecture
    decisions, product principles, the ten non-negotiables (N1–N10), the seven-check quality gate.
 2. [`RAVEN-SPEC/20_ROADMAP.md`](RAVEN-SPEC/20_ROADMAP.md) — one self-contained implementation
