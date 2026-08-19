@@ -94,7 +94,7 @@ the area spec plus the code. Read `AGENTS.md` first.
 | L4.2 Transform SDK | #20               | `packages/transforms/src/sdk` (engine contract, `runEngine` host, testkit, conformance harness, `doh-resolver` reference engine) | `21_TRANSFORM_SYSTEM.md` §12a      |
 | L4.3 Run history   | #21               | `packages/transforms/src/history.ts`, `src/cache.ts` (history, replay, compare, TTL cache)                                       | `21_TRANSFORM_SYSTEM.md` §10       |
 | Layer-2 docs       | #16               | `22_ECOSYSTEM_AUDIT.md`, `23_COMPETITOR_MATRIX.md`, `24_UNIFIED_QUERY.md` (design only)                                          | those documents                    |
-| P6 Capture         | (this PR)         | `packages/domain/src/{capture,net}`, `apps/web/src/capture`, `apps/api/.../unfurl.ts` — §5.12/§5.14 still open | `09_BACKEND.md`, `15_SECURITY.md`  |
+| P6 Capture         | (this PR)         | `packages/domain/src/{capture,net}`, `apps/web/src/capture`, `apps/api/.../unfurl.ts` — §5.12/§5.14 still open                   | `09_BACKEND.md`, `15_SECURITY.md`  |
 | Agent memory       | #18               | `AGENTS.md`, `.mcp.json`                                                                                                         | —                                  |
 
 Open phases in this file: **P5 part 4**, **P6**, **P7**, **P8**, **P17**, **L4.4–L4.7**. P9–P16 have
