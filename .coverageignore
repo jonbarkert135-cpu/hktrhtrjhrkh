@@ -19,6 +19,8 @@ packages/domain/src/nodes/index.ts
 packages/domain/src/edges/index.ts
 packages/domain/src/edges/routing/index.ts
 packages/canvas-engine/src/index.ts
+packages/transforms/src/index.ts
+packages/transforms/src/catalog/index.ts
 
 # Browser bootstrap: finds #root and calls createRoot, so it can only run against a real document
 # root. Everything it composes (AppProviders, AppRoutes) is covered by unit tests; the file itself
@@ -29,3 +31,8 @@ apps/web/src/main.tsx
 # and ResizeObserver, so under jsdom it returns early by design (see the guard in the file). The
 # behaviour it wires up is covered by the e2e and visual jobs instead.
 apps/web/src/app/canvas/useCanvasEngine.ts
+
+# Vitest preset shared by every package: it is configuration, not shipped code, and vitest's own
+# `coverage.exclude` drops `*.config.*` for the same reason. Its correctness shows up as the
+# coverage floors it enforces on every other package.
+packages/config/vitest/base.ts
