@@ -118,15 +118,15 @@ reading order and the graph-query workflow, so it does not re-read the tree to o
 
 1. [`RAVEN-SPEC/00_MASTER.md`](RAVEN-SPEC/00_MASTER.md) — **start here.** Frozen architecture
    decisions, product principles, the ten non-negotiables (N1–N10), the seven-check quality gate.
-2. [`RAVEN-SPEC/20_ROADMAP.md`](RAVEN-SPEC/20_ROADMAP.md) — one self-contained implementation
-   prompt per phase, P1…P16.
-3. Pick the lowest un-ticked phase, branch `phase/p<nn>-<slug>`, implement exactly that phase,
+2. [`RAVEN-SPEC/20_ROADMAP.md`](RAVEN-SPEC/20_ROADMAP.md) — the ledger of what already shipped plus
+   one self-contained implementation prompt per open phase.
+3. Pick the lowest open phase, branch `phase/p<nn>-<slug>`, implement exactly that phase,
    open one PR titled `P<nn> — <name>`.
 4. The PR body states what existed before, what was reused, what was intentionally not touched,
    plus evidence for every acceptance criterion and the test checklist from `18_TESTING.md` §16.
 5. `ci-ok` is the single required check; it aggregates lint, typecheck, unit, coverage-gate,
    build, e2e, visual, bench, audit, docker and migrate-check.
-6. Tick the phase in `20_ROADMAP.md` and in the root progress tracker in the same PR.
+6. In the same PR, move the phase into the `20_ROADMAP.md` ledger and delete its prompt.
 
 Nothing is implemented "later": if a capability is in the core vision, it has a full architectural
 solution in the spec before code is written. No `TODO` markers survive CI.
