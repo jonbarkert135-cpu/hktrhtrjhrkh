@@ -467,6 +467,25 @@ Rendering a URL anywhere in the UI uses `safeHref()` which re-applies the scheme
 Unicode form with a "⚠ mixed-script domain" badge when the host mixes scripts; the underlying href
 always uses the ASCII (punycode) form.
 
+### 4.2a `safeFetch` as shipped (P6)
+
+The policy above lives in `packages/domain/src/net/` and is the only outbound HTTP path:
+
+| Module            | Enforces                                                                                                                                                                              |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `urlValidator.ts` | scheme + port allowlist, no userinfo, punycode + mixed-script rejection, non-normalized encodings, `normalizeUrl` (cache key)                                                         |
+| `dnsPin.ts`       | private / loopback / link-local / CGNAT / ULA / multicast denylist; one resolution, one pinned address; an answer mixing public and private addresses is refused outright (rebinding) |
+| `safeFetch.ts`    | redirect cap 5 with **re-validation at every hop**, 10 s total timeout, 10 MB body cap, `Content-Type` allowlist, no cookies/credentials/referer, one error code per rejection reason |
+
+Rejections are `UrlRejected` with a `UrlErrorCode`; `URL_ERROR_MESSAGES` holds the analyst-facing
+sentence, so "blocked by policy" and "the site refused us" never read the same. The corpus lives in
+`packages/domain/test/ssrf.corpus.test.ts` and `net.dnsPin.test.ts`.
+
+Deviation to close later: the socket is not yet bound to `pinned.address` in-process — the resolved
+address is passed to the injected transport and the egress allowlist proxy (`19_DEPLOYMENT.md` §3)
+is what stops a bypass at the network layer. An undici dispatcher that dials the pinned IP with the
+original SNI is the intended fix.
+
 ### 4.3 HTML sanitization
 
 Untrusted HTML appears in three places: pasted rich text, unfurl descriptions, and imported notes.

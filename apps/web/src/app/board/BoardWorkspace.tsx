@@ -20,7 +20,7 @@ import {
 } from '@nexus/domain';
 import { Banner, Button } from '@nexus/ui';
 import type { Engine, Intent } from '@nexus/canvas-engine';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useBoardDoc } from '../../data/docProvider.tsx';
 import { restoreSnapshot } from '../../data/snapshots.ts';
@@ -34,6 +34,10 @@ import { createNodeStore } from '../../nodes/nodeStore.ts';
 import { SyncStatus } from '../shell/SyncStatus.tsx';
 import { useBoardStatus } from '../shell/boardStatus.tsx';
 import { ImportDialog, type ImportPreview } from './ImportDialog.tsx';
+import { QuickAdd } from '../../capture/QuickAdd.tsx';
+import { PasteToast } from '../../capture/PasteToast.tsx';
+import { captureTransfer, usePaste, type CaptureResult } from '../../capture/usePaste.ts';
+import { useDropZone } from '../../capture/useDropZone.ts';
 import { VersionHistory } from './VersionHistory.tsx';
 
 const APP_VERSION = '0.3.0';
@@ -53,6 +57,23 @@ export function BoardWorkspace() {
   const [inspectorWidth, setInspectorWidth] = useState(360);
 
   const boardStatus = useBoardStatus();
+  const [capture, setCapture] = useState<CaptureResult | null>(null);
+
+  // Capture aims at the middle of what the analyst is looking at; the pointer position is only
+  // known inside the engine, so a drop re-aims through `screenToWorld` below.
+  const pointer = useRef<{ x: number; y: number } | null>(null);
+  const aim = useCallback(() => {
+    const screen = pointer.current;
+    if (screen !== null && engine !== null) return engine.camera.screenToWorld(screen);
+    const viewport = engine?.camera.viewportWorld;
+    return viewport === undefined
+      ? { x: 0, y: 0 }
+      : { x: viewport.x + viewport.w / 2, y: viewport.y + viewport.h / 2 };
+  }, [engine]);
+  const captureTarget = useMemo(() => ({ doc, history, aim }), [doc, history, aim]);
+
+  usePaste(captureTarget, setCapture);
+  const dropZone = useDropZone(captureTarget, setCapture);
 
   // One store per document: cards subscribe per node id, so an edit re-renders one card (P4 §7).
   const store = useMemo(() => createNodeStore(doc), [doc]);
@@ -141,6 +162,16 @@ export function BoardWorkspace() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc, history, engine]);
 
+  const importAsList = useCallback(() => {
+    if (capture === null) return;
+    setCapture(captureTransfer(captureTarget, capture.snapshot, 'paste', { asList: true }));
+  }, [capture, captureTarget]);
+
+  const quickCapture = useCallback(
+    (text: string) => setCapture(captureTransfer(captureTarget, { text }, 'quick-add')),
+    [captureTarget],
+  );
+
   const finishDrop = useCallback(
     (from: string, at: { x: number; y: number }) => {
       connectToEmpty(intentContext(), from, at);
@@ -198,6 +229,7 @@ export function BoardWorkspace() {
         <Button onClick={addNote} data-testid="add-note">
           Add note
         </Button>
+        <QuickAdd onNote={addNote} onCapture={quickCapture} />
         <Button variant="secondary" onClick={() => setHistoryOpen(true)}>
           Version history
         </Button>
@@ -229,7 +261,20 @@ export function BoardWorkspace() {
         </Banner>
       ) : null}
 
-      <div className="nx-board-main">
+      <div
+        className="nx-board-main"
+        onDragOver={dropZone.handlers.onDragOver}
+        onDragLeave={dropZone.handlers.onDragLeave}
+        onDrop={dropZone.handlers.onDrop}
+        onPointerMove={(event) => {
+          pointer.current = { x: event.clientX, y: event.clientY };
+        }}
+      >
+        {dropZone.state.active ? (
+          <div className="nx-drop-overlay" data-testid="drop-overlay" aria-hidden="true">
+            <span>Drop to add {dropZone.state.summary}</span>
+          </div>
+        ) : null}
         <CanvasHost onIntent={onIntent} onEngine={onEngine} nodeCount={counts.nodes}>
           {({ slotOf, screenOf }) => (
             <>
@@ -274,6 +319,20 @@ export function BoardWorkspace() {
           onEdgeDeleted={() => setSelectedIds([])}
         />
       </div>
+
+      <PasteToast
+        message={capture?.message ?? null}
+        onUndo={
+          capture !== null && capture.ids.length > 0
+            ? () => {
+                history.undo();
+                setCapture(null);
+              }
+            : null
+        }
+        onImportList={capture !== null && capture.overflow !== null ? importAsList : null}
+        onDismiss={() => setCapture(null)}
+      />
 
       <VersionHistory
         open={historyOpen}

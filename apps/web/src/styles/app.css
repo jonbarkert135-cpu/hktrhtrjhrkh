@@ -347,6 +347,42 @@
     border-radius: var(--nx-radius-3);
   }
 
+  /* ---------------------------------------------------------------- capture (P6) */
+
+  /* Drop target: a dashed outline over the whole canvas saying what is about to land (P6 §6).
+     It is decoration only, so it never takes the pointer away from the engine. */
+  .nx-drop-overlay {
+    position: absolute;
+    inset: var(--nx-space-3);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    border: var(--nx-border-heavy) dashed var(--border-strong);
+    border-radius: var(--nx-radius-3);
+    background: var(--overlay-scrim);
+    color: var(--fg-default);
+    font: var(--text-body);
+  }
+
+  .nx-capture-toast {
+    position: absolute;
+    inset-inline-start: 50%;
+    inset-block-end: var(--nx-space-6);
+    transform: translateX(-50%);
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: var(--nx-space-3);
+    padding: var(--nx-space-2) var(--nx-space-4);
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--nx-radius-3);
+    color: var(--fg-default);
+    font: var(--text-body-sm);
+  }
+
   /* ---------------------------------------------------------------- node cards (P4) */
 
   .nx-board-main {
