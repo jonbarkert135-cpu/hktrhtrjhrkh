@@ -9,6 +9,9 @@
 import {
   countEntities,
   deleteNode,
+  getEdge,
+  getNode,
+  hasEdge,
   duplicateNode,
   exportBoard,
   importBoard,
@@ -25,7 +28,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useBoardDoc } from '../../data/docProvider.tsx';
 import { restoreSnapshot } from '../../data/snapshots.ts';
 import { CanvasHost } from '../canvas/CanvasHost';
-import { applyIntent, createNoteNode } from '../canvas/bindings/applyIntents.ts';
+import { applyIntent, connectToEmpty, createNoteNode } from '../canvas/bindings/applyIntents.ts';
+import { ConnectionOverlay, type ConnectionDrop } from '../../edges/ConnectionOverlay.tsx';
+import { EdgeContextMenu } from '../../edges/EdgeContextMenu.tsx';
+import { EdgeInspector } from '../../edges/EdgeInspector.tsx';
 import { patchesFromChange, sceneFromDoc } from '../canvas/bindings/sceneFromDoc.ts';
 import { Inspector } from '../../nodes/inspector/Inspector.tsx';
 import { NodeHosts } from '../../nodes/NodeHosts.tsx';
@@ -36,6 +42,16 @@ import { ImportDialog, type ImportPreview } from './ImportDialog.tsx';
 import { VersionHistory } from './VersionHistory.tsx';
 
 const APP_VERSION = '0.3.0';
+
+/** Endpoint titles for the relationship inspector; deleted endpoints read as such, never blank. */
+function endpointTitles(doc: Parameters<typeof getEdge>[0], edgeId: string) {
+  const edge = getEdge(doc, edgeId);
+  if (edge === undefined) return undefined;
+  return {
+    source: getNode(doc, edge.source.nodeId)?.title ?? 'Deleted node',
+    target: getNode(doc, edge.target.nodeId)?.title ?? 'Deleted node',
+  };
+}
 
 export function BoardWorkspace() {
   const { boardId, doc, history, status, snapshots, snapshotStore, ready, storageWarning, retry } =
@@ -58,12 +74,33 @@ export function BoardWorkspace() {
   useEffect(() => () => store.destroy(), [store]);
 
   const now = useCallback(() => new Date().toISOString(), []);
-  const context = { doc, history, now, makeId: (): string => newId.board() };
+  const report = useCallback((message: string) => setNotice(message), []);
+  const context = { doc, history, now, makeId: (): string => newId.board(), onNotice: report };
+  const intentContext = useCallback(
+    () => ({ doc, history, now, makeId: (): string => newId.board(), onNotice: report }),
+    [doc, history, now, report],
+  );
+  // `pendingIntent` is a ref-free trick: the screen position of a canvas event is only available
+  // inside the render prop, so the intent handler stores world coordinates and the menu converts.
+  const [pendingMenu, setPendingMenu] = useState<{
+    kind: 'edge' | 'drop';
+    id: string;
+    world: { x: number; y: number };
+  } | null>(null);
+
   const onIntent = useCallback(
     (intent: Intent) => {
-      applyIntent(intent, { doc, history, now, makeId: (): string => newId.board() });
+      if (intent.t === 'context-menu' && intent.target.t === 'edge') {
+        setPendingMenu({ kind: 'edge', id: intent.target.id, world: intent.at });
+        return;
+      }
+      if (intent.t === 'connect-to-empty') {
+        setPendingMenu({ kind: 'drop', id: intent.from, world: intent.at });
+        return;
+      }
+      applyIntent(intent, intentContext());
     },
-    [doc, history, now],
+    [intentContext],
   );
 
   // Document → engine: incremental patches, O(changed) per transaction.
@@ -126,6 +163,14 @@ export function BoardWorkspace() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc, history, engine]);
 
+  const finishDrop = useCallback(
+    (pending: ConnectionDrop) => {
+      connectToEmpty(intentContext(), pending.from, pending.at);
+      setPendingMenu(null);
+    },
+    [intentContext],
+  );
+
   const download = useCallback(() => {
     const archive = exportBoard(doc, { appVersion: APP_VERSION, now: new Date().toISOString() });
     const blob = new Blob([serializeBoardExport(archive)], { type: 'application/json' });
@@ -169,6 +214,12 @@ export function BoardWorkspace() {
     [doc, snapshotStore],
   );
 
+  // A single selected relationship swaps the node inspector for the relationship one (P5 §5.11).
+  const selectedEdgeId =
+    selectedIds.length === 1 && selectedIds[0] !== undefined && hasEdge(doc, selectedIds[0])
+      ? selectedIds[0]
+      : null;
+
   return (
     <section className="nx-board" aria-label="Board">
       <header className="nx-board-bar">
@@ -208,32 +259,70 @@ export function BoardWorkspace() {
 
       <div className="nx-board-main">
         <CanvasHost onIntent={onIntent} onEngine={onEngine} nodeCount={counts.nodes}>
-          {({ slotOf }) => (
-            <NodeHosts
-              engine={engine}
-              doc={doc}
-              store={store}
-              slotOf={slotOf}
-              selectedIds={selectedIds}
-              onOpenInspector={(id) => setSelectedIds([id])}
-              onDuplicate={(id) => {
-                duplicateNode(doc, id, { now: new Date().toISOString() });
-              }}
-              onDelete={(id) => {
-                deleteNode(doc, id, { now: new Date().toISOString() });
-              }}
-            />
+          {({ slotOf, screenOf }) => (
+            <>
+              <NodeHosts
+                engine={engine}
+                doc={doc}
+                store={store}
+                slotOf={slotOf}
+                selectedIds={selectedIds}
+                onOpenInspector={(id) => setSelectedIds([id])}
+                onDuplicate={(id) => {
+                  duplicateNode(doc, id, { now: new Date().toISOString() });
+                }}
+                onDelete={(id) => {
+                  deleteNode(doc, id, { now: new Date().toISOString() });
+                }}
+              />
+              {pendingMenu?.kind === 'edge' && hasEdge(doc, pendingMenu.id) ? (
+                <EdgeContextMenu
+                  doc={doc}
+                  edgeId={pendingMenu.id}
+                  context={context}
+                  at={screenOf(pendingMenu.world)}
+                  onClose={() => setPendingMenu(null)}
+                  onEditLabel={(id) => setSelectedIds([id])}
+                  onResult={(result) => {
+                    if (result.message !== null) setNotice(result.message);
+                  }}
+                />
+              ) : null}
+              {pendingMenu?.kind === 'drop' ? (
+                <ConnectionOverlay
+                  drop={{
+                    from: pendingMenu.id,
+                    at: pendingMenu.world,
+                    screen: screenOf(pendingMenu.world),
+                  }}
+                  onCreate={finishDrop}
+                  onCancel={() => setPendingMenu(null)}
+                />
+              ) : null}
+            </>
           )}
         </CanvasHost>
 
-        <Inspector
-          doc={doc}
-          store={store}
-          selectedIds={selectedIds}
-          width={inspectorWidth}
-          onWidthChange={setInspectorWidth}
-          onClose={() => setSelectedIds([])}
-        />
+        {selectedEdgeId === null ? (
+          <Inspector
+            doc={doc}
+            store={store}
+            selectedIds={selectedIds}
+            width={inspectorWidth}
+            onWidthChange={setInspectorWidth}
+            onClose={() => setSelectedIds([])}
+          />
+        ) : (
+          <EdgeInspector
+            doc={doc}
+            edgeId={selectedEdgeId}
+            context={context}
+            endpoints={endpointTitles(doc, selectedEdgeId)}
+            width={inspectorWidth}
+            onClose={() => setSelectedIds([])}
+            onDeleted={() => setSelectedIds([])}
+          />
+        )}
       </div>
 
       <VersionHistory

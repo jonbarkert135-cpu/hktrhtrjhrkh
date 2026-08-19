@@ -208,11 +208,14 @@ describe('pointer transitions', () => {
       },
     ]);
 
+    // A drop on empty canvas is a creation gesture in P5: the host decides (fsm.connect.test.ts).
     const dropped = run(
       [pointer('pointerdown', at(100, 30), port), pointer('pointerup', at(900, 900))],
       ctx,
     );
-    expect(intentsOf(dropped.all)).toEqual([]);
+    expect(intentsOf(dropped.all)).toEqual([
+      { t: 'connect-to-empty', from: 'a', fromAnchor: { side: 'right', t: 0.5 }, at: at(900, 900) },
+    ]);
     expect(dropped.state.name).toBe('idle');
   });
 
@@ -606,6 +609,9 @@ describe('cursorFor', () => {
           from: 'a',
           fromAnchor: { side: 'auto', t: 0.5 },
           current: at(0, 0),
+          via: 'pointer',
+          candidates: [],
+          candidateIndex: -1,
         },
         canvas,
       ),

@@ -112,6 +112,8 @@ export function makeFrame(over: Partial<RenderFrame> = {}): RenderFrame {
     selected: [],
     guides: [],
     marquee: null,
+    selectedEdges: new Set<string>(),
+    connection: null,
     text: createTextCache(),
     edgePath: straightEdgePath,
   };

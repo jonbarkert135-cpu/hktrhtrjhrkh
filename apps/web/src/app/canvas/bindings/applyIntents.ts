@@ -9,6 +9,8 @@
 import type { Intent } from '@nexus/canvas-engine';
 import {
   addEdge,
+  bestEdgeType,
+  builtinEdgeTypes,
   builtinNodeTypes,
   createNode,
   decideCapture,
@@ -17,6 +19,7 @@ import {
   getNode,
   hasEdge,
   hasNode,
+  listEdges,
   listNodes,
   makeEdge,
   moveNodes,
@@ -27,6 +30,7 @@ import {
   resizeNode,
   updateEdge,
   updateNode,
+  validateEdgeCandidate,
   type BoardHistory,
   type CaptureInput,
 } from '@nexus/domain';
@@ -38,7 +42,18 @@ export interface IntentContext {
   now: () => string;
   /** Ids are minted client-side so capture works offline (N2). */
   makeId?: (() => string) | undefined;
+  /** Refusals reach the analyst instead of vanishing: duplicates, self-loops, node budget. */
+  onNotice?: ((message: string) => void) | undefined;
 }
+
+/** Engine anchors carry `auto` plus the four sides; the document stores exactly the same words. */
+const portOf = (anchor: { side: string }): 'auto' | 'top' | 'right' | 'bottom' | 'left' =>
+  anchor.side === 'top' ||
+  anchor.side === 'right' ||
+  anchor.side === 'bottom' ||
+  anchor.side === 'left'
+    ? anchor.side
+    : 'auto';
 
 const plural = (count: number, word: string): string =>
   `${String(count)} ${word}${count === 1 ? '' : 's'}`;
@@ -112,12 +127,53 @@ function applyIntentToDoc(intent: Intent, context: IntentContext): boolean {
     }
 
     case 'create-edge': {
-      if (!hasNode(doc, intent.from) || !hasNode(doc, intent.to)) return false;
+      const source = getNode(doc, intent.from);
+      const target = getNode(doc, intent.to);
+      if (source === undefined || target === undefined) return false;
+      // The relationship type is *suggested*, never asked for mid-gesture: the analyst retypes it
+      // in the inspector if the suggestion is wrong (07 §5.3).
+      const registry = builtinEdgeTypes();
+      const type = bestEdgeType(registry, source.type, target.type);
+      const definition = registry.get(type);
+      const result = validateEdgeCandidate(
+        registry,
+        {
+          type,
+          sourceNodeId: intent.from,
+          targetNodeId: intent.to,
+          sourceNodeType: source.type,
+          targetNodeType: target.type,
+          directed: definition.directed,
+          provenanceKind: 'manual',
+        },
+        listEdges(doc),
+      );
+      const blocker = result.issues.find((issue) => issue.severity === 'error');
+      if (blocker !== undefined) {
+        context.onNotice?.(blocker.message);
+        return false;
+      }
       label('connect 2 nodes');
-      addEdge(doc, makeEdge({ id: makeId(), from: intent.from, to: intent.to }, now), {
-        origin: 'local:create',
+      const edge = makeEdge(
+        {
+          id: makeId(),
+          from: intent.from,
+          to: intent.to,
+          type,
+          fromPort: portOf(intent.fromAnchor),
+          toPort: portOf(intent.toAnchor),
+        },
         now,
-      });
+      );
+      addEdge(
+        doc,
+        {
+          ...edge,
+          directed: definition.directed,
+          ...(result.forceUnknownConfidence ? { confidence: 'unknown' as const } : {}),
+        },
+        { origin: 'local:create', now },
+      );
       return true;
     }
 
@@ -189,11 +245,37 @@ function applyIntentToDoc(intent: Intent, context: IntentContext): boolean {
   }
 }
 
+/**
+ * A connection dropped on empty canvas (P5 §5.3): one note, one relationship, one undo step. The
+ * note is created first because the edge needs its id; both writes share the same history label.
+ */
+export function connectToEmpty(
+  context: IntentContext,
+  from: string,
+  at: { x: number; y: number },
+  title = 'New note',
+): string | null {
+  if (!hasNode(context.doc, from)) return null;
+  const nodeId = createNoteNode(context, at, title, { separate: false });
+  applyIntent(
+    {
+      t: 'create-edge',
+      from,
+      fromAnchor: { side: 'auto', t: 0.5 },
+      to: nodeId,
+      toAnchor: { side: 'auto', t: 0.5 },
+    },
+    context,
+  );
+  return nodeId;
+}
+
 /** Creates a note at a world position — the "N" shortcut and the toolbar button (P3 §6). */
 export function createNoteNode(
   context: IntentContext,
   at: { x: number; y: number },
   title = 'New note',
+  options: { separate?: boolean } = {},
 ): string {
   const now = context.now();
   const makeId = context.makeId ?? ((): string => newId.board());
@@ -217,6 +299,6 @@ export function createNoteNode(
     },
     { now, makeId, origin: 'local:create' },
   );
-  context.history?.separate();
+  if (options.separate !== false) context.history?.separate();
   return node.id;
 }

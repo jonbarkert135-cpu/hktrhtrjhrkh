@@ -16,7 +16,10 @@ export interface CanvasHostProps {
   scene?: SceneSnapshot;
   /** Rendered above the canvas; receives the overlay slot lookup for the node card portals. */
   children?:
-    | ((api: { slotOf: (id: string) => HTMLElement | undefined }) => React.ReactNode)
+    | ((api: {
+        slotOf: (id: string) => HTMLElement | undefined;
+        screenOf: (world: { x: number; y: number }) => { x: number; y: number };
+      }) => React.ReactNode)
     | undefined;
   /** Engine intents, forwarded to the document binding (P3 §5.14). */
   onIntent?: ((intent: Intent) => void) | undefined;
@@ -44,6 +47,7 @@ export function CanvasHost({
     zoom,
     nodeCount: engineNodeCount,
     slotOf,
+    screenOf,
   } = useCanvasEngine({
     ...(scene === undefined ? {} : { scene }),
     ...(onIntent === undefined ? {} : { onIntent }),
@@ -84,7 +88,7 @@ export function CanvasHost({
         />
         {/* Node hosts are mounted here by the engine's overlay; React never touches its children. */}
         <div ref={overlayRef} data-testid="canvas-overlay" className="nx-canvas-overlay" />
-        {children?.({ slotOf })}
+        {children?.({ slotOf, screenOf })}
         {nodeCount === 0 ? (
           <p className="nx-canvas-empty" data-testid="canvas-empty">
             Paste a link, drop a file, or press N for a note

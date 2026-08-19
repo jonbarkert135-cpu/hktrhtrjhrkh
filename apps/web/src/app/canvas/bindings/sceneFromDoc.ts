@@ -16,6 +16,7 @@ import {
 } from '@nexus/domain';
 import type * as Y from 'yjs';
 
+import { edgeToView as edgeViewOf, type ColorResolver } from '../../../edges/edgeVisual.ts';
 import { accentFor, glyphForType } from '../../../nodes/accents.ts';
 
 export const MAIN_LAYER_ID = 'l_main';
@@ -53,27 +54,12 @@ export function nodeToView(node: BoardNode, index: number): NodeView {
   };
 }
 
-export function edgeToView(edge: BoardEdge, index: number): EdgeView {
-  return {
-    id: edge.id,
-    from: edge.source.nodeId,
-    to: edge.target.nodeId,
-    fromAnchor: { side: 'auto', t: edge.source.offset },
-    toAnchor: { side: 'auto', t: edge.target.offset },
-    routing: 'straight',
-    style: {
-      color: rgba(0.6, 0.63, 0.7, 0.85),
-      width: 1.5,
-      dash: null,
-      arrowStart: false,
-      arrowEnd: edge.directed,
-      opacity: 1,
-    },
-    label: edge.label === '' ? null : edge.label,
-    z: index,
-    hidden: edge.hidden || edge.status !== 'active',
-    visualVersion: edge.version,
-  };
+/**
+ * Edge appearance comes from the relationship registry (P5 §5.1); the colour resolver is injected
+ * by the board so the canvas theme owns every token lookup.
+ */
+export function edgeToView(edge: BoardEdge, index: number, color?: ColorResolver): EdgeView {
+  return edgeViewOf(edge, { index, ...(color === undefined ? {} : { color }) });
 }
 
 export function groupToView(group: BoardGroup) {
@@ -87,10 +73,10 @@ export function groupToView(group: BoardGroup) {
 }
 
 /** Full snapshot — used on first load and after a snapshot restore. */
-export function sceneFromDoc(doc: Y.Doc): SceneSnapshot {
+export function sceneFromDoc(doc: Y.Doc, color?: ColorResolver): SceneSnapshot {
   return {
     nodes: listNodes(doc).map(nodeToView),
-    edges: listEdges(doc).map(edgeToView),
+    edges: listEdges(doc).map((edge, index) => edgeToView(edge, index, color)),
     groups: listGroups(doc).map(groupToView),
     layers: [{ id: MAIN_LAYER_ID, name: 'Main', visible: true, locked: false }],
   };
@@ -100,7 +86,11 @@ export function sceneFromDoc(doc: Y.Doc): SceneSnapshot {
  * Incremental patches for one observed change. Only the touched records are read from the document,
  * so a 200-node move costs 200 map reads, not a scene rebuild.
  */
-export function patchesFromChange(doc: Y.Doc, change: BoardChange): ScenePatch[] {
+export function patchesFromChange(
+  doc: Y.Doc,
+  change: BoardChange,
+  color?: ColorResolver,
+): ScenePatch[] {
   const patches: ScenePatch[] = [];
   if (change.nodes.upserted.length > 0) {
     const byId = new Map(listNodes(doc).map((node, index) => [node.id, { node, index }] as const));
@@ -117,7 +107,7 @@ export function patchesFromChange(doc: Y.Doc, change: BoardChange): ScenePatch[]
     for (const id of change.edges.upserted) {
       const found = byId.get(id);
       if (found !== undefined)
-        patches.push({ op: 'upsert-edge', edge: edgeToView(found.edge, found.index) });
+        patches.push({ op: 'upsert-edge', edge: edgeToView(found.edge, found.index, color) });
     }
   }
   for (const id of change.edges.removed) patches.push({ op: 'remove-edge', id });

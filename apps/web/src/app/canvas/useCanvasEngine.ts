@@ -6,8 +6,10 @@
 
 import {
   createCanvasTarget,
+  createEdgePicker,
   createEngine,
   createOverlay,
+  createRoutedEdgePath,
   cursorFor,
   type Engine,
   type EngineClock,
@@ -55,6 +57,8 @@ export interface CanvasEngineHandles {
   nodeCount: number;
   /** The overlay slot the engine mounted for a node, for the React card portals (P4 §7). */
   slotOf: (id: string) => HTMLElement | undefined;
+  /** World → viewport CSS px, for menus opened at a canvas point (P5 §6). */
+  screenOf: (world: { x: number; y: number }) => { x: number; y: number };
 }
 
 export interface UseCanvasEngineOptions {
@@ -101,12 +105,36 @@ export function useCanvasEngine(options: UseCanvasEngineOptions = {}): CanvasEng
     });
     overlayApiRef.current = overlay;
 
+    // Real routing (P5 part 2) plus the picker that makes edges selectable (P5 §5.10). Both need
+    // the engine, and the engine needs them, so they read it through `live` instead of a cycle.
+    let live: Engine | null = null;
+    const routed = createRoutedEdgePath({
+      cardRadius: metrics.nodeRadius,
+      zoom: () => live?.camera.state.zoom ?? 1,
+      quality: () => (live?.state.interaction === 'draggingNodes' ? 'draft' : 'full'),
+      obstacles: {
+        query: (bbox) =>
+          (
+            live?.query.nodesIn({
+              x: bbox.minX,
+              y: bbox.minY,
+              w: bbox.maxX - bbox.minX,
+              h: bbox.maxY - bbox.minY,
+            }) ?? []
+          ).map((node) => ({ id: node.id, x: node.x, y: node.y, w: node.w, h: node.h, radius: 0 })),
+      },
+    });
     const created = createEngine({
       target,
       clock,
       theme,
       metrics,
       overlay,
+      edgePath: routed,
+      edgeHit: createEdgePicker({
+        source: routed,
+        isSelected: (id) => live?.selection.has(id) ?? false,
+      }),
       ...(options.scene === undefined ? {} : { initialScene: options.scene }),
       prefersReducedMotion: win.matchMedia('(prefers-reduced-motion: reduce)').matches,
       capturePointer: (id) => canvas.setPointerCapture(id),
@@ -115,6 +143,7 @@ export function useCanvasEngine(options: UseCanvasEngineOptions = {}): CanvasEng
       },
     });
     engineRef.current = created;
+    live = created;
 
     const mods = (e: PointerEvent | KeyboardEvent | WheelEvent) => ({
       shift: e.shiftKey,
@@ -188,6 +217,8 @@ export function useCanvasEngine(options: UseCanvasEngineOptions = {}): CanvasEng
 
     const offCamera = created.on('cameraChanged', (state) => setZoom(state.zoom));
     const offIntent = created.on('intent', (intent) => {
+      // Geometry moved: orthogonal and smart routes must not reuse paths around the old obstacles.
+      if (intent.t === 'move-nodes' || intent.t === 'resize-node') routed.invalidateObstacles();
       if (intent.t !== 'camera') setNodeCount(created.query.nodeCount);
       intentRef.current?.(intent);
     });
@@ -220,6 +251,7 @@ export function useCanvasEngine(options: UseCanvasEngineOptions = {}): CanvasEng
       canvas.removeEventListener('blur', onBlur);
       canvas.ownerDocument.removeEventListener('visibilitychange', onVisibility);
       created.dispose();
+      live = null;
       engineRef.current = null;
       overlayApiRef.current = null;
     };
@@ -229,5 +261,13 @@ export function useCanvasEngine(options: UseCanvasEngineOptions = {}): CanvasEng
 
   const slotOf = useCallback((id: string) => overlayApiRef.current?.slotOf(id), []);
 
-  return { canvasRef, overlayRef, engineRef, zoom, nodeCount, slotOf };
+  const screenOf = useCallback((world: { x: number; y: number }) => {
+    const engine = engineRef.current;
+    const box = canvasRef.current?.getBoundingClientRect();
+    if (engine === null || box === undefined) return { x: 0, y: 0 };
+    const local = engine.camera.worldToScreen(world);
+    return { x: box.left + local.x, y: box.top + local.y };
+  }, []);
+
+  return { canvasRef, overlayRef, engineRef, zoom, nodeCount, slotOf, screenOf };
 }

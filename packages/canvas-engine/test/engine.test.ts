@@ -131,7 +131,8 @@ describe('createEngine — interaction', () => {
     expect(engine.selection.ids).toHaveLength(200);
 
     const first = engine.query.node('n0');
-    const start = engine.camera.worldToScreen({ x: (first?.x ?? 0) + 5, y: (first?.y ?? 0) + 5 });
+    // Well inside the card: the outer band is the connection port from P5 on (§5.3).
+    const start = engine.camera.worldToScreen({ x: (first?.x ?? 0) + 60, y: (first?.y ?? 0) + 40 });
     intents.length = 0;
     runPointerScript(engine, clock, [
       { t: 'down', at: start },
@@ -157,8 +158,8 @@ describe('createEngine — interaction', () => {
     engine.camera.setState({ x: 0, y: 0, zoom: 1 }, 'user');
 
     runPointerScript(engine, clock, [
-      { t: 'down', at: { x: 10, y: 10 } },
-      { t: 'move', at: { x: 90, y: 60 } },
+      { t: 'down', at: { x: 60, y: 40 } },
+      { t: 'move', at: { x: 140, y: 90 } },
     ]);
     expect(engine.state.interaction).toBe('draggingNodes');
 
@@ -184,14 +185,14 @@ describe('createEngine — interaction', () => {
       pointerId: 1,
       pointerType: 'mouse',
       button: -1,
-      screen: { x: 10, y: 10 },
+      screen: { x: 60, y: 40 },
       mods: { shift: false, alt: false, ctrl: false, meta: false },
     });
     engine.input.pointerMove({
       pointerId: 1,
       pointerType: 'mouse',
       button: -1,
-      screen: { x: 20, y: 20 },
+      screen: { x: 65, y: 45 },
       mods: { shift: false, alt: false, ctrl: false, meta: false },
     });
     engine.input.pointerMove({

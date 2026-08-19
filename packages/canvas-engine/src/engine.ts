@@ -8,7 +8,15 @@
  */
 
 import { createCamera, type Camera } from './camera/camera';
-import { HANDLE_HIT_PAD_PX, MAX_DOM_NODES } from './constants';
+import {
+  EDGE_HIT_TOL_PX,
+  HANDLE_HIT_PAD_PX,
+  MAX_DOM_NODES,
+  PORT_BAND_PX,
+  PORT_MIN_ZOOM,
+} from './constants';
+import { facingPort, portAt, portPoint } from './edges/ports';
+import type { EdgePicker } from './edges/pick';
 import {
   createGestures,
   cursorFor,
@@ -44,6 +52,8 @@ import { createSelection } from './selection';
 import type {
   CameraCause,
   CameraState,
+  ConnectionPreview,
+  EdgeId,
   EngineClock,
   EngineEvents,
   EngineFeatures,
@@ -98,6 +108,11 @@ export interface EngineOptions {
   capturePointer?: (pointerId: number) => void;
   releasePointer?: (pointerId: number) => void;
   edgePath?: EdgePath;
+  /**
+   * Edge hit-testing. Injected because it needs the routed geometry and therefore the domain
+   * package; without it edges are simply not selectable (the P2 behaviour).
+   */
+  edgeHit?: EdgePicker;
   /** DOM promotion budget; lowered in tests that assert the budget path. */
   domBudget?: number;
 }
@@ -111,6 +126,8 @@ export interface EngineState {
   mountedHosts: number;
   /** True while the LOD zoom is quantized because the camera is moving (req 7). */
   quantized: boolean;
+  /** The in-flight connection, or null when no edge is being drawn (P5 §6). */
+  connection: ConnectionPreview | null;
 }
 
 export interface Engine {
@@ -154,6 +171,8 @@ interface FrameBuffer {
   marquee: Rect | null;
   text: TextCache;
   edgePath: EdgePath;
+  selectedEdges: Set<EdgeId>;
+  connection: ConnectionPreview | null;
 }
 
 const guideOf = (g: GuideLine): AlignmentGuide => ({
@@ -228,6 +247,8 @@ export function createEngine(options: EngineOptions): Engine {
     marquee: null,
     text,
     edgePath,
+    selectedEdges: new Set<EdgeId>(),
+    connection: null,
   };
   const visible = new Set<NodeId>();
   const edgeBuf: EdgeView[] = [];
@@ -315,9 +336,11 @@ export function createEngine(options: EngineOptions): Engine {
     frame.edges = edgeBuf;
 
     frame.selected.length = 0;
+    frame.selectedEdges.clear();
     for (const id of selection.ids) {
       const node = previewed(graph.nodes.get(id));
       if (node !== undefined && !node.hidden) frame.selected.push(node);
+      else if (graph.edges.has(id)) frame.selectedEdges.add(id);
     }
 
     const ctx = target.beginFrame();
@@ -384,16 +407,70 @@ export function createEngine(options: EngineOptions): Engine {
     for (const l of listeners.intent) l(intent);
   }
 
-  /** Resize handles win over the node itself, so a corner grab resizes instead of dragging. */
+  /**
+   * Priority (P5 §5.3, §5.10): resize handle → connection port → node → edge → canvas. The port
+   * band straddles the card border, so it is tested both for the node under the pointer and for
+   * the nodes just outside it.
+   */
   function hitTest(world: Vec2): HitTarget {
+    const zoom = camera.state.zoom;
     const box = selection.bounds();
     if (box !== null && selection.ids.length === 1) {
       const id = selection.ids[0];
-      const handle = handleAt(box, world, camera.state.zoom);
+      const handle = handleAt(box, world, zoom);
       if (handle !== null && typeof id === 'string') return { t: 'handle', id, handle };
     }
+
+    const ports = zoom >= PORT_MIN_ZOOM;
     const node = graph.query.nodeAt(world);
-    return node === null ? { t: 'canvas' } : { t: 'node', id: node.id };
+    if (node !== null) {
+      const anchor = ports ? portAt(node, world, zoom) : null;
+      return anchor === null ? { t: 'node', id: node.id } : { t: 'port', id: node.id, anchor };
+    }
+
+    const band = ports ? PORT_BAND_PX / Math.max(zoom, 1e-3) : 0;
+    bandRect.x = world.x - band;
+    bandRect.y = world.y - band;
+    bandRect.w = band * 2;
+    bandRect.h = band * 2;
+    const near = band === 0 ? [] : graph.query.nodesIn(bandRect);
+    for (let i = near.length - 1; i >= 0; i -= 1) {
+      const candidate = near[i];
+      if (candidate === undefined) continue;
+      const anchor = portAt(candidate, world, zoom);
+      if (anchor !== null) return { t: 'port', id: candidate.id, anchor };
+    }
+
+    const edge = options.edgeHit?.(world, EDGE_HIT_TOL_PX / Math.max(zoom, 1e-3), edgeBuf);
+    if (edge !== undefined && edge !== null) return { t: 'edge', id: edge };
+    return { t: 'canvas' };
+  }
+
+  const bandRect: Rect = { x: 0, y: 0, w: 0, h: 0 };
+
+  /** Mirrors the FSM's `connecting` state into the frame so the renderer can paint the preview. */
+  function syncConnection(): void {
+    if (fsm.name !== 'connecting') {
+      frame.connection = null;
+      return;
+    }
+    const source = graph.query.node(fsm.from);
+    if (source === undefined) {
+      frame.connection = null;
+      return;
+    }
+    const anchor =
+      fsm.fromAnchor.side === 'auto' ? facingPort(source, fsm.current) : fsm.fromAnchor;
+    const target = graph.query.nodeAt(fsm.current);
+    frame.connection = {
+      from: fsm.from,
+      fromAnchor: fsm.fromAnchor,
+      fromPoint: portPoint(source, anchor),
+      to: fsm.current,
+      targetId: target === null ? null : target.id,
+      valid: target === null || target.id !== fsm.from,
+      keyboard: fsm.via === 'keyboard',
+    };
   }
 
   const context = (): FsmContext => ({
@@ -495,6 +572,7 @@ export function createEngine(options: EngineOptions): Engine {
     if (fsm.name !== 'draggingNodes' && previewIds.length > 0) clearPreview();
     if (fsm.name !== 'marquee' && frame.marquee !== null) frame.marquee = null;
     if (fsm.name !== 'draggingNodes' && frame.guides.length > 0) frame.guides.length = 0;
+    syncConnection();
     overlay?.setDragging(fsm.name === 'draggingNodes');
 
     if (event.t === 'pointermove' || event.t === 'pointerdown') {
@@ -539,6 +617,7 @@ export function createEngine(options: EngineOptions): Engine {
         lod: frame.lod,
         mountedHosts,
         quantized: lod.quantized,
+        connection: frame.connection,
       };
     },
     setViewport(width: number, height: number, dpr = target.dpr): void {
