@@ -28,6 +28,8 @@ export interface CurvedInput {
   readonly curvature: number;
   readonly siblingIndex: number;
   readonly siblingCount: number;
+  /** Perpendicular spacing of the parallel group; bundling shrinks it (07 §7.6). */
+  readonly separation?: number;
 }
 
 /** The reach of the control points, self-adjusting to avoid the classic S-loop overshoot. */
@@ -47,7 +49,7 @@ export function controlReach(input: {
 }
 
 export function routeCurved(input: CurvedInput): PathCommand[] {
-  const offset = siblingOffset(input.siblingIndex, input.siblingCount);
+  const offset = siblingOffset(input.siblingIndex, input.siblingCount, input.separation);
   const perp = perpendicular(normalize(sub(input.p1, input.p0)));
   const shift = scale(perp, offset * CONTROL_SHIFT_FOR_MID);
 

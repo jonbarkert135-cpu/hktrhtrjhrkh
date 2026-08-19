@@ -88,7 +88,7 @@ the area spec plus the code. Read `AGENTS.md` first.
 | P2 Canvas engine   | #3                | `packages/canvas-engine` (camera, spatial index, FSM, renderer)                                                                  | `05_CANVAS_ENGINE.md`              |
 | P3 Document        | #4, #5            | `packages/domain` (board doc, patches, undo, autosave), `apps/web/src/data`                                                      | `08_DATA_MODEL.md`                 |
 | P4 Node system     | #6, #7, #8        | `packages/domain/src/nodes`, `apps/web/src/nodes` (9 types, inspector, hosts)                                                    | `06_NODE_SYSTEM.md`                |
-| P5 Edge system     | #11, #12, #17     | edge taxonomy, 4 routing modes + cache, ports, selection, relationship UI — **part 4 open below**                                | `07_EDGE_SYSTEM.md`                |
+| P5 Edge system     | #11, #12, #17, #23 | edge taxonomy, 4 routing modes + cache, ports, selection, relationship UI, waypoints, flow animation, bundling                   | `07_EDGE_SYSTEM.md`                |
 | Local-first        | #9, #10, #13, #14 | `APP_MODE=local`, `WorkspaceRepository`, local persistence, first-run seed                                                       | `docs/adr/ADR-001-local-first.md`  |
 | L4.1 Transforms    | #15               | `packages/transforms` (manifests, registries, router, modes, scores, planner, catalogue)                                         | `21_TRANSFORM_SYSTEM.md`           |
 | L4.2 Transform SDK | #20               | `packages/transforms/src/sdk` (engine contract, `runEngine` host, testkit, conformance harness, `doh-resolver` reference engine) | `21_TRANSFORM_SYSTEM.md` §12a      |
@@ -97,32 +97,8 @@ the area spec plus the code. Read `AGENTS.md` first.
 | P6 Capture         | (this PR)         | `packages/domain/src/{capture,net}`, `apps/web/src/capture`, `apps/api/.../unfurl.ts` — §5.12/§5.14 still open                   | `09_BACKEND.md`, `15_SECURITY.md`  |
 | Agent memory       | #18               | `AGENTS.md`, `.mcp.json`                                                                                                         | —                                  |
 
-Open phases in this file: **P5 part 4**, **P6**, **P7**, **P8**, **P17**, **L4.4–L4.7**. P9–P16 have
+Open phases in this file: **P6**, **P7**, **P8**, **P17**, **L4.4–L4.7**. P9–P16 have
 no prompt yet; write one in this format when their turn comes.
-
----
-
-# P5 part 4 — Edge system, remaining scope
-
-Parts 1–3 shipped (see the ledger). Only this is left; everything else in `07_EDGE_SYSTEM.md` is
-implemented and must not be rewritten.
-
-1. **Waypoints** — double-click an edge inserts a waypoint, drag moves it, right-click deletes it;
-   `orthogonal`/`smart` paths pass through waypoints in order; one undo step per operation;
-   a waypoint dropped inside a node is legal but flagged in the inspector.
-2. **Routing in a worker** — move routing into `packages/canvas-engine/src/edges/router.worker.ts`
-   behind the existing cached `EdgePath` seam, transferable `ArrayBuffer`s, batched per frame,
-   at most 400 edges per frame with visible edges first. Main-thread routing stays as the fallback
-   when workers are unavailable. Required only when a measured scene misses the frame budget —
-   record the measurement in `16_PERFORMANCE.md` either way.
-3. **Animated flow** on `derived_from` / inferred edges, disabled under `prefers-reduced-motion`.
-4. **Edge bundling** for dense parallel runs, off by default, with a density control.
-
-Budgets unchanged: 10,000 curved edges repaint ≤ 6 ms, `route-smart-2000-edges` ≤ 900 ms,
-p95 ≤ 16.6 ms while dragging 200 nodes with 1,000 edges, routing cache hit ratio ≥ 90 %.
-Tests: waypoint unit tests in `packages/canvas-engine/test`, the routing property suite unchanged,
-`e2e/visual/edges.spec.ts` extended with a waypointed edge. Update `07_EDGE_SYSTEM.md` §15.6a,
-`packages/canvas-engine/README.md` (worker protocol) and this ledger.
 
 ---
 

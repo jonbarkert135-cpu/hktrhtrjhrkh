@@ -29,3 +29,17 @@ export function bundleWidth(count: number): number {
 
 /** Tighter spacing used while an expanded bundle is drawn member by member (07 §7.6). */
 export const EXPANDED_BUNDLE_SEPARATION = 12;
+
+/**
+ * Bundling (07 §7.6, P5 part 4 §4): a dense parallel run is drawn tighter instead of fanned out.
+ * `density` 0 keeps the full {@link SEPARATION}, 1 collapses the run onto one line. Groups at or
+ * below {@link BUNDLE_THRESHOLD} are never bundled — a fan of three must stay readable.
+ */
+export function bundledSeparation(
+  count: number,
+  density: number,
+  sep: number = SEPARATION,
+): number {
+  if (!isBundled(count)) return sep;
+  return sep * (1 - Math.max(0, Math.min(1, density)));
+}

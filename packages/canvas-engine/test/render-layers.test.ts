@@ -33,7 +33,7 @@ describe('painting order', () => {
     const counts = paintFrame(rec.beginFrame(), frame);
     rec.endFrame();
 
-    expect(counts).toEqual({ nodes: 2, edges: 1 });
+    expect(counts).toEqual({ nodes: 2, edges: 1, animatedEdges: 0 });
     const ops = opsOf(rec.calls);
     expect(ops[0]).toBe('clear');
     expect(ops[1]).toBe('save');

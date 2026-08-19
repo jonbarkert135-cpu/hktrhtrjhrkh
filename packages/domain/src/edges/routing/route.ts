@@ -24,6 +24,7 @@ import {
 } from './geometry.ts';
 import {
   buildObstacleGrid,
+  collapseCollinear,
   firstClearRoute,
   inflateBoxes,
   roundCorners,
@@ -140,6 +141,7 @@ function buildCommands(
         curvature: input.curvature,
         siblingIndex: input.siblingIndex,
         siblingCount: input.siblingCount,
+        separation: input.separation,
       }),
     };
   }
@@ -151,6 +153,7 @@ function buildCommands(
       waypoints: input.waypoints,
       siblingIndex: input.siblingIndex,
       siblingCount: input.siblingCount,
+      separation: input.separation,
     }),
   };
 }
@@ -183,14 +186,37 @@ function orthogonalCommands(
   // card cleanly instead of hugging its border (07 §7.7).
   const start = add(p0, scale(n0, CLEARANCE));
   const end = add(p1, scale(n1, CLEARANCE));
+  // Manual waypoints are visited in order: each leg is routed on its own, which is what makes an
+  // orthogonal (and a smart-resolved-orthogonal) path pass *through* them (P5 part 4 §1).
+  if (input.waypoints.length > 0) {
+    const stops = [start, ...input.waypoints, end];
+    const points: Point[] = [p0];
+    let degraded = false;
+    for (let i = 1; i < stops.length; i += 1) {
+      const leg = orthogonalLeg(input, stops[i - 1] as Point, stops[i] as Point);
+      degraded = degraded || leg.degraded;
+      for (const point of leg.points) points.push(point);
+    }
+    points.push(p1);
+    return { cmds: roundCorners(collapseCollinear(points), input.cornerRadius), degraded };
+  }
+  const leg = orthogonalLeg(input, start, end);
+  return {
+    cmds: roundCorners([p0, ...leg.points, p1], input.cornerRadius),
+    degraded: leg.degraded,
+  };
+}
+
+/** One obstacle-aware orthogonal run between two free points (07 §7.7). */
+function orthogonalLeg(
+  input: RouteInput,
+  start: Point,
+  end: Point,
+): { points: Point[]; degraded: boolean } {
   const obstacles = input.obstacles;
   if (obstacles === undefined) {
-    return {
-      cmds: roundCorners([p0, ...zRoute(start, end), p1], input.cornerRadius),
-      degraded: false,
-    };
+    return { points: zRoute(start, end), degraded: false };
   }
-
   const region = routingRegion(start, end);
   const boxes = nearestObstacles(
     obstacles
@@ -201,20 +227,11 @@ function orthogonalCommands(
   );
   // Probe the cheap L/Z shapes against the bare boxes first: when one is clear — the common case —
   // the Hanan lattice is never built at all.
-  const inflated = inflateBoxes(boxes);
-  const cheap = firstClearRoute(inflated, start, end);
-  if (cheap !== null) {
-    return {
-      cmds: roundCorners([p0, ...cheap, p1], input.cornerRadius),
-      degraded: false,
-    };
-  }
+  const cheap = firstClearRoute(inflateBoxes(boxes), start, end);
+  if (cheap !== null) return { points: cheap, degraded: false };
   const grid = buildObstacleGrid(region, boxes, start, end);
   const result = routeOrthogonal(grid, start, end);
-  return {
-    cmds: roundCorners([p0, ...snapToLanes(result.points), p1], input.cornerRadius),
-    degraded: result.degraded,
-  };
+  return { points: snapToLanes(result.points), degraded: result.degraded };
 }
 
 /**

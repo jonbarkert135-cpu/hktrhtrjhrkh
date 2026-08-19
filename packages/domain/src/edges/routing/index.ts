@@ -13,4 +13,5 @@ export * from './smart.ts';
 export * from './route.ts';
 export * from './cache.ts';
 export * from './hit-test.ts';
+export * from './waypoints.ts';
 export * from './labels.ts';

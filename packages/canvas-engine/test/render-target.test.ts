@@ -22,6 +22,7 @@ function stubCanvas(): {
     fillStyle: '',
     strokeStyle: '',
     lineWidth: 1,
+    lineDashOffset: 0,
     get font(): string {
       return font;
     },

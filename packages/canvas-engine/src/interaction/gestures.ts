@@ -256,6 +256,7 @@ export function cursorFor(state: FsmState, hover: HitTarget): Cursor {
       return 'text';
     case 'panning':
     case 'draggingNodes':
+    case 'draggingWaypoint':
       return 'grabbing';
     case 'spacePan':
       return 'grab';
@@ -274,6 +275,7 @@ export function cursorFor(state: FsmState, hover: HitTarget): Cursor {
     case 'handle':
       return handleCursor(hover.handle);
     case 'port':
+    case 'waypoint':
       return 'crosshair';
     case 'node':
     case 'edge':

@@ -59,6 +59,8 @@ export interface CanvasEngineHandles {
   slotOf: (id: string) => HTMLElement | undefined;
   /** World → viewport CSS px, for menus opened at a canvas point (P5 §6). */
   screenOf: (world: { x: number; y: number }) => { x: number; y: number };
+  /** Edge bundling density, 0..1; 0 (the default) means no bundling (07 §7.6). */
+  setBundleDensity: (density: number) => void;
 }
 
 export interface UseCanvasEngineOptions {
@@ -76,6 +78,7 @@ export function useCanvasEngine(options: UseCanvasEngineOptions = {}): CanvasEng
   const intentRef = useRef(options.onIntent);
   intentRef.current = options.onIntent;
 
+  const bundleDensityRef = useRef(0);
   const [zoom, setZoom] = useState(1);
   const [nodeCount, setNodeCount] = useState(options.scene?.nodes.length ?? 0);
 
@@ -110,6 +113,7 @@ export function useCanvasEngine(options: UseCanvasEngineOptions = {}): CanvasEng
     let live: Engine | null = null;
     const routed = createRoutedEdgePath({
       cardRadius: metrics.nodeRadius,
+      bundleDensity: () => bundleDensityRef.current,
       zoom: () => live?.camera.state.zoom ?? 1,
       quality: () => (live?.state.interaction === 'draggingNodes' ? 'draft' : 'full'),
       obstacles: {
@@ -269,5 +273,19 @@ export function useCanvasEngine(options: UseCanvasEngineOptions = {}): CanvasEng
     return { x: box.left + local.x, y: box.top + local.y };
   }, []);
 
-  return { canvasRef, overlayRef, engineRef, zoom, nodeCount, slotOf, screenOf };
+  const setBundleDensity = useCallback((density: number) => {
+    bundleDensityRef.current = density;
+    engineRef.current?.invalidate();
+  }, []);
+
+  return {
+    canvasRef,
+    overlayRef,
+    engineRef,
+    zoom,
+    nodeCount,
+    slotOf,
+    screenOf,
+    setBundleDensity,
+  };
 }

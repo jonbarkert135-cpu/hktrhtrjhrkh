@@ -5,7 +5,7 @@
  * React renders this shell exactly once per mount; every frame after that is painted by the engine.
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useCanvasEngine } from './useCanvasEngine';
 import type { Engine, Intent, SceneSnapshot } from '@nexus/canvas-engine';
@@ -48,11 +48,15 @@ export function CanvasHost({
     nodeCount: engineNodeCount,
     slotOf,
     screenOf,
+    setBundleDensity,
   } = useCanvasEngine({
     ...(scene === undefined ? {} : { scene }),
     ...(onIntent === undefined ? {} : { onIntent }),
   });
   const rootRef = useRef<HTMLDivElement | null>(null);
+  // Bundling is off at 0, which is where it starts: a fan of parallel relationships is information,
+  // and collapsing it is a choice the analyst makes (07 §7.6, P5 part 4 §4).
+  const [bundleDensity, setDensity] = useState(0);
   const nodeCount = nodeCountProp ?? engineNodeCount;
 
   // The engine is created in an effect inside the hook, so it exists on the first commit.
@@ -128,6 +132,26 @@ export function CanvasHost({
         >
           +
         </button>
+      </div>
+
+      <div className="nx-zoom-cluster" role="group" aria-label="Edge bundling">
+        <label htmlFor="edge-bundling">Bundling</label>
+        <input
+          id="edge-bundling"
+          type="range"
+          min={0}
+          max={100}
+          step={10}
+          value={bundleDensity * 100}
+          onChange={(event) => {
+            const next = Number(event.target.value) / 100;
+            setDensity(next);
+            setBundleDensity(next);
+          }}
+        />
+        <span className="nx-card-meta">
+          {bundleDensity === 0 ? 'off' : `${String(Math.round(bundleDensity * 100))}%`}
+        </span>
       </div>
     </div>
   );

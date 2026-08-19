@@ -97,6 +97,13 @@ export type FsmState =
       candidates: readonly NodeId[];
       candidateIndex: number;
     }
+  | {
+      name: 'draggingWaypoint';
+      pointerId: number;
+      edgeId: string;
+      index: number;
+      current: Vec2;
+    }
   | { name: 'editing'; id: NodeId };
 
 export type FsmStateName = FsmState['name'];
@@ -291,6 +298,19 @@ function abort(state: FsmState): FsmResult {
     case 'connecting':
     case 'pressPending':
       return result({ name: 'idle' }, [{ t: 'release', pointerId: state.pointerId }]);
+    case 'draggingWaypoint':
+      // A cancelled waypoint drag reverts through undo of the interim writes, like a node drag.
+      return result({ name: 'idle' }, [
+        { t: 'release', pointerId: state.pointerId },
+        intent({
+          t: 'edge-waypoint',
+          op: 'move',
+          edgeId: state.edgeId,
+          index: state.index,
+          at: state.current,
+          phase: 'cancel',
+        }),
+      ]);
     case 'editing':
     case 'idle':
     case 'hover':
@@ -341,6 +361,28 @@ function onPointerDown(
         [{ t: 'capture', pointerId: e.pointerId }],
       );
     }
+  }
+  if (e.target.t === 'waypoint') {
+    return result(
+      {
+        name: 'draggingWaypoint',
+        pointerId: e.pointerId,
+        edgeId: e.target.id,
+        index: e.target.index,
+        current: e.world,
+      },
+      [
+        { t: 'capture', pointerId: e.pointerId },
+        intent({
+          t: 'edge-waypoint',
+          op: 'move',
+          edgeId: e.target.id,
+          index: e.target.index,
+          at: e.world,
+          phase: 'start',
+        }),
+      ],
+    );
   }
   if (e.target.t === 'port') {
     return result(
@@ -529,6 +571,18 @@ function onPointerMove(
       ]);
     }
 
+    case 'draggingWaypoint':
+      return result({ ...state, current: e.world }, [
+        intent({
+          t: 'edge-waypoint',
+          op: 'move',
+          edgeId: state.edgeId,
+          index: state.index,
+          at: e.world,
+          phase: 'update',
+        }),
+      ]);
+
     case 'connecting':
       return result({ ...state, current: e.world });
   }
@@ -569,6 +623,19 @@ function onPointerUp(
         intent({ t: 'select', ids: hits.map((n) => n.id), mode: state.mode }),
       ]);
     }
+
+    case 'draggingWaypoint':
+      return result({ name: 'idle' }, [
+        release,
+        intent({
+          t: 'edge-waypoint',
+          op: 'move',
+          edgeId: state.edgeId,
+          index: state.index,
+          at: e.world,
+          phase: 'end',
+        }),
+      ]);
 
     case 'panning':
       return result({ name: state.fromSpace ? 'spacePan' : 'idle' }, [release]);
@@ -834,7 +901,13 @@ export function reduce(state: FsmState, event: FsmEvent, ctx: FsmContext): FsmRe
       if (event.key === ' ' && state.name === 'spacePan') return result({ name: 'idle' });
       return result(state);
     case 'dblclick': {
-      if (state.name === 'editing' || !isNodeTarget(event.target)) return result(state);
+      if (state.name === 'editing') return result(state);
+      if (event.target.t === 'edge') {
+        return result(state, [
+          intent({ t: 'edge-waypoint', op: 'insert', edgeId: event.target.id, at: event.world }),
+        ]);
+      }
+      if (!isNodeTarget(event.target)) return result(state);
       const node = ctx.scene.node(event.target.id);
       if (node === undefined || node.locked) return result(state);
       return result({ name: 'editing', id: node.id }, [
@@ -844,6 +917,16 @@ export function reduce(state: FsmState, event: FsmEvent, ctx: FsmContext): FsmRe
     }
     case 'longpress':
     case 'contextmenu': {
+      if (event.target.t === 'waypoint') {
+        return result(state, [
+          intent({
+            t: 'edge-waypoint',
+            op: 'delete',
+            edgeId: event.target.id,
+            index: event.target.index,
+          }),
+        ]);
+      }
       // §7.5: the selection is left alone when the target is already selected.
       const effects: Effect[] = [];
       const picked = selectableId(event.target);

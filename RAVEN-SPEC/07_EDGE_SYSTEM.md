@@ -1059,8 +1059,40 @@ DOM affordances (the hover rail while it is visible, the in-place editor). Two c
    `begin-edit-text` intent starts in-place editing. `Enter` is also skipped while the engine is in
    `connecting`, because there it confirms the connection (§13).
 
+### 15.6b Shipped (P5 part 4 — waypoints, flow animation, bundling)
+
+| Section   | Where it lives                                                                                     |
+| --------- | -------------------------------------------------------------------------------------------------- |
+| §8.3      | `packages/domain/src/edges/routing/waypoints.ts` (insert index, move, delete, inside-card flag)    |
+| §8.3 UX   | engine `waypoint` hit target + `draggingWaypoint` FSM state; `edge-waypoint` intents               |
+| §7.7      | `orthogonalLeg` in `routing/route.ts` — an orthogonal path visits the waypoints in order           |
+| §7.6      | `bundledSeparation` + the per-frame `EdgePath.prepare` that computes the parallel groups           |
+| §10.4     | flow dash in `render/layers.ts` (`MAX_ANIMATED_EDGES`, frozen under `prefers-reduced-motion`)      |
+| inspector | "Shape" section of `apps/web/src/edges/EdgeInspector.tsx` (waypoint count, warning, Reset routing) |
+| control   | edge-bundling density slider in `apps/web/src/app/canvas/CanvasHost.tsx` (0 = off, the default)    |
+
+### 15.6c Deviations in part 4, and why
+
+1. **Waypoints stay absolute.** §8.3's `rel` frame (source/target/midpoint/absolute with an
+   edge-local basis) is not implemented: the document schema (`entities/edge.ts`, frozen in P3)
+   stores plain `{x, y}` points, and adding a relative frame is a document-format change with an
+   import/export migration behind it. Waypoints therefore keep their world position when a card
+   moves. `Reset routing` clears them, and the inspector says how many there are.
+2. **The routing worker is not shipped.** §11.2 is conditional on the measured scene missing its
+   budget; it does not (`16_PERFORMANCE.md` §5.7.1: 2.4 ms p95 pan-zoom, 550 ms for
+   `route-smart-2000-edges` against budgets of 16.6 ms and 900 ms). The `EdgePath` + `RouteCache`
+   seam it would plug into is untouched, so the offload stays a one-module change when a real board
+   needs it.
+3. **Bundling is a routing effect, not a second geometry.** §7.6's "one thick path with an N badge"
+   would need a parallel render path and its own hit-testing; instead the density control shrinks
+   the parallel separation of groups above `BUNDLE_THRESHOLD`, which collapses a dense run into a
+   visual bundle with the existing geometry, picking and labels. Off (density 0) by default.
+4. **Right-click on a waypoint deletes it** instead of opening a one-item menu (part 4 §1 asks for
+   the delete, and a menu for a single destructive action is noise). The relationship menu still
+   opens on a right-click anywhere else on the line.
+
 ### 15.7 Not yet implemented
 
-Waypoint editing and `rel` materialization (§8.3), label content toggles (§9.3), animated flow
-(§10.3–§10.4), bundling render and the worker offload (§11.1–§11.2), graph queries (§12) — P5
-part 4, tracked in `20_ROADMAP.md`.
+Waypoint `rel` materialization (§8.3, see 15.6c.1), label content toggles (§9.3), the hub-node
+"N more" spoke chip (§11.1 rule 6), the worker offload (§11.2, see 15.6c.2) and graph queries
+(§12).

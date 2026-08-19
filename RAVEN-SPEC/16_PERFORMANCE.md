@@ -319,6 +319,28 @@ frames on the main thread.
 _Wrong when:_ the transfer cost exceeds the compute — do not send a worker anything under ~1 ms of
 work; the round trip alone is ~0.3 ms.
 
+#### 5.7.1 Measurement of 2026-08 (P5 part 4): routing stays on the main thread
+
+The routing worker of `07_EDGE_SYSTEM.md` §11.2 is **not** shipped, because the scene it exists for
+does not miss its budget. Measured headlessly on this repo's bench (`pnpm bench`,
+`BENCH_SKIP_BROWSER=1`, Node 22, 5,000-node / 10,000-edge scene) after waypoints, flow animation
+and bundling landed:
+
+| Metric                      | Measured | Budget  |
+| --------------------------- | -------- | ------- |
+| `pan-zoom-5000` (p95 frame) | 2.4 ms   | 16.6 ms |
+| `pan-zoom-5000-p99`         | 6.0 ms   | 33 ms   |
+| `drag-200-selected`         | 2.6 ms   | 16.6 ms |
+| `select-all-5000`           | 6.3 ms   | 120 ms  |
+| `route-smart-2000-edges`    | 550.3 ms | 900 ms  |
+
+Nothing in the frame path is within 5× of its budget, so moving routing into a worker would buy
+latency nobody can perceive and cost a second copy of the obstacle state, a transfer protocol and a
+staleness epoch — exactly the "do not send a worker anything under ~1 ms of work" rule above. The
+trigger to revisit is a `route-smart-2000-edges` above 900 ms or a `drag-200-selected` p95 above
+16.6 ms on the reference machine; the seam it would plug into (`EdgePath` + `RouteCache`) already
+exists and is unchanged.
+
 ### 5.8 Memoization strategy — and when memo hurts
 
 Applied:

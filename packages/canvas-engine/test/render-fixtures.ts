@@ -106,6 +106,8 @@ export function makeFrame(over: Partial<RenderFrame> = {}): RenderFrame {
     metrics,
     lod: 'glyphText',
     showGrid: true,
+    timeMs: 0,
+    reducedMotion: false,
     nodes,
     edges: [],
     node: (id) => byId.get(id),

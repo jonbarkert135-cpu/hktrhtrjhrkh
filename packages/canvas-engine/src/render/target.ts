@@ -26,6 +26,7 @@ export interface Context2DLike {
   fillStyle: string | CanvasGradient | CanvasPattern;
   strokeStyle: string | CanvasGradient | CanvasPattern;
   lineWidth: number;
+  lineDashOffset: number;
   font: string;
   textBaseline: CanvasTextBaseline;
   save(): void;
@@ -149,7 +150,15 @@ export function createCanvasTarget(canvas: CanvasLike): RenderTarget {
       ctx.roundRect(r.x, r.y, r.w, r.h, radius);
       paint(fill, stroke, strokeWidth);
     },
-    line(a: Vec2, b: Vec2, color: RGBA, width: number, dashPattern?: readonly number[] | null) {
+    line(
+      a: Vec2,
+      b: Vec2,
+      color: RGBA,
+      width: number,
+      dashPattern?: readonly number[] | null,
+      dashOffset?: number,
+    ) {
+      ctx.lineDashOffset = dashOffset ?? 0;
       if (dashPattern === undefined || dashPattern === null) {
         ctx.setLineDash(NO_DASH);
       } else {
@@ -164,6 +173,7 @@ export function createCanvasTarget(canvas: CanvasLike): RenderTarget {
       ctx.lineWidth = width;
       ctx.stroke();
       ctx.setLineDash(NO_DASH);
+      ctx.lineDashOffset = 0;
     },
     dot(p: Vec2, radius: number, color: RGBA): void {
       ctx.beginPath();
