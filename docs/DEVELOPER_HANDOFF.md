@@ -1,6 +1,7 @@
 # Developer handoff
 
 Everything a new developer (or agent) needs to be productive here, in reading order.
+Agents: start at [`AGENTS.md`](../AGENTS.md) — invariants, commands and the graph-query workflow.
 
 ## 1. Run it
 
