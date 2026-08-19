@@ -5,5 +5,7 @@ export * from './modes.ts';
 export * from './score.ts';
 export * from './router.ts';
 export * from './planner.ts';
+export * from './history.ts';
+export * from './cache.ts';
 export { createCatalogRegistry } from './catalog/index.ts';
 export * from './sdk/index.ts';

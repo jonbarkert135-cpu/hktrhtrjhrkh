@@ -22,6 +22,15 @@ actionsFor(registry, 'username', ctx); // ≤ 7 ranked transforms for the contex
 expand(registry, 'username', ctx, 2); // the plan behind the Expand button, nothing executed
 ```
 
+Run history, replay, comparison and the result cache (§10) are here too, still pure:
+
+```ts
+import { createRunHistory, planReplay, compareRuns, createResultCache } from '@nexus/transforms';
+```
+
+A cache hit always carries the age of the data (`ageLabel`), because a stale answer presented as
+fresh is a correctness bug; storage of both is the repository's job, not this package's.
+
 ## Deliberate decisions
 
 - **Capability-first.** A transform names a capability, never a provider, so a provider can be

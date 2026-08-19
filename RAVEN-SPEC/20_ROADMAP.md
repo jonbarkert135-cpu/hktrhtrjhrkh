@@ -92,10 +92,11 @@ the area spec plus the code. Read `AGENTS.md` first.
 | Local-first        | #9, #10, #13, #14 | `APP_MODE=local`, `WorkspaceRepository`, local persistence, first-run seed                                                       | `docs/adr/ADR-001-local-first.md`  |
 | L4.1 Transforms    | #15               | `packages/transforms` (manifests, registries, router, modes, scores, planner, catalogue)                                         | `21_TRANSFORM_SYSTEM.md`           |
 | L4.2 Transform SDK | #20               | `packages/transforms/src/sdk` (engine contract, `runEngine` host, testkit, conformance harness, `doh-resolver` reference engine) | `21_TRANSFORM_SYSTEM.md` §12a      |
+| L4.3 Run history   | #21               | `packages/transforms/src/history.ts`, `src/cache.ts` (history, replay, compare, TTL cache)                                       | `21_TRANSFORM_SYSTEM.md` §10       |
 | Layer-2 docs       | #16               | `22_ECOSYSTEM_AUDIT.md`, `23_COMPETITOR_MATRIX.md`, `24_UNIFIED_QUERY.md` (design only)                                          | those documents                    |
 | Agent memory       | #18               | `AGENTS.md`, `.mcp.json`                                                                                                         | —                                  |
 
-Open phases in this file: **P5 part 4**, **P6**, **P7**, **P8**, **P17**, **L4.3–L4.7**. P9–P16 have
+Open phases in this file: **P5 part 4**, **P6**, **P7**, **P8**, **P17**, **L4.4–L4.7**. P9–P16 have
 no prompt yet; write one in this format when their turn comes.
 
 ---
@@ -836,7 +837,7 @@ UI. Nothing here changes a phase that is already done.
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
 | **L4.1** | Ecosystem audit, provider catalogue, transform catalogue, this spec, `packages/transforms` foundation: manifests, registries, capability router, modes, scoring, expand planner, seeded catalogue | —                   |
 | **L4.2** | Transform SDK surface for third parties and the conformance test harness — **shipped** (PR #20), see the ledger                                                                                   | L4.1, 17_PLUGIN_SDK |
-| L4.3     | Run history, replay, run comparison and the result cache with TTL and age labelling                                                                                                               | L4.1, P3            |
+| ~~L4.3~~ | Run history, replay, run comparison and the result cache with TTL and age labelling — **shipped** (PR #21), see the ledger                                                                        | L4.1, P3            |
 | L4.4     | Execution integration: engines become Runner jobs, streaming partial results, cancellation, budgets enforced at run time                                                                          | P10                 |
 | L4.5     | Canvas UX: contextual menu, hover chips, Expand with preview, result clusters, density control, data-flow disclosure                                                                              | L4.4, P4/P5         |
 | L4.6     | Provider vault, provider settings UI, ecosystem health check (stale `lastVerified`, dead endpoints, deprecations)                                                                                 | L4.4, P9            |

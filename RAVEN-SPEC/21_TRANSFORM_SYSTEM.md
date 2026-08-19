@@ -338,6 +338,11 @@ log line, and survives export.
   labelled in the UI with the age of the data — a stale answer presented as fresh is a correctness
   bug in an investigation tool.
 
+**Shipped (L4.3)** in `packages/transforms`: `src/history.ts` (`RunRecord`, `createRunHistory`,
+`planReplay`, `compareRuns`) and `src/cache.ts` (`cacheKey`, `isCacheable`, `createResultCache`,
+`ageLabel`). Both are pure and in-memory — durable storage is the repository's job (ADR-001) and
+lands with execution (L4.4). A provider opts out of caching with `storeResults: false`.
+
 ---
 
 ## 11. Universal query and the library
