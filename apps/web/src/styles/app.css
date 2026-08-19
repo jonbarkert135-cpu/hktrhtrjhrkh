@@ -347,6 +347,11 @@
     border-radius: var(--nx-radius-3);
   }
 
+  /* Stack a second cluster (edge bundling) above the zoom one instead of on top of it. */
+  .nx-zoom-cluster + .nx-zoom-cluster {
+    bottom: calc(var(--nx-space-4) + 3rem);
+  }
+
   /* ---------------------------------------------------------------- capture (P6) */
 
   /* Drop target: a dashed outline over the whole canvas saying what is about to land (P6 §6).
