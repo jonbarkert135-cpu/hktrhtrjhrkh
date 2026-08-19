@@ -37,6 +37,23 @@ expand(registry, 'username', ctx, 2); // the plan behind the Expand button, noth
   this layer exists to prevent.
 - **No mock results.** An unavailable engine yields a status, never a fabricated entity.
 
+## Writing an engine (SDK, L4.2)
+
+```ts
+import { runConformance, createTestHost, type TransformEngine } from '@nexus/transforms/sdk';
+```
+
+An engine implements `metadata / validateInput / execute / normalize` (plus optional
+`initialize / healthCheck / cleanup`) and gets no ambient capabilities: network through
+`ctx.fetch`, secrets through `ctx.credential`, cancellation through `ctx.signal`. `runEngine` owns
+the deadline, truncation, output validation and cleanup, and never throws — it returns a
+`RunOutcome` of `completed | partial | cancelled | failed`. Output that violates the contract is
+discarded whole, so a malformed proposal cannot reach the graph.
+
+`runConformance(engine, { manifest, fixtures, invalidInputs })` is the installation gate; see
+`src/sdk/engines/doh-resolver.ts` for a complete engine and `test/sdk.conformance.test.ts` for its
+report. Spec: `RAVEN-SPEC/21_TRANSFORM_SYSTEM.md` §12a.
+
 ## Keeping the catalogue honest
 
 `test/catalog.contract.test.ts` fails when the code and `docs/ecosystem/*.md` disagree, when a
