@@ -1,13 +1,15 @@
-// J04: connect two nodes, inspect the relationship, change its type and routing, delete it.
+// J04: connect two nodes from the keyboard and refuse the duplicate.
 //
-// This is the P5 half of journey 4: J04a covers selection and dragging, this one covers the edge
-// system end to end — the port band, the pending connection, the inspector and the counters.
+// This is the P5 half of journey 4: J04a covers selection and dragging, this one covers edge
+// creation — selection through the overlay, the pending connection, validation and the counters.
+// Editing and deleting a relationship live in the inspector's own tests; they need an edge picked
+// by coordinates, which belongs to part 4 once waypoints make the geometry stable.
 import { expect, test } from '@playwright/test';
 
 const unique = () => `e2e-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 
 test.describe('J04 — connect two nodes', () => {
-  test('creates, edits and deletes a relationship', async ({ page }) => {
+  test('creates a relationship from the keyboard and refuses a duplicate', async ({ page }) => {
     const email = `${unique()}@example.test`;
     const password = 'e2e-password-1234';
 
@@ -39,10 +41,22 @@ test.describe('J04 — connect two nodes', () => {
     if (box === null) return;
 
     // Keyboard connection (N6): select the first card, press C, confirm with Enter.
+    //
+    // The click lands on the canvas surface even though a card is drawn there: overlay cards are
+    // transparent to the pointer, so the engine stays the single hit-test authority (05 §3). If a
+    // card ever starts intercepting gestures again, this click fails with "subtree intercepts
+    // pointer events" — which is exactly the regression this line guards.
     await canvas.click({ position: { x: box.width / 2, y: box.height / 2 } });
+    await expect(page.locator('[data-state="selected"]')).toHaveCount(1);
     await page.keyboard.press('c');
     await page.keyboard.press('Enter');
 
     await expect(page.getByTestId('node-count')).toContainText('1 edges', { timeout: 10_000 });
+
+    // The same gesture again is a duplicate: it is refused *with a message*, and the count holds.
+    await page.keyboard.press('c');
+    await page.keyboard.press('Enter');
+    await expect(page.getByText(/already connected/i)).toBeVisible();
+    await expect(page.getByTestId('node-count')).toContainText('1 edges');
   });
 });

@@ -1041,6 +1041,24 @@ organization` ranked `alias_of` above `works_at` purely on alphabetical tie-brea
 4. **The inspector writes directly**, like the node inspector, instead of going through engine
    intents: the engine has no vocabulary for relationship semantics and should not grow one.
 
+### 15.6a Regression found while landing part 3 — the overlay pointer contract
+
+The port band, the selection click and the marquee all reach the engine through the `canvas`
+element, which is the only element the host binds pointer listeners to. Overlay cards were styled
+`pointer-events: auto`, so every gesture that started **over a card** — selecting it, dragging it,
+grabbing its port — was swallowed by the DOM before the engine saw it. The J04 journey exposed it
+(`<article class="nx-node-card"> … intercepts pointer events`).
+
+Fixed by making the card body transparent to the pointer and giving the pointer back only to real
+DOM affordances (the hover rail while it is visible, the in-place editor). Two consequences:
+
+1. **Hover is an engine fact, not a CSS state.** A pointer-transparent element is never `:hover`ed,
+   so `NodeHosts` subscribes to `hoverChanged` and sets `data-hover` on the card; a `port` or
+   `handle` hit counts as its node so the rail stays reachable. See `06_NODE_SYSTEM.md` §13.6.
+2. **Double-click editing is an intent.** The card can no longer receive `dblclick`; the engine's
+   `begin-edit-text` intent starts in-place editing. `Enter` is also skipped while the engine is in
+   `connecting`, because there it confirms the connection (§13).
+
 ### 15.7 Not yet implemented
 
 Waypoint editing and `rel` materialization (§8.3), label content toggles (§9.3), animated flow

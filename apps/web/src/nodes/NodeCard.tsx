@@ -24,6 +24,11 @@ export interface NodeCardProps extends NodeCardActions {
   node: BoardNode;
   /** L3 (zoom ≥ 1.6) shows descriptions, full badges and inline editing affordances. */
   detailed?: boolean;
+  /**
+   * Hover comes from the engine's hit test, never from CSS `:hover`: the card is transparent to
+   * the pointer so the canvas keeps owning gestures, and a transparent element is never hovered.
+   */
+  hovered?: boolean;
   context?: CardContext;
   now?: number;
   /**
@@ -39,6 +44,7 @@ const MAX_VISIBLE_TAGS = 4;
 function NodeCardImpl({
   node,
   detailed = false,
+  hovered = false,
   context,
   now,
   editorSlot,
@@ -63,6 +69,7 @@ function NodeCardImpl({
       data-testid={`node-card-${node.id}`}
       data-node-type={node.type}
       data-state={editing ? 'editing' : state}
+      data-hover={hovered ? 'true' : undefined}
       data-locked={node.locked ? 'true' : undefined}
       style={{ borderInlineStartColor: `var(${def.glyph.colorToken})` }}
       aria-label={`${def.label}: ${node.title === '' ? 'Untitled' : node.title}`}

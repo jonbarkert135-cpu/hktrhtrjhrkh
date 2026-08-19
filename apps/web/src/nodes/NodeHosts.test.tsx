@@ -6,7 +6,7 @@
 
 import { createBoardDoc, createNode, updateNode } from '@nexus/domain';
 import { createOverlay } from '@nexus/canvas-engine';
-import type { Engine, EngineEvents, NodeView } from '@nexus/canvas-engine';
+import type { Engine, EngineEvents, HitTarget, Intent, NodeView } from '@nexus/canvas-engine';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
@@ -15,18 +15,25 @@ import { createNodeStore } from './nodeStore.ts';
 
 const T0 = '2026-06-01T00:00:00.000Z';
 
-function fakeEngine(): {
+function fakeEngine(interaction: string = 'idle'): {
   engine: Engine;
   emitHosts: (ids: string[]) => void;
   emitZoom: (zoom: number) => void;
+  emitHover: (target: HitTarget) => void;
+  emitIntent: (intent: Intent) => void;
 } {
   const hosts: Array<EngineEvents['hostsChanged']> = [];
   const cameras: Array<EngineEvents['cameraChanged']> = [];
+  const hovers: Array<EngineEvents['hoverChanged']> = [];
+  const intents: Array<EngineEvents['intent']> = [];
   const engine = {
     camera: { state: { x: 0, y: 0, zoom: 1 } },
+    state: { interaction },
     on: (event: keyof EngineEvents, listener: unknown) => {
       if (event === 'hostsChanged') hosts.push(listener as EngineEvents['hostsChanged']);
       if (event === 'cameraChanged') cameras.push(listener as EngineEvents['cameraChanged']);
+      if (event === 'hoverChanged') hovers.push(listener as EngineEvents['hoverChanged']);
+      if (event === 'intent') intents.push(listener as EngineEvents['intent']);
       return () => undefined;
     },
   } as unknown as Engine;
@@ -37,6 +44,12 @@ function fakeEngine(): {
     },
     emitZoom: (zoom) => {
       for (const listener of cameras) listener({ x: 0, y: 0, zoom }, 'user');
+    },
+    emitHover: (target) => {
+      for (const listener of hovers) listener(target);
+    },
+    emitIntent: (intent) => {
+      for (const listener of intents) listener(intent);
     },
   };
 }
@@ -215,6 +228,38 @@ describe('NodeHosts', () => {
     overlay.dispose();
   });
 
+  /**
+   * Cards are transparent to the pointer so the canvas keeps owning gestures (05 §3), which means
+   * the browser never hovers them. Hover therefore arrives from the engine's hit test.
+   */
+  it('marks the hovered card from the engine hit test, including a port or handle hit', () => {
+    const { doc, ids, slots, store } = setup();
+    const { engine, emitHosts, emitHover } = fakeEngine();
+    render(<NodeHosts engine={engine} doc={doc} store={store} slotOf={(id) => slots.get(id)} />);
+    act(() => emitHosts(ids));
+    const first = ids[0] ?? '';
+    const second = ids[1] ?? '';
+
+    expect(screen.getByTestId(`node-card-${first}`)).not.toHaveAttribute('data-hover');
+
+    act(() => emitHover({ t: 'node', id: first }));
+    expect(screen.getByTestId(`node-card-${first}`)).toHaveAttribute('data-hover', 'true');
+    expect(screen.getByTestId(`node-card-${second}`)).not.toHaveAttribute('data-hover');
+
+    // The port band sits on the card's own border, so a port hit keeps the rail reachable.
+    act(() => emitHover({ t: 'port', id: second, anchor: { side: 'auto', t: 0.5 } }));
+    expect(screen.getByTestId(`node-card-${second}`)).toHaveAttribute('data-hover', 'true');
+    expect(screen.getByTestId(`node-card-${first}`)).not.toHaveAttribute('data-hover');
+
+    act(() => emitHover({ t: 'handle', id: first, handle: 'se' }));
+    expect(screen.getByTestId(`node-card-${first}`)).toHaveAttribute('data-hover', 'true');
+
+    act(() => emitHover({ t: 'canvas' }));
+    expect(screen.getByTestId(`node-card-${first}`)).not.toHaveAttribute('data-hover');
+    act(() => emitHover({ t: 'edge', id: 'e_1' }));
+    expect(screen.getByTestId(`node-card-${first}`)).not.toHaveAttribute('data-hover');
+  });
+
   it('renders nothing without an engine', () => {
     const { doc, slots, store } = setup();
     render(<NodeHosts engine={null} doc={doc} store={store} slotOf={(id) => slots.get(id)} />);
@@ -269,6 +314,61 @@ describe('NodeHosts in-place editing', () => {
     await waitFor(() =>
       expect(screen.queryByTestId(`card-editor-${note.id}`)).not.toBeInTheDocument(),
     );
+  });
+
+  /**
+   * The double-click gesture is the engine's (the card cannot receive it while it is transparent to
+   * the pointer), so the bridge listens for the intent the engine publishes instead.
+   */
+  it('starts editing on the engine begin-edit-text intent', async () => {
+    const { doc, slots, store } = setup();
+    const { engine, emitHosts, emitIntent } = fakeEngine();
+    const note = createNode(
+      doc,
+      { type: 'note', x: 0, y: 0, title: 'Note' },
+      { now: T0, makeId: () => 'n_note_intent' },
+    ).node;
+    const slot = document.createElement('div');
+    document.body.appendChild(slot);
+    slots.set(note.id, slot);
+
+    render(
+      <NodeHosts engine={engine} doc={doc} store={store} slotOf={(nodeId) => slots.get(nodeId)} />,
+    );
+    act(() => emitHosts([note.id]));
+    expect(screen.queryByTestId(`card-editor-${note.id}`)).not.toBeInTheDocument();
+
+    act(() => emitIntent({ t: 'begin-edit-text', id: note.id }));
+    expect(await screen.findByTestId(`card-editor-${note.id}`)).toBeInTheDocument();
+  });
+
+  /** Enter also confirms a pending connection (P5 §6); the editor must not steal it. */
+  it('leaves Enter to the engine while a connection is pending', () => {
+    const { doc, slots, store } = setup();
+    const { engine, emitHosts } = fakeEngine('connecting');
+    const note = createNode(
+      doc,
+      { type: 'note', x: 0, y: 0, title: 'Note' },
+      { now: T0, makeId: () => 'n_note_connect' },
+    ).node;
+    const slot = document.createElement('div');
+    document.body.appendChild(slot);
+    slots.set(note.id, slot);
+
+    render(
+      <NodeHosts
+        engine={engine}
+        doc={doc}
+        store={store}
+        slotOf={(nodeId) => slots.get(nodeId)}
+        selectedIds={[note.id]}
+      />,
+    );
+    act(() => emitHosts([note.id]));
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    });
+    expect(screen.queryByTestId(`card-editor-${note.id}`)).not.toBeInTheDocument();
   });
 
   it('ignores Enter while a form field has focus, and with a multi-selection', () => {
