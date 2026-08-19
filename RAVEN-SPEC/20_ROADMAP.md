@@ -82,19 +82,20 @@ This file carries prompts for **remaining** work only. The implementation prompt
 were deleted once shipped — they are in git history, and the binding description of what exists is
 the area spec plus the code. Read `AGENTS.md` first.
 
-| Phase            | PRs               | Where it lives now                                                                                | Spec                               |
-| ---------------- | ----------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| P1 Foundation    | #2                | monorepo, tokens, app shell, CI, bench harness                                                    | `00_MASTER.md`, `19_DEPLOYMENT.md` |
-| P2 Canvas engine | #3                | `packages/canvas-engine` (camera, spatial index, FSM, renderer)                                   | `05_CANVAS_ENGINE.md`              |
-| P3 Document      | #4, #5            | `packages/domain` (board doc, patches, undo, autosave), `apps/web/src/data`                       | `08_DATA_MODEL.md`                 |
-| P4 Node system   | #6, #7, #8        | `packages/domain/src/nodes`, `apps/web/src/nodes` (9 types, inspector, hosts)                     | `06_NODE_SYSTEM.md`                |
-| P5 Edge system   | #11, #12, #17     | edge taxonomy, 4 routing modes + cache, ports, selection, relationship UI — **part 4 open below** | `07_EDGE_SYSTEM.md`                |
-| Local-first      | #9, #10, #13, #14 | `APP_MODE=local`, `WorkspaceRepository`, local persistence, first-run seed                        | `docs/adr/ADR-001-local-first.md`  |
-| L4.1 Transforms  | #15               | `packages/transforms` (manifests, registries, router, modes, scores, planner, catalogue)          | `21_TRANSFORM_SYSTEM.md`           |
-| Layer-2 docs     | #16               | `22_ECOSYSTEM_AUDIT.md`, `23_COMPETITOR_MATRIX.md`, `24_UNIFIED_QUERY.md` (design only)           | those documents                    |
-| Agent memory     | #18               | `AGENTS.md`, `.mcp.json`                                                                          | —                                  |
+| Phase              | PRs               | Where it lives now                                                                                                               | Spec                               |
+| ------------------ | ----------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| P1 Foundation      | #2                | monorepo, tokens, app shell, CI, bench harness                                                                                   | `00_MASTER.md`, `19_DEPLOYMENT.md` |
+| P2 Canvas engine   | #3                | `packages/canvas-engine` (camera, spatial index, FSM, renderer)                                                                  | `05_CANVAS_ENGINE.md`              |
+| P3 Document        | #4, #5            | `packages/domain` (board doc, patches, undo, autosave), `apps/web/src/data`                                                      | `08_DATA_MODEL.md`                 |
+| P4 Node system     | #6, #7, #8        | `packages/domain/src/nodes`, `apps/web/src/nodes` (9 types, inspector, hosts)                                                    | `06_NODE_SYSTEM.md`                |
+| P5 Edge system     | #11, #12, #17     | edge taxonomy, 4 routing modes + cache, ports, selection, relationship UI — **part 4 open below**                                | `07_EDGE_SYSTEM.md`                |
+| Local-first        | #9, #10, #13, #14 | `APP_MODE=local`, `WorkspaceRepository`, local persistence, first-run seed                                                       | `docs/adr/ADR-001-local-first.md`  |
+| L4.1 Transforms    | #15               | `packages/transforms` (manifests, registries, router, modes, scores, planner, catalogue)                                         | `21_TRANSFORM_SYSTEM.md`           |
+| L4.2 Transform SDK | #20               | `packages/transforms/src/sdk` (engine contract, `runEngine` host, testkit, conformance harness, `doh-resolver` reference engine) | `21_TRANSFORM_SYSTEM.md` §12a      |
+| Layer-2 docs       | #16               | `22_ECOSYSTEM_AUDIT.md`, `23_COMPETITOR_MATRIX.md`, `24_UNIFIED_QUERY.md` (design only)                                          | those documents                    |
+| Agent memory       | #18               | `AGENTS.md`, `.mcp.json`                                                                                                         | —                                  |
 
-Open phases in this file: **P5 part 4**, **P6**, **P7**, **P8**, **P17**, **L4.2–L4.7**. P9–P16 have
+Open phases in this file: **P5 part 4**, **P6**, **P7**, **P8**, **P17**, **L4.3–L4.7**. P9–P16 have
 no prompt yet; write one in this format when their turn comes.
 
 ---
@@ -834,12 +835,15 @@ UI. Nothing here changes a phase that is already done.
 | Phase    | Content                                                                                                                                                                                           | Depends on          |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
 | **L4.1** | Ecosystem audit, provider catalogue, transform catalogue, this spec, `packages/transforms` foundation: manifests, registries, capability router, modes, scoring, expand planner, seeded catalogue | —                   |
-| L4.2     | Transform SDK surface for third parties (`initialize/validateInput/execute/stream/normalize/healthCheck`) and the conformance test harness                                                        | L4.1, 17_PLUGIN_SDK |
+| **L4.2** | Transform SDK surface for third parties and the conformance test harness — **shipped** (PR #20), see the ledger                                                                                   | L4.1, 17_PLUGIN_SDK |
 | L4.3     | Run history, replay, run comparison and the result cache with TTL and age labelling                                                                                                               | L4.1, P3            |
 | L4.4     | Execution integration: engines become Runner jobs, streaming partial results, cancellation, budgets enforced at run time                                                                          | P10                 |
 | L4.5     | Canvas UX: contextual menu, hover chips, Expand with preview, result clusters, density control, data-flow disclosure                                                                              | L4.4, P4/P5         |
 | L4.6     | Provider vault, provider settings UI, ecosystem health check (stale `lastVerified`, dead endpoints, deprecations)                                                                                 | L4.4, P9            |
 | L4.7     | Agent-driven transform planning under budgets, plan explanation, smart chaining                                                                                                                   | L4.4, 14_AI_AGENT   |
+
+**L4.2 shipped** (PR #20): the engine contract, host driver, testkit and 14-check conformance
+harness live in `packages/transforms/src/sdk`; `21_TRANSFORM_SYSTEM.md` §12a is the binding spec.
 
 **L4.1 shipped** (PR #15): see the ledger. Acceptance criteria for it are now permanent invariants
 of `packages/transforms`, asserted by `test/catalog.contract.test.ts` — registry validation clean,
