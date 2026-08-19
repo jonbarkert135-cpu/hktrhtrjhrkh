@@ -48,15 +48,24 @@ export function urlsFromUriList(list: string): string[] {
   ];
 }
 
+const HTML_ENTITIES: Record<string, string> = {
+  nbsp: ' ',
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  '#39': "'",
+};
+
 /** Strips tags and collapses whitespace — HTML is never trusted as markup (§9). */
 export function htmlToPlainText(html: string): string {
   return html
     .replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ')
     .replace(/<[^>]*>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
+    .replace(
+      /&(nbsp|amp|lt|gt|quot|#39);/gi,
+      (_m, name: string) => HTML_ENTITIES[name.toLowerCase()] ?? _m,
+    )
     .replace(/\s+/g, ' ')
     .trim();
 }
