@@ -360,8 +360,12 @@
   }
 
   /* The card fills the slot the engine positions in world space; the slot owns geometry, the
-     card owns everything inside it. Pointer events stay off until the card is hovered so the
-     canvas keeps owning pan and marquee gestures. */
+     card owns everything inside it.
+
+     Gestures belong to the engine (05 §3): the canvas below is the single hit-test authority, so
+     the card body is transparent to the pointer. Anything that is genuinely a DOM affordance —
+     the action rail, the in-place editor — opts back in with `pointer-events: auto`. Without this
+     a card would swallow selection, drag, marquee and port gestures over its own area. */
   .nx-node-card {
     display: flex;
     flex-direction: column;
@@ -375,13 +379,20 @@
     color: var(--fg-default);
     font-family: var(--nx-font-sans);
     overflow: hidden;
-    pointer-events: auto;
+    pointer-events: none;
     position: relative;
   }
 
-  .nx-node-card:hover {
+  /* Hover comes from the engine's hit test (`data-hover`), not from CSS `:hover`: a
+     pointer-transparent element is never hovered by the browser. */
+  .nx-node-card[data-hover='true'] {
     border-color: var(--border-strong);
     box-shadow: var(--nx-shadow-1);
+  }
+
+  /* While editing, the card *is* the interactive surface: the editor needs the pointer. */
+  .nx-node-card[data-state='editing'] {
+    pointer-events: auto;
   }
 
   .nx-node-card[data-state='selected'],
@@ -546,9 +557,17 @@
     transition: opacity var(--nx-dur-2) var(--nx-ease-standard);
   }
 
-  .nx-node-card:hover .nx-card-rail,
+  .nx-node-card[data-hover='true'] .nx-card-rail,
   .nx-node-card:focus-within .nx-card-rail {
     opacity: 1;
+  }
+
+  /* The rail and the editor are real DOM affordances, so they take the pointer back from the
+     canvas. The rail only does so once it is visible — an invisible rail must not block a drag. */
+  .nx-node-card[data-hover='true'] .nx-card-rail,
+  .nx-node-card:focus-within .nx-card-rail,
+  .nx-card-editor {
+    pointer-events: auto;
   }
 
   .nx-card-rail button {
@@ -625,6 +644,47 @@
     font: var(--text-mono);
     color: var(--fg-muted);
     overflow-x: auto;
+  }
+
+  /* Relationship menus open at a canvas point, so they are positioned, not anchored (P5 §6). */
+  .nx-context-menu {
+    z-index: var(--nx-z-dropdown);
+    display: flex;
+    flex-direction: column;
+    gap: var(--nx-space-1);
+    min-width: 12rem;
+    padding: var(--nx-space-2);
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--nx-radius-3);
+    box-shadow: var(--nx-shadow-3, none);
+  }
+
+  .nx-context-menu .nx-menu-item {
+    justify-content: flex-start;
+    background: none;
+    border: 0;
+    text-align: start;
+  }
+
+  .nx-context-menu .nx-menu-item:hover,
+  .nx-context-menu .nx-menu-item:focus-visible {
+    background: var(--surface-3, var(--surface-1));
+  }
+
+  .nx-context-menu hr {
+    margin: var(--nx-space-1) 0;
+    border: 0;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .nx-menu-heading {
+    margin: 0;
+    padding-inline: var(--nx-space-2);
+    font: var(--text-body-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--fg-muted);
   }
 
   .nx-inspector-list {

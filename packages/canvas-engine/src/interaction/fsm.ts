@@ -24,7 +24,7 @@ import type {
   SelectionMode,
   Vec2,
 } from '../types';
-import { DRAG_THRESHOLD_PX, MIN_NODE_SIZE } from '../constants';
+import { CONNECT_CANDIDATE_LIMIT, DRAG_THRESHOLD_PX, MIN_NODE_SIZE } from '../constants';
 import type { GuideLine } from './snapping';
 import { snapDrag } from './snapping';
 
@@ -92,6 +92,10 @@ export type FsmState =
       from: NodeId;
       fromAnchor: AnchorSpec;
       current: Vec2;
+      /** Pointer drags follow the cursor; keyboard connections step through `candidates`. */
+      via: 'pointer' | 'keyboard';
+      candidates: readonly NodeId[];
+      candidateIndex: number;
     }
   | { name: 'editing'; id: NodeId };
 
@@ -201,6 +205,10 @@ const inflate = (r: Rect, by: number): Rect => ({
 });
 
 const isNodeTarget = (t: HitTarget): t is { t: 'node'; id: NodeId } => t.t === 'node';
+
+/** Nodes and edges are both selectable; ports and handles are affordances, not entities. */
+const selectableId = (t: HitTarget): EntityId | null =>
+  t.t === 'node' || t.t === 'edge' ? t.id : null;
 
 const selectedNodes = (ctx: FsmContext): NodeView[] => {
   const out: NodeView[] = [];
@@ -342,6 +350,9 @@ function onPointerDown(
         from: e.target.id,
         fromAnchor: e.target.anchor,
         current: e.world,
+        via: 'pointer',
+        candidates: [],
+        candidateIndex: -1,
       },
       [{ t: 'capture', pointerId: e.pointerId }],
     );
@@ -532,8 +543,9 @@ function onPointerUp(
   switch (state.name) {
     case 'pressPending': {
       const target = state.target;
-      const rest: FsmState = isNodeTarget(target) ? { name: 'hover', target } : { name: 'idle' };
-      const ids = isNodeTarget(target) ? [target.id] : [];
+      const picked = selectableId(target);
+      const rest: FsmState = picked === null ? { name: 'idle' } : { name: 'hover', target };
+      const ids = picked === null ? [] : [picked];
       // Click on empty canvas clears; shift/alt-click on empty canvas keeps the selection.
       if (ids.length === 0 && state.mode !== 'replace') return result(rest, [release]);
       return result(rest, [release, intent({ t: 'select', ids, mode: state.mode })]);
@@ -601,6 +613,19 @@ function onPointerUp(
           }),
         ]);
       }
+      if (to.t === 'canvas') {
+        // Dropping into the void is a creation gesture, not a cancel: the host offers the quick
+        // menu at the drop point (P5 §5.3). Escape and pointercancel still cancel outright.
+        return result({ name: 'idle' }, [
+          release,
+          intent({
+            t: 'connect-to-empty',
+            from: state.from,
+            fromAnchor: state.fromAnchor,
+            at: e.world,
+          }),
+        ]);
+      }
       return result({ name: 'idle' }, [release]);
     }
 
@@ -623,6 +648,84 @@ function nudge(ctx: FsmContext, dx: number, dy: number): FsmResult {
   return result({ name: 'idle' }, [intent({ t: 'move-nodes', deltas, phase: 'end' })]);
 }
 
+const centreOf = (n: NodeView): Vec2 => ({ x: n.x + n.w / 2, y: n.y + n.h / 2 });
+
+/**
+ * Targets offered to a keyboard connection: visible, unlocked nodes ordered by distance from the
+ * source (P5 §6 "Tab cycles candidate targets by proximity"). Proximity, not document order, is
+ * what makes the first candidate the one the analyst means.
+ */
+function connectCandidates(ctx: FsmContext, from: NodeView): NodeId[] {
+  const origin = centreOf(from);
+  return ctx.scene
+    .nodesIn(inflate(ctx.viewportWorld, SNAP_MARGIN_PX))
+    .filter((n) => n.id !== from.id && !n.hidden)
+    .map((n) => ({ id: n.id, d: dist(origin, centreOf(n)) }))
+    .sort((a, b) => (a.d === b.d ? (a.id < b.id ? -1 : 1) : a.d - b.d))
+    .slice(0, CONNECT_CANDIDATE_LIMIT)
+    .map((entry) => entry.id);
+}
+
+/** Places the free end on the current candidate; an empty candidate list parks it on the source. */
+function aimAtCandidate(
+  state: FsmState & { name: 'connecting' },
+  ctx: FsmContext,
+  index: number,
+): FsmResult {
+  const id = state.candidates[index];
+  const node = id === undefined ? undefined : ctx.scene.node(id);
+  const source = ctx.scene.node(state.from);
+  const current =
+    node !== undefined ? centreOf(node) : source !== undefined ? centreOf(source) : state.current;
+  return result({ ...state, candidateIndex: index, current });
+}
+
+/** `C`, `Tab`, `Enter`: the keyboard half of edge creation (P5 §6, N6 full operability). */
+function onConnectKey(
+  state: FsmState & { name: 'connecting' },
+  e: FsmEvent & { t: 'keydown' },
+  ctx: FsmContext,
+): FsmResult {
+  if (state.via !== 'keyboard') return result(state);
+  const count = state.candidates.length;
+  if (e.key === 'Tab' && count > 0) {
+    const step = e.mods.shift ? -1 : 1;
+    return aimAtCandidate(state, ctx, (state.candidateIndex + step + count) % count);
+  }
+  if (e.key === 'Enter') {
+    const id = state.candidates[state.candidateIndex];
+    if (id === undefined || id === state.from) return result({ name: 'idle' });
+    return result({ name: 'idle' }, [
+      intent({
+        t: 'create-edge',
+        from: state.from,
+        fromAnchor: state.fromAnchor,
+        to: id,
+        toAnchor: { side: 'auto', t: 0.5 },
+      }),
+    ]);
+  }
+  return result(state);
+}
+
+function startKeyboardConnect(state: FsmState, ctx: FsmContext): FsmResult {
+  const anchorId = ctx.selection[ctx.selection.length - 1];
+  const source = anchorId === undefined ? undefined : ctx.scene.node(anchorId);
+  if (source === undefined) return result(state);
+  const candidates = connectCandidates(ctx, source);
+  const started: FsmState = {
+    name: 'connecting',
+    pointerId: -1,
+    from: source.id,
+    fromAnchor: { side: 'auto', t: 0.5 },
+    current: centreOf(source),
+    via: 'keyboard',
+    candidates,
+    candidateIndex: -1,
+  };
+  return candidates.length === 0 ? result(started) : aimAtCandidate(started, ctx, 0);
+}
+
 function onKeyDown(state: FsmState, e: FsmEvent & { t: 'keydown' }, ctx: FsmContext): FsmResult {
   if (state.name === 'editing') {
     // Shortcut shield (§7.6): only Escape reaches the engine while editing.
@@ -636,6 +739,14 @@ function onKeyDown(state: FsmState, e: FsmEvent & { t: 'keydown' }, ctx: FsmCont
   }
   if (e.key === ' ' && (state.name === 'idle' || state.name === 'hover')) {
     return result({ name: 'spacePan' });
+  }
+  if (state.name === 'connecting') return onConnectKey(state, e, ctx);
+  if (
+    (e.key === 'c' || e.key === 'C') &&
+    !primaryMod(e.mods) &&
+    (state.name === 'idle' || state.name === 'hover')
+  ) {
+    return startKeyboardConnect(state, ctx);
   }
   if (state.name !== 'idle' && state.name !== 'hover' && state.name !== 'spacePan') {
     return result(state); // mid-gesture: only Escape is honoured
@@ -735,8 +846,9 @@ export function reduce(state: FsmState, event: FsmEvent, ctx: FsmContext): FsmRe
     case 'contextmenu': {
       // §7.5: the selection is left alone when the target is already selected.
       const effects: Effect[] = [];
-      if (isNodeTarget(event.target) && !ctx.selection.includes(event.target.id)) {
-        effects.push(intent({ t: 'select', ids: [event.target.id], mode: 'replace' }));
+      const picked = selectableId(event.target);
+      if (picked !== null && !ctx.selection.includes(picked)) {
+        effects.push(intent({ t: 'select', ids: [picked], mode: 'replace' }));
       }
       effects.push(intent({ t: 'context-menu', at: event.world, target: event.target }));
       return result(state.name === 'idle' ? state : { name: 'idle' }, effects);

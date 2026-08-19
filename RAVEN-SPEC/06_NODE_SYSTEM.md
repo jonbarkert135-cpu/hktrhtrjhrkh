@@ -1525,3 +1525,21 @@ the content, so having both open at once is not a conflict.
 
 Still open in P4 (part 3): the file/image upload pipeline (presign, sniffing, thumbnails) and the
 `e2e/journeys/J03-drop-file.spec.ts` / `J06-rich-text-reload.spec.ts` journeys.
+
+### 13.6 The overlay pointer contract (P5 part 3)
+
+The engine is the single hit-test authority (`05_CANVAS_ENGINE.md` §3) and binds pointer listeners
+to the `canvas` element only. A DOM card that accepts pointer events therefore **removes** its own
+area from every canvas gesture — selection, drag, resize handles, edge ports, marquee. So:
+
+- `.nx-node-card` is `pointer-events: none`. Only the hover rail (while visible) and the in-place
+  editor opt back in; a card in the `editing` state is interactive as a whole.
+- Hover comes from the engine (`hoverChanged` → `data-hover` on the card), never from CSS `:hover`:
+  a pointer-transparent element is never hovered by the browser. `port` and `handle` hits count as
+  a hover of their node, so the rail does not vanish when the pointer crosses the port band.
+- Double-click editing arrives as the engine's `begin-edit-text` intent instead of a DOM handler on
+  the card. `Enter` on a single selection still starts editing, except while the engine is
+  `connecting` — there `Enter` confirms the pending relationship (`07_EDGE_SYSTEM.md` §13).
+
+Anything new drawn into the overlay follows the same rule: presentational by default, interactive
+only where a DOM affordance genuinely needs the pointer.

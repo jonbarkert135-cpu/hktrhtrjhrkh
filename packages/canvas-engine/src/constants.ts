@@ -67,6 +67,15 @@ export const DBLCLICK_MAX_MS = 320;
 export const LONG_PRESS_MS = 480;
 export const HOVER_LEAVE_MS = 80;
 export const EDGE_HIT_TOL_PX = 10;
+/** Half-width of the connection band around a card border (P5 §5.3). */
+export const PORT_BAND_PX = 10;
+/**
+ * Below this zoom the port band is off: cards are glyphs or dots there, the band would cover the
+ * whole card, and dragging the card must keep winning (P5 §5.3 read together with 05 §6.8).
+ */
+export const PORT_MIN_ZOOM = 0.4;
+/** Candidate targets offered to a keyboard-driven connection, nearest first (P5 §6). */
+export const CONNECT_CANDIDATE_LIMIT = 12;
 export const HANDLE_HIT_PAD_PX = 6;
 export const ANCHOR_MAGNET_PX = 28;
 export const SNAP_TOL_PX = 6;

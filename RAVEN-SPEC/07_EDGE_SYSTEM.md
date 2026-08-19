@@ -1014,8 +1014,53 @@ organization` ranked `alias_of` above `works_at` purely on alphabetical tie-brea
    (O(cells) instead of O(cells · obstacles)); and reused A\* scratch buffers. Measured headlessly:
    6,067 ms → 520 ms for 2,000 smart edges over the 5,000-node scene, with 8 degraded routes.
 
-### 15.5 Not yet implemented
+### 15.5 Shipped (P5 part 3 — creation, selection and the relationship UI)
 
-Creation UX (§5.1, §5.2, §5.4), editing (§6), waypoint `rel` materialization (§8.3), label content
-toggles (§9.3), hover/selection states and animated flow (§10.2–§10.4), bundling render and the
-worker offload (§11.1–§11.2), graph queries (§12) and accessibility (§13) — P5 part 3.
+| Section     | Where it lives                                                                                 |
+| ----------- | ---------------------------------------------------------------------------------------------- |
+| §5.1, §5.2  | `packages/canvas-engine/src/edges/ports.ts` (10 px band), FSM `connecting` state               |
+| §5.4        | `connect-to-empty` intent + `apps/web/src/edges/ConnectionOverlay.tsx` quick menu              |
+| §6          | `apps/web/src/edges/EdgeInspector.tsx`, `EdgeContextMenu.tsx`, `edgeCommands.ts`               |
+| §10.1       | `packages/canvas-engine/src/edges/pick.ts` (picker over the _drawn_ geometry)                  |
+| §10.2       | selected-edge stroke and endpoint dots in `render/layers.ts`; pending line in `drawConnection` |
+| §13         | keyboard creation: `C` starts, `Tab` cycles candidates by proximity, `Enter` confirms          |
+| host wiring | `createRoutedEdgePath` + `createEdgePicker` in `apps/web/src/app/canvas/useCanvasEngine.ts`    |
+| appearance  | `apps/web/src/edges/edgeVisual.ts` (type colour, dash, width, routing into the `EdgeView`)     |
+
+### 15.6 Deviations in part 3, and why
+
+1. **Edge hit-testing is injected, not built in.** `engine.ts` stays free of domain imports; the
+   host passes `edgeHit`, built by `createEdgePicker` over the routed geometry. Without it edges are
+   simply not selectable, which is exactly the P2 behaviour.
+2. **Port side outside a card.** §5.1 says "nearest border". Outside the card at low zoom the band
+   is wider than the card, so nearest-border picks absurd sides; the implementation uses the
+   overshoot direction outside and nearest-border inside.
+3. **The relationship type is suggested, not asked for.** A modal type picker mid-drag breaks the
+   gesture; `bestEdgeType` picks, the inspector corrects. Refusals (duplicate, self-loop) surface as
+   a board notice instead of silently dropping the gesture.
+4. **The inspector writes directly**, like the node inspector, instead of going through engine
+   intents: the engine has no vocabulary for relationship semantics and should not grow one.
+
+### 15.6a Regression found while landing part 3 — the overlay pointer contract
+
+The port band, the selection click and the marquee all reach the engine through the `canvas`
+element, which is the only element the host binds pointer listeners to. Overlay cards were styled
+`pointer-events: auto`, so every gesture that started **over a card** — selecting it, dragging it,
+grabbing its port — was swallowed by the DOM before the engine saw it. The J04 journey exposed it
+(`<article class="nx-node-card"> … intercepts pointer events`).
+
+Fixed by making the card body transparent to the pointer and giving the pointer back only to real
+DOM affordances (the hover rail while it is visible, the in-place editor). Two consequences:
+
+1. **Hover is an engine fact, not a CSS state.** A pointer-transparent element is never `:hover`ed,
+   so `NodeHosts` subscribes to `hoverChanged` and sets `data-hover` on the card; a `port` or
+   `handle` hit counts as its node so the rail stays reachable. See `06_NODE_SYSTEM.md` §13.6.
+2. **Double-click editing is an intent.** The card can no longer receive `dblclick`; the engine's
+   `begin-edit-text` intent starts in-place editing. `Enter` is also skipped while the engine is in
+   `connecting`, because there it confirms the connection (§13).
+
+### 15.7 Not yet implemented
+
+Waypoint editing and `rel` materialization (§8.3), label content toggles (§9.3), animated flow
+(§10.3–§10.4), bundling render and the worker offload (§11.1–§11.2), graph queries (§12) — P5
+part 4, tracked in `20_ROADMAP.md`.

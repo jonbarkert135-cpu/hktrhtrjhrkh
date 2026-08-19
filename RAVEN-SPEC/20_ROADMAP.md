@@ -867,6 +867,14 @@ the engine only receives an accent color and a glyph id.
 
 # P5 — Edge system
 
+**Status: parts 1–3 DONE** — `phase/p05-edges-1` (PR #11, taxonomy, registry, validation),
+`phase/p05-edges-2` (PR #12, routing, cache, hit-testing, labels, `route-smart-2000-edges` at 520 ms
+against a 900 ms budget) and `phase/p05-edges-3` (PR #17, ports, connection preview, edge selection,
+keyboard creation, quick menu, relationship inspector and context menu, real type colours on the
+canvas, e2e J04). **Deferred to a part 4:** waypoint editing (§5 req 8), routing in a dedicated
+worker (§6, §7) — routing currently runs on the main thread behind the cached `EdgePath` seam, which
+holds the frame budget at the measured scene sizes — plus animated flow and edge bundling.
+
 ## 1 Objective
 
 Implement typed edges with four routing modes (curved, orthogonal, straight, smart), labels,

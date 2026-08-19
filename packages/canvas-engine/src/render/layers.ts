@@ -16,7 +16,9 @@ import {
 } from '../constants';
 import type {
   CameraState,
+  ConnectionPreview,
   DrawContext,
+  EdgeId,
   EdgeView,
   EngineTheme,
   NodeId,
@@ -91,6 +93,10 @@ export interface RenderFrame {
   readonly marquee: Rect | null;
   readonly text: TextCache;
   readonly edgePath: EdgePath;
+  /** Selected edge ids: painted wider, in the selection colour, with visible endpoints (P5 §6). */
+  readonly selectedEdges: ReadonlySet<EdgeId>;
+  /** The in-flight connection, or null. */
+  readonly connection: ConnectionPreview | null;
 }
 
 /* ---------------------------------------------------------------- scratch */
@@ -146,15 +152,31 @@ export function drawEdges(ctx: DrawContext, frame: RenderFrame): number {
     if (count < 2) continue;
     // ponytail: opacity 1 (the only P2 case) reuses the theme color object and its cached CSS
     // string; translucent edges arrive with P5 degraded routing and pay one small object then.
-    const color =
-      edge.style.opacity === 1 ? edge.style.color : fade(edge.style.color, edge.style.opacity);
-    const width = edge.style.width / frame.camera.zoom;
+    const selected = frame.selectedEdges.has(edge.id);
+    const color = selected
+      ? frame.theme.selectionStroke
+      : edge.style.opacity === 1
+        ? edge.style.color
+        : fade(edge.style.color, edge.style.opacity);
+    // A selected edge is drawn one screen px wider, so the emphasis survives every zoom level.
+    const width = (edge.style.width + (selected ? 1 : 0)) / frame.camera.zoom;
     for (let i = 1; i < count; i += 1) {
       pa.x = path[(i - 1) * 2] ?? 0;
       pa.y = path[(i - 1) * 2 + 1] ?? 0;
       pb.x = path[i * 2] ?? 0;
       pb.y = path[i * 2 + 1] ?? 0;
       ctx.line(pa, pb, color, width, scaleDash(edge.style.dash, frame.camera.zoom));
+    }
+    if (selected) {
+      // Endpoints as draggable dots and the waypoints they imply (UX §6: "selected edge shows its
+      // endpoints"); the dots are screen-sized, like every other handle.
+      const dot = frame.metrics.handleSize / (2 * frame.camera.zoom);
+      pa.x = path[0] ?? 0;
+      pa.y = path[1] ?? 0;
+      ctx.dot(pa, dot, frame.theme.selectionStroke);
+      pb.x = path[(count - 1) * 2] ?? 0;
+      pb.y = path[(count - 1) * 2 + 1] ?? 0;
+      ctx.dot(pb, dot, frame.theme.selectionStroke);
     }
     painted += 1;
   }
@@ -354,6 +376,40 @@ export function drawGuides(ctx: DrawContext, frame: RenderFrame): number {
   return frame.guides.length;
 }
 
+/* -------------------------------------------------------------- connection */
+
+/**
+ * The pending connection (P5 §6): a dashed line from the source port to the free end, the free end
+ * marked with a dot, and the drop target outlined when the drop would be accepted.
+ */
+export function drawConnection(ctx: DrawContext, frame: RenderFrame): number {
+  const c = frame.connection;
+  if (c === null) return 0;
+  const zoom = frame.camera.zoom;
+  const width = frame.theme.selectionWidth / zoom;
+  dash.length = 0;
+  dash.push(frame.metrics.guideDash / zoom, frame.metrics.guideDash / zoom);
+  pa.x = c.fromPoint.x;
+  pa.y = c.fromPoint.y;
+  pb.x = c.to.x;
+  pb.y = c.to.y;
+  const color = c.valid ? frame.theme.selectionStroke : frame.theme.guideStroke;
+  ctx.line(pa, pb, color, width, dash);
+  ctx.dot(pb, frame.metrics.handleSize / (2 * zoom), color);
+
+  if (c.targetId !== null && c.valid) {
+    const target = frame.node(c.targetId);
+    if (target !== undefined) {
+      box.x = target.x;
+      box.y = target.y;
+      box.w = sizeOf(target.w);
+      box.h = sizeOf(target.h);
+      ctx.roundRect(box, frame.metrics.nodeRadius / zoom, null, color, width);
+    }
+  }
+  return 1;
+}
+
 /* ----------------------------------------------------------------- marquee */
 
 export function drawMarquee(ctx: DrawContext, frame: RenderFrame): number {
@@ -383,6 +439,7 @@ export function paintFrame(ctx: DrawContext, frame: RenderFrame): FramePaintCoun
   const edges = drawEdges(ctx, frame);
   const nodes = drawNodes(ctx, frame);
   drawSelection(ctx, frame);
+  drawConnection(ctx, frame);
   drawGuides(ctx, frame);
   drawMarquee(ctx, frame);
   ctx.restore();

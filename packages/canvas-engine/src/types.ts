@@ -231,6 +231,8 @@ export type Intent =
       phase: GesturePhase;
     }
   | { t: 'create-edge'; from: NodeId; fromAnchor: AnchorSpec; to: NodeId; toAnchor: AnchorSpec }
+  /** A connection dropped on empty canvas: the host offers "new node here and connect" (P5 §5.3). */
+  | { t: 'connect-to-empty'; from: NodeId; fromAnchor: AnchorSpec; at: Vec2 }
   | { t: 'create-node-from-drop'; at: Vec2; payload: DropPayload }
   | { t: 'reconnect-edge'; edgeId: EdgeId; end: 'from' | 'to'; to: NodeId; anchor: AnchorSpec }
   | { t: 'begin-edit-text'; id: NodeId }
@@ -243,6 +245,23 @@ export type Intent =
   | { t: 'align'; ids: NodeId[]; axis: AlignAxis }
   | { t: 'distribute'; ids: NodeId[]; axis: 'h' | 'v' }
   | { t: 'camera'; camera: CameraState; cause: CameraCause };
+
+/**
+ * The in-flight connection, published so the renderer can draw the pending line and the host can
+ * dim invalid drop targets (P5 §6). `to` follows the pointer (or the keyboard candidate).
+ */
+export interface ConnectionPreview {
+  from: NodeId;
+  fromAnchor: AnchorSpec;
+  fromPoint: Vec2;
+  to: Vec2;
+  /** The node under the free end, when there is one. */
+  targetId: NodeId | null;
+  /** False when the drop would be rejected outright (same node). */
+  valid: boolean;
+  /** True while the gesture is driven by the keyboard (C / Tab / Enter). */
+  keyboard: boolean;
+}
 
 export type Unsubscribe = () => void;
 

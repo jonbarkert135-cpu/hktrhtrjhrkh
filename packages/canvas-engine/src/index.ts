@@ -83,6 +83,7 @@ export {
   type PaintLod,
 } from './render/lod';
 export {
+  drawConnection,
   paintFrame,
   straightEdgePath,
   type AlignmentGuide,
@@ -91,6 +92,13 @@ export {
   type RenderFrame,
   type RenderMetrics,
 } from './render/layers';
+export { facingPort, portAt, portPoint } from './edges/ports';
+export {
+  createEdgePicker,
+  type EdgePicker,
+  type EdgePickerOptions,
+  type GeometrySource,
+} from './edges/pick';
 export {
   createRoutedEdgePath,
   type RoutedEdgePath,

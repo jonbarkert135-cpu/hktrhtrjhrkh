@@ -25,9 +25,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useBoardDoc } from '../../data/docProvider.tsx';
 import { restoreSnapshot } from '../../data/snapshots.ts';
 import { CanvasHost } from '../canvas/CanvasHost';
-import { applyIntent, createNoteNode } from '../canvas/bindings/applyIntents.ts';
+import { applyIntent, connectToEmpty, createNoteNode } from '../canvas/bindings/applyIntents.ts';
+import { EdgeLayer, pendingFromIntent, type PendingEdgeUi } from '../../edges/EdgeLayer.tsx';
+import { BoardInspector } from './BoardInspector.tsx';
 import { patchesFromChange, sceneFromDoc } from '../canvas/bindings/sceneFromDoc.ts';
-import { Inspector } from '../../nodes/inspector/Inspector.tsx';
 import { NodeHosts } from '../../nodes/NodeHosts.tsx';
 import { createNodeStore } from '../../nodes/nodeStore.ts';
 import { SyncStatus } from '../shell/SyncStatus.tsx';
@@ -58,12 +59,26 @@ export function BoardWorkspace() {
   useEffect(() => () => store.destroy(), [store]);
 
   const now = useCallback(() => new Date().toISOString(), []);
-  const context = { doc, history, now, makeId: (): string => newId.board() };
+  const report = useCallback((message: string) => setNotice(message), []);
+  const context = { doc, history, now, makeId: (): string => newId.board(), onNotice: report };
+  const intentContext = useCallback(
+    () => ({ doc, history, now, makeId: (): string => newId.board(), onNotice: report }),
+    [doc, history, now, report],
+  );
+  // The relationship menus open at a world point; the screen position is only available inside the
+  // canvas render prop, so the intent handler stores world coordinates and `EdgeLayer` converts.
+  const [pendingMenu, setPendingMenu] = useState<PendingEdgeUi | null>(null);
+
   const onIntent = useCallback(
     (intent: Intent) => {
-      applyIntent(intent, { doc, history, now, makeId: (): string => newId.board() });
+      const pending = pendingFromIntent(intent);
+      if (pending !== null) {
+        setPendingMenu(pending);
+        return;
+      }
+      applyIntent(intent, intentContext());
     },
-    [doc, history, now],
+    [intentContext],
   );
 
   // Document → engine: incremental patches, O(changed) per transaction.
@@ -125,6 +140,14 @@ export function BoardWorkspace() {
     // `context` is rebuilt every render on purpose: it only holds the doc, history and clock.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc, history, engine]);
+
+  const finishDrop = useCallback(
+    (from: string, at: { x: number; y: number }) => {
+      connectToEmpty(intentContext(), from, at);
+      setPendingMenu(null);
+    },
+    [intentContext],
+  );
 
   const download = useCallback(() => {
     const archive = exportBoard(doc, { appVersion: APP_VERSION, now: new Date().toISOString() });
@@ -208,31 +231,47 @@ export function BoardWorkspace() {
 
       <div className="nx-board-main">
         <CanvasHost onIntent={onIntent} onEngine={onEngine} nodeCount={counts.nodes}>
-          {({ slotOf }) => (
-            <NodeHosts
-              engine={engine}
-              doc={doc}
-              store={store}
-              slotOf={slotOf}
-              selectedIds={selectedIds}
-              onOpenInspector={(id) => setSelectedIds([id])}
-              onDuplicate={(id) => {
-                duplicateNode(doc, id, { now: new Date().toISOString() });
-              }}
-              onDelete={(id) => {
-                deleteNode(doc, id, { now: new Date().toISOString() });
-              }}
-            />
+          {({ slotOf, screenOf }) => (
+            <>
+              <NodeHosts
+                engine={engine}
+                doc={doc}
+                store={store}
+                slotOf={slotOf}
+                selectedIds={selectedIds}
+                onOpenInspector={(id) => setSelectedIds([id])}
+                onDuplicate={(id) => {
+                  duplicateNode(doc, id, { now: new Date().toISOString() });
+                }}
+                onDelete={(id) => {
+                  deleteNode(doc, id, { now: new Date().toISOString() });
+                }}
+              />
+              <EdgeLayer
+                doc={doc}
+                context={context}
+                pending={pendingMenu}
+                screenOf={screenOf}
+                onClose={() => setPendingMenu(null)}
+                onConnectToEmpty={finishDrop}
+                onEditLabel={(id) => setSelectedIds([id])}
+                onResult={(result) => {
+                  if (result.message !== null) setNotice(result.message);
+                }}
+              />
+            </>
           )}
         </CanvasHost>
 
-        <Inspector
+        <BoardInspector
           doc={doc}
           store={store}
           selectedIds={selectedIds}
+          context={context}
           width={inspectorWidth}
           onWidthChange={setInspectorWidth}
           onClose={() => setSelectedIds([])}
+          onEdgeDeleted={() => setSelectedIds([])}
         />
       </div>
 

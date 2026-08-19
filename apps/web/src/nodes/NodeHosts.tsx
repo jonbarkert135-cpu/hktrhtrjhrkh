@@ -33,6 +33,7 @@ function HostedCard({
   store,
   slot,
   detailed,
+  hovered,
   selected,
   multiSelected,
   editing,
@@ -44,6 +45,7 @@ function HostedCard({
   store: NodeStore;
   slot: HTMLElement;
   detailed: boolean;
+  hovered: boolean;
   selected: boolean;
   multiSelected: boolean;
   editing: boolean;
@@ -60,6 +62,7 @@ function HostedCard({
     <NodeCard
       node={node}
       detailed={detailed}
+      hovered={hovered}
       context={{ selected, multiSelected }}
       {...(editing
         ? {
@@ -91,6 +94,7 @@ export function NodeHosts({
   const [ids, setIds] = useState<readonly string[]>([]);
   const [zoom, setZoom] = useState(engine?.camera.state.zoom ?? 1);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const beginEdit = useCallback(
     (id: string) => {
@@ -106,11 +110,26 @@ export function NodeHosts({
     if (engine === null) return undefined;
     const offHosts = engine.on('hostsChanged', (next) => setIds([...next]));
     const offCamera = engine.on('cameraChanged', (state) => setZoom(state.zoom));
+    // The engine owns hit-testing, so it also owns hover: cards are transparent to the pointer
+    // (05 §3), which means CSS `:hover` never fires on them. A port hit still counts as its node —
+    // the analyst is over that card and the rail must stay reachable.
+    const offHover = engine.on('hoverChanged', (target) => {
+      setHoveredId(
+        target.t === 'node' || target.t === 'port' || target.t === 'handle' ? target.id : null,
+      );
+    });
+    // Double-click editing used to hang off the card's own DOM handler. With a pointer-transparent
+    // card the gesture reaches the engine instead, which publishes `begin-edit-text`.
+    const offIntent = engine.on('intent', (intent) => {
+      if (intent.t === 'begin-edit-text') beginEdit(intent.id);
+    });
     return () => {
       offHosts();
       offCamera();
+      offHover();
+      offIntent();
     };
-  }, [engine]);
+  }, [engine, beginEdit]);
 
   // Enter on a single selection starts editing — the keyboard path to the same gesture as a
   // double-click (§5.5). Typing inside a field must never be hijacked, hence the target check.
@@ -118,6 +137,9 @@ export function NodeHosts({
     const onKey = (event: KeyboardEvent): void => {
       if (event.key !== 'Enter' || event.metaKey || event.ctrlKey || event.altKey) return;
       if (selectedIds.length !== 1) return;
+      // Enter also confirms a pending connection (P5 §6). The engine owns that gesture, so the
+      // text editor must not steal the key mid-connection.
+      if (engine?.state.interaction === 'connecting') return;
       const target = event.target;
       if (
         target instanceof HTMLElement &&
@@ -131,7 +153,7 @@ export function NodeHosts({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selectedIds, beginEdit]);
+  }, [selectedIds, beginEdit, engine]);
 
   // A node that stops being hosted (culled, deleted) must not stay "in edit" invisibly.
   useEffect(() => {
@@ -156,6 +178,7 @@ export function NodeHosts({
             onEndEdit={() => setEditingId(null)}
             slot={slot}
             detailed={detailed}
+            hovered={hoveredId === id}
             selected={selected.has(id) && selected.size === 1}
             multiSelected={selected.has(id) && selected.size > 1}
             actions={{ ...actions, onBeginEdit: beginEdit }}
