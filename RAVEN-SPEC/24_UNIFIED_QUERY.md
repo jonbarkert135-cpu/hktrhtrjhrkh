@@ -315,39 +315,45 @@ apps/web/src/features/query/      query bar, plan review, streaming results, rev
 apps/api/src/routes/query/        server-mode execution (same planner, remote executor)
 ```
 
-`packages/query-engine` depends on `packages/domain` only. It must not import from `apps/*`, from
-`packages/canvas-engine`, or from any adapter package — adapters are injected as a registry at
-construction. dependency-cruiser enforces this.
+`packages/query-engine` depends on `packages/domain` and `@nexus/transforms` only. It must not
+import from `apps/*`, from `packages/canvas-engine`, or from any adapter package — adapters are
+injected as a registry at construction, and `@nexus/transforms` must never import back.
+dependency-cruiser enforces both directions.
 
 ---
 
-## 12. Seam with the transform/provider layer (L4 / PROMPT 4)
+## 12. Seam with the transform layer (L4)
 
-Two layers, deliberately separate, developed in parallel by different agents. L4.1 (transform
-foundation) is already delivered; this layer is written against what it exposes.
+L4.1 already shipped `packages/transforms` (`@nexus/transforms`): frozen transform/engine/provider
+manifests, a validating registry, mode filtering, explainable scoring, a capability router with
+fallback chains, and an expand planner with budgets and mandatory exclusion reasons — all pure, with
+nothing executing. This layer **builds on that package; it does not re-implement it.**
 
-| Concern                                                                                                                             | Owner                                                                                                                    |
-| ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Transform/provider catalog, transform registry, transform-level DAG planner, Maltego-compatible semantics                           | **Layer L4** — `21_TRANSFORM_SYSTEM.md`, `docs/ecosystem/**`, `packages/transforms`, the `L4` section of `20_ROADMAP.md` |
-| Capability descriptors, intake, routing, budgets, plan review, execution policy, normalization, dedupe, provenance, query lifecycle | this document (`packages/query-engine`)                                                                                  |
+| Concern                                                                                                                                                                     | Owner                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Transform/engine/provider manifests and catalogue, registry validation, mode gating, scoring, transform-level routing and the expand planner                                | `@nexus/transforms` (`21_TRANSFORM_SYSTEM.md`) |
+| Query intake and entity typing, non-transform capability sources, execution, budgets at run time, normalization, entity resolution, confidence, provenance, query lifecycle | `packages/query-engine` (this document)        |
 
-Contract between them, in one direction only — **the unified layer consumes the transform layer,
-never the reverse**:
+Concretely:
 
-1. The transform registry exposes `listTransforms(): TransformDescriptor[]`. An adapter in this
-   layer converts each into a `CapabilityDescriptor` with `execution: 'transform'`. No transform
-   metadata is duplicated by hand.
-2. When a plan step is a transform, the executor calls the transform layer's own planner/runner with
-   `(transformId, input, budgetSlice, abortSignal)` and consumes its result stream. This layer does
-   not re-implement transform chaining; it treats a transform sub-DAG as one step with its own
-   internal fan-out.
-3. Normalization, dedupe, confidence, provenance and merge remain this layer's job, applied uniformly
-   to transform output and direct-adapter output alike, so both look identical on the canvas.
-4. If the transform registry is absent (not yet merged, or disabled), the router simply sees no
-   `transform` capabilities and everything else still works. Neither layer is a hard dependency of
-   the other's tests.
-
----
+1. `CapabilityDescriptor` (§2) is the **union view**. For transforms it is projected from
+   `TransformManifest` + `EngineManifest` by one adapter (`adapters/transform-registry.ts`); for
+   direct integrations it is projected from the P9/P10 integration manifest. No metadata is
+   hand-written twice, and both projections are contract-tested against their source.
+2. Routing and scoring for transform capabilities delegate to `routeForInput` / `routeTransform`
+   and the L4 scorer rather than duplicating them; §4's filter chain wraps that result and applies
+   only the stages L4 does not own (credentials, health, redundancy, cross-source value scoring).
+3. `planExpand` from L4 produces the transform sub-plan; §5's staged `QueryPlan` embeds it as one
+   step with its own internal fan-out, and reconciles budgets by handing the sub-planner a slice of
+   the global `Budget` (the L4 `Budget` shape is reused, not redefined).
+4. Execution, normalization, dedupe, confidence, provenance and merge are applied uniformly to
+   transform output and direct-adapter output, so both look identical on the canvas. L4.4 is where
+   transforms actually execute; until then this layer's transform steps are plan-only.
+5. Dependency direction is one-way: `packages/query-engine` imports `@nexus/transforms`; the
+   transform package must never import the query engine. If the registry is empty or the package is
+   disabled, the router simply sees no transform capabilities and everything else still works.
+6. Exclusion reasons are a shared vocabulary: L4's `PlanExclusion` values surface unchanged in
+   §5's `hidden` list, so "why did this not run" reads the same wherever the answer came from.
 
 ## 13. Performance targets
 

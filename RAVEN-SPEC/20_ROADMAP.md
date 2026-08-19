@@ -1585,8 +1585,9 @@ bench/query/{router.bench.ts,dedupe.bench.ts}
 
 1. `CapabilityDescriptor` exactly as in `24_UNIFIED_QUERY.md` §2, validated by zod at registration;
    an invalid descriptor fails registration loudly and the engine stays unavailable.
-2. Descriptors are derived from integration manifests by one adapter, and from the transform
-   registry (when present) by a second adapter; no descriptor is hand-written twice.
+2. Descriptors are derived from integration manifests by one adapter, and projected from
+   `@nexus/transforms` manifests by a second adapter; no descriptor is hand-written twice, and both
+   projections are contract-tested against their source.
 3. Selectors for domain (IDN/punycode), URL, IPv4/IPv6/CIDR, e-mail, E.164 phone, username handle,
    hash, BTC/ETH address, LEI, company name, free text — pure, offline, ≤ 1 ms, fully unit-tested
    including hostile inputs.
@@ -1622,7 +1623,8 @@ bench/query/{router.bench.ts,dedupe.bench.ts}
 20. A run is persisted as a `QueryRun`; a saved query is a canvas node; re-running produces a diff
     (new / changed / disappeared), never duplicate subgraphs.
 21. Cache keys include descriptor and engine versions; cached results are labelled as cached.
-22. `packages/query-engine` imports only `packages/domain`; dependency-cruiser enforces it.
+22. `packages/query-engine` imports only `packages/domain` and `@nexus/transforms`; the reverse
+    direction is forbidden and dependency-cruiser enforces both.
 
 ## 6 UX requirements
 
