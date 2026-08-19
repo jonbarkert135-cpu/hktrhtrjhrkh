@@ -69,6 +69,9 @@ export const HOVER_LEAVE_MS = 80;
 export const EDGE_HIT_TOL_PX = 10;
 /** Half-width of the connection band around a card border (P5 §5.3). */
 export const PORT_BAND_PX = 10;
+
+/** Grab radius of a manual waypoint, screen px (07 §8.3). */
+export const WAYPOINT_HIT_PX = 8;
 /**
  * Below this zoom the port band is off: cards are glyphs or dots there, the band would cover the
  * whole card, and dragging the card must keep winning (P5 §5.3 read together with 05 §6.8).

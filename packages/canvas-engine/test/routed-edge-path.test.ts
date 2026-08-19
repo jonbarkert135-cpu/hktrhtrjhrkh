@@ -84,3 +84,48 @@ describe('createRoutedEdgePath', () => {
     expect(rec.ops('line').length).toBeGreaterThan(1);
   });
 });
+
+describe('parallel groups and bundling (07 §7.6, P5 part 4 §4)', () => {
+  const a: EdgeView = { ...makeEdge(0, 'a', 'b'), id: 'e_a', routing: 'straight' };
+  // Reversed endpoints: a fan is direction-insensitive, both edges belong to one group.
+  const b: EdgeView = { ...makeEdge(1, 'b', 'a'), id: 'e_b', routing: 'straight' };
+
+  const midpointOf = (path: ReturnType<typeof createRoutedEdgePath>, edge: EdgeView): number => {
+    const out: number[] = [];
+    const count = path.route(
+      edge,
+      edge.from === 'a' ? from : to,
+      edge.from === 'a' ? to : from,
+      out,
+    );
+    return (out[Math.floor(count / 2) * 2 + 1] as number) ?? 0;
+  };
+
+  it('fans siblings apart once prepare has seen the frame', () => {
+    const path = createRoutedEdgePath();
+    const alone = midpointOf(path, a);
+    path.prepare?.([a, b]);
+    expect(midpointOf(path, a)).not.toBe(alone);
+  });
+
+  it('collapses a dense run when the density control is turned up', () => {
+    const dense = Array.from({ length: 9 }, (_, i) => ({ ...a, id: `e_${String(i)}` }));
+    const spread = createRoutedEdgePath();
+    spread.prepare?.(dense);
+    const bundled = createRoutedEdgePath({ bundleDensity: () => 1 });
+    bundled.prepare?.(dense);
+    const last = dense[8] as EdgeView;
+    expect(midpointOf(bundled, last)).not.toBe(midpointOf(spread, last));
+    // Fully bundled: every member sits on the line the group would occupy alone.
+    expect(midpointOf(bundled, last)).toBeCloseTo(midpointOf(bundled, dense[0] as EdgeView), 6);
+  });
+
+  it('routes through the edge waypoints', () => {
+    const path = createRoutedEdgePath();
+    const out: number[] = [];
+    path.route({ ...edge, waypoints: [{ x: 400, y: 900 }] }, from, to, out);
+    let lowest = -Infinity;
+    for (let i = 1; i < out.length; i += 2) lowest = Math.max(lowest, out[i] as number);
+    expect(lowest).toBeGreaterThan(600);
+  });
+});

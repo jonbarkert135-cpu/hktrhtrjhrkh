@@ -131,6 +131,8 @@ export interface RouteInput {
   /** Position of this edge inside its parallel-edge group, and the group size (07 §7.6). */
   readonly siblingIndex: number;
   readonly siblingCount: number;
+  /** Perpendicular spacing inside the parallel group; {@link SEPARATION} unless bundled (07 §7.6). */
+  readonly separation: number;
   readonly obstacles?: ObstacleSource;
   /** Bezier bow, 0..1. Default {@link DEFAULT_CURVATURE}. */
   readonly curvature: number;
@@ -171,6 +173,7 @@ export function withRouteDefaults(
     mode: input.mode ?? 'smart',
     siblingIndex: input.siblingIndex ?? 0,
     siblingCount: input.siblingCount ?? 1,
+    separation: input.separation ?? SEPARATION,
     curvature: input.curvature ?? DEFAULT_CURVATURE,
     cornerRadius: input.cornerRadius ?? DEFAULT_CORNER_RADIUS,
     zoom: input.zoom ?? 1,

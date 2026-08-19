@@ -354,3 +354,95 @@ describe('applyIntent', () => {
     expect(listNodes(doc)).toHaveLength(1);
   });
 });
+
+describe('waypoint intents (P5 part 4 §1)', () => {
+  const waypoints = (doc: Y.Doc): readonly { x: number; y: number }[] =>
+    getEdge(doc, 'e1')?.waypoints ?? [];
+
+  it('inserts, moves and deletes a waypoint, one document write each', () => {
+    const doc = board();
+    const ctx = context(doc);
+
+    expect(
+      applyIntent({ t: 'edge-waypoint', op: 'insert', edgeId: 'e1', at: { x: 200, y: 90 } }, ctx),
+    ).toBe(true);
+    expect(waypoints(doc)).toEqual([{ x: 200, y: 90 }]);
+
+    applyIntent(
+      {
+        t: 'edge-waypoint',
+        op: 'move',
+        edgeId: 'e1',
+        index: 0,
+        at: { x: 220, y: 140 },
+        phase: 'end',
+      },
+      ctx,
+    );
+    expect(waypoints(doc)).toEqual([{ x: 220, y: 140 }]);
+
+    applyIntent({ t: 'edge-waypoint', op: 'delete', edgeId: 'e1', index: 0 }, ctx);
+    expect(waypoints(doc)).toEqual([]);
+  });
+
+  it('follows the drag and ignores a cancelled one', () => {
+    const doc = board();
+    const ctx = context(doc);
+    applyIntent({ t: 'edge-waypoint', op: 'insert', edgeId: 'e1', at: { x: 200, y: 90 } }, ctx);
+
+    let step = 0;
+    for (const phase of ['start', 'update', 'end'] as const) {
+      step += 10;
+      applyIntent(
+        {
+          t: 'edge-waypoint',
+          op: 'move',
+          edgeId: 'e1',
+          index: 0,
+          at: { x: 300 + step, y: 300 },
+          phase,
+        },
+        ctx,
+      );
+    }
+    expect(waypoints(doc)).toEqual([{ x: 330, y: 300 }]);
+
+    expect(
+      applyIntent(
+        {
+          t: 'edge-waypoint',
+          op: 'move',
+          edgeId: 'e1',
+          index: 0,
+          at: { x: 900, y: 900 },
+          phase: 'cancel',
+        },
+        ctx,
+      ),
+    ).toBe(false);
+  });
+
+  it('is a no-op for a relationship that no longer exists', () => {
+    const doc = board();
+    expect(
+      applyIntent(
+        { t: 'edge-waypoint', op: 'insert', edgeId: 'gone', at: { x: 0, y: 0 } },
+        context(doc),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('edge views carry the routing inputs', () => {
+  it('passes waypoints and the flow flag to the engine', () => {
+    const doc = board();
+    applyIntent(
+      { t: 'edge-waypoint', op: 'insert', edgeId: 'e1', at: { x: 200, y: 90 } },
+      context(doc),
+    );
+    const view = sceneFromDoc(doc).edges.find((edge) => edge.id === 'e1');
+    expect(view?.waypoints).toEqual([{ x: 200, y: 90 }]);
+    expect(view?.manualRoute).toBe(false);
+    expect(view?.style.animated).toBe(false);
+  });
+});

@@ -39,12 +39,16 @@ export interface RouteKeyInput {
   /** Board-level counter, bumped whenever any node geometry changes (07 §8.1). */
   readonly obstacleEpoch: number;
   readonly quality: RouteInput['quality'];
+  /** Parallel spacing; a bundling density change reshapes the fan (07 §7.6). */
+  readonly separation?: number;
 }
 
 export function routeKey(input: RouteKeyInput): string {
+  // Waypoints shape every mode now (P5 part 4 §1), so they are always part of the key; the
+  // obstacle epoch only matters when the router is allowed to reshape around cards.
   const tail = input.manualRoute
     ? `w:${waypointsHash(input.waypoints)}`
-    : `e:${input.obstacleEpoch}`;
+    : `w:${waypointsHash(input.waypoints)}:e:${input.obstacleEpoch}`;
   return [
     input.edgeId,
     input.version,
@@ -52,6 +56,7 @@ export function routeKey(input: RouteKeyInput): string {
     nodeGeomHash(input.target),
     input.resolvedMode,
     `${input.siblingIndex}/${input.siblingCount}`,
+    quantize(input.separation ?? 0),
     input.quality,
     tail,
   ].join(':');

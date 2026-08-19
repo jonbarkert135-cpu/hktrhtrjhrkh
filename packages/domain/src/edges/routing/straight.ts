@@ -13,11 +13,13 @@ export interface StraightInput {
   readonly waypoints: readonly Point[];
   readonly siblingIndex: number;
   readonly siblingCount: number;
+  /** Perpendicular spacing of the parallel group; bundling shrinks it (07 §7.6). */
+  readonly separation?: number;
 }
 
 /** Commands for a straight (or waypointed) run, with the parallel-edge offset applied. */
 export function routeStraight(input: StraightInput): PathCommand[] {
-  const offset = siblingOffset(input.siblingIndex, input.siblingCount);
+  const offset = siblingOffset(input.siblingIndex, input.siblingCount, input.separation);
   const shift =
     offset === 0
       ? { x: 0, y: 0 }

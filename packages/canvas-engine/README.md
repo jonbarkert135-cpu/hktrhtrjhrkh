@@ -53,6 +53,30 @@ implementations ship:
   a plain object and can print a stable text snapshot. This is why the whole engine, including the
   frame loop, runs in Node with **no jsdom and no browser** (`pnpm test:engine`).
 
+## The `EdgePath` seam (and where the routing worker would go)
+
+Edges are routed outside the engine. The host injects an `EdgePath`:
+
+```ts
+interface EdgePath {
+  route(edge: EdgeView, from: NodeView, to: NodeView, out: number[]): number;
+  /** Optional per-frame preamble with the culled edge set (parallel groups, bundling). */
+  prepare?(edges: readonly EdgeView[]): void;
+}
+```
+
+`createRoutedEdgePath({ obstacles, zoom, quality, bundleDensity })` is the shipped implementation:
+it calls `@nexus/domain`'s router, caches geometry by `routeKey` and keeps the last geometry per
+edge for hit-testing (`createEdgePicker`) and labels. `EdgeView.waypoints` / `manualRoute` are
+passed straight through, so a hand-routed edge is routed the same way everywhere.
+
+**Worker offload (07_EDGE_SYSTEM.md §11.2) is deliberately not shipped.** `route()` is synchronous
+by design and the measured scene stays far inside its frame budget (`16_PERFORMANCE.md` §5.7.1), so
+a batching protocol, a second copy of the obstacle state and an epoch guard would buy nothing today.
+When it is needed, it plugs in behind this same interface: `prepare()` collects the frame's batch,
+`route()` returns the cached geometry (draft on a miss) and the worker result swaps in on a later
+frame — no engine change.
+
 ## Testing harness
 
 ```ts

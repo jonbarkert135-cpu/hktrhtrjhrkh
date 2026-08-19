@@ -36,6 +36,7 @@ export type DrawCall =
       color: string;
       width: number;
       dash: string | null;
+      dashOffset?: number;
     }
   | { op: 'dot'; x: number; y: number; r: number; color: string }
   | {
@@ -98,9 +99,17 @@ export function createRecordingTarget(width = 1440, height = 900, dprValue = 1):
     roundRect(r: Rect, radius: number, fill: RGBA | null, stroke: RGBA | null, strokeWidth = 1) {
       calls.push(shape('roundRect', r, radius, fill, stroke, strokeWidth));
     },
-    line(a: Vec2, b: Vec2, color: RGBA, lineWidth: number, dash?: readonly number[] | null): void {
+    line(
+      a: Vec2,
+      b: Vec2,
+      color: RGBA,
+      lineWidth: number,
+      dash?: readonly number[] | null,
+      dashOffset?: number,
+    ): void {
       calls.push({
         op: 'line',
+        ...(dashOffset === undefined || dashOffset === 0 ? {} : { dashOffset }),
         x1: a.x,
         y1: a.y,
         x2: b.x,

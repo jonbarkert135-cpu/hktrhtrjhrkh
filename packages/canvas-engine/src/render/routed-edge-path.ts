@@ -9,6 +9,7 @@
 
 import {
   RouteCache,
+  bundledSeparation,
   resolveMode,
   route,
   routeKey,
@@ -32,6 +33,11 @@ export interface RoutedEdgePathOptions {
   /** Nodes that may obstruct an orthogonal route; omitted means "no obstacle avoidance". */
   readonly obstacles?: ObstacleSource;
   readonly cache?: RouteCache;
+  /**
+   * Bundling density for parallel runs, 0..1 (07 §7.6, P5 part 4 §4). 0 — the default — keeps the
+   * full fan; 1 collapses a dense run onto one line. Read per frame so a slider takes effect live.
+   */
+  readonly bundleDensity?: () => number;
 }
 
 export interface RoutedEdgePath extends EdgePath {
@@ -50,6 +56,9 @@ export function createRoutedEdgePath(options: RoutedEdgePathOptions = {}): Route
   const zoomOf = options.zoom ?? ((): number => 1);
   const qualityOf = options.quality ?? ((): RouteQuality => 'full');
   const latest = new Map<EdgeId, EdgeGeometry>();
+  const densityOf = options.bundleDensity ?? ((): number => 0);
+  /** Parallel-edge group of each edge, recomputed once per frame from the culled set. */
+  const siblings = new Map<EdgeId, { index: number; count: number }>();
 
   const boxOf = (node: NodeView): NodeBox => ({
     id: node.id,
@@ -62,6 +71,24 @@ export function createRoutedEdgePath(options: RoutedEdgePathOptions = {}): Route
 
   return {
     cache,
+
+    prepare(edges: readonly EdgeView[]): void {
+      siblings.clear();
+      const groups = new Map<string, EdgeId[]>();
+      for (const edge of edges) {
+        // Direction-insensitive key: A→B and B→A share one fan (07 §7.6).
+        const key = edge.from < edge.to ? `${edge.from}|${edge.to}` : `${edge.to}|${edge.from}`;
+        const group = groups.get(key);
+        if (group === undefined) groups.set(key, [edge.id]);
+        else group.push(edge.id);
+      }
+      for (const group of groups.values()) {
+        if (group.length === 1) continue;
+        for (let i = 0; i < group.length; i += 1) {
+          siblings.set(group[i] as EdgeId, { index: i, count: group.length });
+        }
+      }
+    },
 
     geometry(id: EdgeId): EdgeGeometry | undefined {
       return latest.get(id);
@@ -79,10 +106,16 @@ export function createRoutedEdgePath(options: RoutedEdgePathOptions = {}): Route
       const source = boxOf(from);
       const target = boxOf(to);
       const quality = qualityOf();
+      const group = siblings.get(edge.id) ?? { index: 0, count: 1 };
       const input = withRouteDefaults({
         source,
         target,
         mode: edge.routing,
+        siblingIndex: group.index,
+        siblingCount: group.count,
+        separation: bundledSeparation(group.count, densityOf()),
+        waypoints: edge.waypoints ?? [],
+        manualRoute: edge.manualRoute ?? false,
         zoom: zoomOf(),
         quality,
         srcPort: toPortRequest(edge.fromAnchor),
@@ -99,6 +132,7 @@ export function createRoutedEdgePath(options: RoutedEdgePathOptions = {}): Route
         resolvedMode: resolveMode(input),
         siblingIndex: input.siblingIndex,
         siblingCount: input.siblingCount,
+        separation: input.separation,
         manualRoute: input.manualRoute,
         waypoints: input.waypoints,
         obstacleEpoch: cache.obstacleEpoch,

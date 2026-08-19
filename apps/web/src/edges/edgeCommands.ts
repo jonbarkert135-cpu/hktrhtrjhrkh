@@ -152,6 +152,17 @@ export function reverseEdge(context: EdgeCommandContext, id: string): EdgeComman
   );
 }
 
+/**
+ * "Reset routing" (07 §8.3): drops every manual waypoint and the manual flag, so the edge follows
+ * its routing mode again. One transaction, one undo step, like every other command here.
+ */
+export function clearEdgeWaypoints(context: EdgeCommandContext, id: string): EdgeCommandResult {
+  const edge = getEdge(context.doc, id);
+  if (edge === undefined) return { ok: false, message: 'This relationship no longer exists.' };
+  if (edge.waypoints.length === 0 && !edge.manualRoute) return ok;
+  return commit(context, 'reset routing', { waypoints: [], manualRoute: false }, id);
+}
+
 export function deleteEdge(context: EdgeCommandContext, id: string): EdgeCommandResult {
   const now = stamp(context);
   if (getEdge(context.doc, id) === undefined) {

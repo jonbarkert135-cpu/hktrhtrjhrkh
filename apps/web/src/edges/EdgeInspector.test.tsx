@@ -1,6 +1,14 @@
 /** The relationship inspector (P5 §5.11): every control writes to the document. */
 
-import { addEdge, createBoardDoc, createNode, getEdge, listEdges, makeEdge } from '@nexus/domain';
+import {
+  addEdge,
+  createBoardDoc,
+  createNode,
+  getEdge,
+  listEdges,
+  makeEdge,
+  updateEdge,
+} from '@nexus/domain';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -92,5 +100,22 @@ describe('EdgeInspector', () => {
     await userEvent.selectOptions(screen.getByLabelText('Relationship type'), 'owns');
     expect(await screen.findByRole('status')).toHaveTextContent(/already connected/i);
     expect(getEdge(doc, 'e_1')?.type).toBe('references');
+  });
+
+  it('teaches the waypoint gestures while there are none', () => {
+    panel();
+    expect(screen.getByTestId('edge-waypoints')).toHaveTextContent(/Double-click the line/i);
+    expect(screen.queryByRole('button', { name: 'Reset routing' })).not.toBeInTheDocument();
+  });
+
+  it('flags a waypoint dropped inside a card, and resets the routing', async () => {
+    const { doc } = board();
+    // Both cards sit at 0,0 sized by the note default, so this waypoint is inside one of them.
+    updateEdge(doc, 'e_1', { waypoints: [{ x: 10, y: 10 }] }, { origin: 'local:edit', now: T0 });
+    render(<EdgeInspector doc={doc} edgeId="e_1" context={{ doc, now: () => T0 }} />);
+    expect(screen.getByTestId('edge-waypoints-warning')).toHaveTextContent(/inside a card/i);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Reset routing' }));
+    await waitFor(() => expect(getEdge(doc, 'e_1')?.waypoints).toEqual([]));
   });
 });

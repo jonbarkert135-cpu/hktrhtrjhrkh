@@ -63,6 +63,11 @@ export interface AlignmentGuide {
  */
 export interface EdgePath {
   route(edge: EdgeView, from: NodeView, to: NodeView, out: number[]): number;
+  /**
+   * Optional per-frame preamble with the culled edge set, so a router can compute board-wide facts
+   * (parallel-edge groups and their bundling, 07 §7.6) exactly once instead of per edge.
+   */
+  prepare?(edges: readonly EdgeView[]): void;
 }
 
 export const straightEdgePath: EdgePath = {
@@ -97,6 +102,10 @@ export interface RenderFrame {
   readonly selectedEdges: ReadonlySet<EdgeId>;
   /** The in-flight connection, or null. */
   readonly connection: ConnectionPreview | null;
+  /** Frame time in ms, driving the flow animation (07 §10.4). */
+  readonly timeMs: number;
+  /** `prefers-reduced-motion`: freezes every animation (N6, 07 §10.3). */
+  readonly reducedMotion: boolean;
 }
 
 /* ---------------------------------------------------------------- scratch */
@@ -140,8 +149,17 @@ export function drawGrid(ctx: DrawContext, frame: RenderFrame): number {
 
 /* ------------------------------------------------------------------- edges */
 
+/** Flow dash pattern and speed (07 §10.4); cap keeps a dense board free of animation cost. */
+const FLOW_DASH = [6, 10];
+const FLOW_SPEED = 0.018;
+const FLOW_ALPHA = 0.55;
+export const MAX_ANIMATED_EDGES = 60;
+
 export function drawEdges(ctx: DrawContext, frame: RenderFrame): number {
+  frame.edgePath.prepare?.(frame.edges);
   let painted = 0;
+  animatedCount = 0;
+  const flowOffset = -(frame.timeMs * FLOW_SPEED) % 16;
   for (const edge of frame.edges) {
     if (edge.hidden) continue;
     const from = frame.node(edge.from);
@@ -167,6 +185,23 @@ export function drawEdges(ctx: DrawContext, frame: RenderFrame): number {
       pb.y = path[i * 2 + 1] ?? 0;
       ctx.line(pa, pb, color, width, scaleDash(edge.style.dash, frame.camera.zoom));
     }
+    // Flow animation: a translucent dashed stroke of the same colour over the solid path, so a
+    // derived relationship reads as "data flowed this way" without any glow (07 §10.4).
+    if (
+      edge.style.animated === true &&
+      !frame.reducedMotion &&
+      animatedCount < MAX_ANIMATED_EDGES
+    ) {
+      animatedCount += 1;
+      const flow = fade(edge.style.color, edge.style.opacity * FLOW_ALPHA);
+      for (let i = 1; i < count; i += 1) {
+        pa.x = path[(i - 1) * 2] ?? 0;
+        pa.y = path[(i - 1) * 2 + 1] ?? 0;
+        pb.x = path[i * 2] ?? 0;
+        pb.y = path[i * 2 + 1] ?? 0;
+        ctx.line(pa, pb, flow, width, scaleDash(FLOW_DASH, frame.camera.zoom), flowOffset);
+      }
+    }
     if (selected) {
       // Endpoints as draggable dots and the waypoints they imply (UX §6: "selected edge shows its
       // endpoints"); the dots are screen-sized, like every other handle.
@@ -177,6 +212,12 @@ export function drawEdges(ctx: DrawContext, frame: RenderFrame): number {
       pb.x = path[(count - 1) * 2] ?? 0;
       pb.y = path[(count - 1) * 2 + 1] ?? 0;
       ctx.dot(pb, dot, frame.theme.selectionStroke);
+      // Manual waypoints are the drag targets of 07 §8.3: visible only while the edge is selected.
+      for (const w of edge.waypoints ?? []) {
+        pa.x = w.x;
+        pa.y = w.y;
+        ctx.dot(pa, dot, frame.theme.selectionStroke);
+      }
     }
     painted += 1;
   }
@@ -428,6 +469,8 @@ export function drawMarquee(ctx: DrawContext, frame: RenderFrame): number {
 export interface FramePaintCounts {
   nodes: number;
   edges: number;
+  /** Edges that painted a moving dash this frame; > 0 means the engine must schedule another. */
+  animatedEdges: number;
 }
 
 /** The fixed painting order (20_ROADMAP P2 §7). The camera is applied exactly once, here. */
@@ -445,7 +488,11 @@ export function paintFrame(ctx: DrawContext, frame: RenderFrame): FramePaintCoun
   ctx.restore();
   counts.nodes = nodes;
   counts.edges = edges;
+  counts.animatedEdges = animatedCount;
   return counts;
 }
 
-const counts: FramePaintCounts = { nodes: 0, edges: 0 };
+const counts: FramePaintCounts = { nodes: 0, edges: 0, animatedEdges: 0 };
+
+/** Animated edges painted in the last {@link drawEdges} pass; the engine reads it to keep frames coming. */
+let animatedCount = 0;

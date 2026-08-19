@@ -7,12 +7,20 @@
  * step, and a refused command explains itself instead of silently doing nothing.
  */
 
-import { builtinEdgeTypes, readingLabel, type BoardEdge, type RoutingMode } from '@nexus/domain';
+import {
+  builtinEdgeTypes,
+  listNodes,
+  readingLabel,
+  waypointsInsideBoxes,
+  type BoardEdge,
+  type RoutingMode,
+} from '@nexus/domain';
 import { Button } from '@nexus/ui';
 import { useState } from 'react';
 import type * as Y from 'yjs';
 
 import {
+  clearEdgeWaypoints,
   deleteEdge,
   reverseEdge,
   setEdgeConfidence,
@@ -77,6 +85,19 @@ export function EdgeInspector({
   const registry = builtinEdgeTypes();
   const definition = registry.get(edge.type);
   const label = draftLabel ?? edge.label;
+  // A waypoint inside a card is legal — the analyst may want the line to pass behind it — but the
+  // panel says so, because the drawn line then disappears under the card (P5 part 4 §1).
+  const hiddenWaypoints = waypointsInsideBoxes(
+    edge.waypoints,
+    listNodes(doc).map((node) => ({
+      id: node.id,
+      x: node.x,
+      y: node.y,
+      w: node.w,
+      h: node.h,
+      radius: 0,
+    })),
+  ).length;
   const sourceTitle = endpoints?.source ?? edge.source.nodeId;
   const targetTitle = endpoints?.target ?? edge.target.nodeId;
 
@@ -183,6 +204,29 @@ export function EdgeInspector({
             </option>
           ))}
         </select>
+      </section>
+
+      <section className="nx-inspector-section">
+        <h3>Shape</h3>
+        <p className="nx-card-meta" data-testid="edge-waypoints">
+          {edge.waypoints.length === 0
+            ? 'No waypoints. Double-click the line to add one, drag it to move it, right-click it to remove it.'
+            : `${String(edge.waypoints.length)} waypoint${edge.waypoints.length === 1 ? '' : 's'}.`}
+        </p>
+        {hiddenWaypoints === 0 ? null : (
+          <p className="nx-field-error" role="status" data-testid="edge-waypoints-warning">
+            {hiddenWaypoints === 1
+              ? 'One waypoint sits'
+              : `${String(hiddenWaypoints)} waypoints sit`}{' '}
+            inside a card, so part of the line is hidden behind it. Drag it out, or reset the
+            routing.
+          </p>
+        )}
+        {edge.waypoints.length === 0 ? null : (
+          <Button variant="secondary" onClick={() => report(clearEdgeWaypoints(context, edge.id))}>
+            Reset routing
+          </Button>
+        )}
       </section>
 
       <section className="nx-inspector-section">

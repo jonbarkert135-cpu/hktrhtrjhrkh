@@ -14,6 +14,7 @@ import {
   MAX_DOM_NODES,
   PORT_BAND_PX,
   PORT_MIN_ZOOM,
+  WAYPOINT_HIT_PX,
 } from './constants';
 import { facingPort, portAt, portPoint } from './edges/ports';
 import type { EdgePicker } from './edges/pick';
@@ -173,6 +174,8 @@ interface FrameBuffer {
   edgePath: EdgePath;
   selectedEdges: Set<EdgeId>;
   connection: ConnectionPreview | null;
+  timeMs: number;
+  reducedMotion: boolean;
 }
 
 const guideOf = (g: GuideLine): AlignmentGuide => ({
@@ -249,6 +252,8 @@ export function createEngine(options: EngineOptions): Engine {
     edgePath,
     selectedEdges: new Set<EdgeId>(),
     connection: null,
+    timeMs: 0,
+    reducedMotion: options.prefersReducedMotion ?? false,
   };
   const visible = new Set<NodeId>();
   const edgeBuf: EdgeView[] = [];
@@ -312,6 +317,7 @@ export function createEngine(options: EngineOptions): Engine {
     frame.metrics = metrics;
     frame.lod = paintLod;
     frame.showGrid = features.grid;
+    frame.timeMs = now;
 
     // Bottom→top: layer rank, then the graph's per-layer z order.
     frame.nodes.length = 0;
@@ -373,6 +379,8 @@ export function createEngine(options: EngineOptions): Engine {
     }
 
     graph.clearDirty();
+    // A moving dash is the only thing in the engine that needs a frame nobody asked for.
+    if (counts.animatedEdges > 0) invalidate();
     const stats: FrameStats = {
       duration: clock.now() - t0,
       paintedNodes: counts.nodes,
@@ -414,6 +422,10 @@ export function createEngine(options: EngineOptions): Engine {
    */
   function hitTest(world: Vec2): HitTarget {
     const zoom = camera.state.zoom;
+    // Waypoints of the selected edges win over everything but the resize handle: they are small,
+    // deliberate affordances and are only shown while their edge is selected (07 §8.3).
+    const waypoint = waypointAt(world, zoom);
+    if (waypoint !== null) return waypoint;
     const box = selection.bounds();
     if (box !== null && selection.ids.length === 1) {
       const id = selection.ids[0];
@@ -447,6 +459,27 @@ export function createEngine(options: EngineOptions): Engine {
   }
 
   const bandRect: Rect = { x: 0, y: 0, w: 0, h: 0 };
+
+  /** Nearest waypoint of a selected edge within the grab radius, or null. */
+  function waypointAt(world: Vec2, zoom: number): HitTarget | null {
+    const tolerance = WAYPOINT_HIT_PX / Math.max(zoom, 1e-3);
+    let best: HitTarget | null = null;
+    let bestD2 = tolerance * tolerance;
+    for (const id of selection.ids) {
+      const edge = graph.edges.get(id);
+      if (edge === undefined || edge.hidden) continue;
+      const points = edge.waypoints ?? [];
+      for (let i = 0; i < points.length; i += 1) {
+        const p = points[i] as Vec2;
+        const d2 = (p.x - world.x) ** 2 + (p.y - world.y) ** 2;
+        if (d2 <= bestD2) {
+          bestD2 = d2;
+          best = { t: 'waypoint', id, index: i };
+        }
+      }
+    }
+    return best;
+  }
 
   /** Mirrors the FSM's `connecting` state into the frame so the renderer can paint the preview. */
   function syncConnection(): void {

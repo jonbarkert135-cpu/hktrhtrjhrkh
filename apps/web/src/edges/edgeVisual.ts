@@ -58,10 +58,15 @@ export function edgeToView(edge: BoardEdge, options: EdgeViewOptions = {}): Edge
       arrowStart: hasHead(visual.arrowSource),
       arrowEnd: hasHead(visual.arrowTarget),
       opacity: visual.opacity,
+      // Flow animation is a type-level default (`derived_from` and the inferred types) that an
+      // edge's own style may override; `resolveEdgeVisual` has already applied both (07 §10.4).
+      animated: visual.animated,
     },
     label: edge.label === '' ? null : edge.label,
     z: index + visual.zBias,
     hidden: edge.hidden || edge.status !== 'active',
     visualVersion: edge.version,
+    waypoints: edge.waypoints,
+    manualRoute: edge.manualRoute,
   };
 }

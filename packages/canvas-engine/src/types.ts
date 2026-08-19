@@ -115,6 +115,8 @@ export interface EdgeStyle {
   arrowStart: boolean;
   arrowEnd: boolean;
   opacity: number;
+  /** Flow animation (07 §10.4): a dashed overlay stroke that travels source → target. */
+  animated?: boolean;
 }
 
 export interface EdgeView {
@@ -130,6 +132,10 @@ export interface EdgeView {
   z: number;
   hidden: boolean;
   visualVersion: number;
+  /** Manual waypoints in world units, in order (07 §8.3). */
+  waypoints?: readonly Vec2[];
+  /** True freezes the shape to "polyline through the waypoints" (07 §8.3). */
+  manualRoute?: boolean;
 }
 
 export interface GroupView {
@@ -174,6 +180,8 @@ export type HitTarget =
   | { t: 'edge'; id: EdgeId }
   | { t: 'handle'; id: NodeId; handle: ResizeHandle }
   | { t: 'port'; id: NodeId; anchor: AnchorSpec }
+  /** A manual waypoint of a *selected* edge; only those are grabbable (07 §8.3). */
+  | { t: 'waypoint'; id: EdgeId; index: number }
   | { t: 'canvas' };
 
 export type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
@@ -236,6 +244,10 @@ export type Intent =
   | { t: 'create-node-from-drop'; at: Vec2; payload: DropPayload }
   | { t: 'reconnect-edge'; edgeId: EdgeId; end: 'from' | 'to'; to: NodeId; anchor: AnchorSpec }
   | { t: 'begin-edit-text'; id: NodeId }
+  /** Waypoint editing: insert at a point, drag one, or delete one (P5 part 4 §1). */
+  | { t: 'edge-waypoint'; op: 'insert'; edgeId: EdgeId; at: Vec2 }
+  | { t: 'edge-waypoint'; op: 'move'; edgeId: EdgeId; index: number; at: Vec2; phase: GesturePhase }
+  | { t: 'edge-waypoint'; op: 'delete'; edgeId: EdgeId; index: number }
   | { t: 'context-menu'; at: Vec2; target: HitTarget }
   | { t: 'delete'; ids: EntityId[] }
   | { t: 'z-order'; ids: EntityId[]; op: 'front' | 'back' | 'forward' | 'backward' }
@@ -390,7 +402,15 @@ export interface DrawContext {
     stroke: RGBA | null,
     strokeWidth?: number,
   ): void;
-  line(a: Vec2, b: Vec2, color: RGBA, width: number, dash?: readonly number[] | null): void;
+  /** `dashOffset` shifts the dash pattern along the line; the flow animation drives it (07 §10.4). */
+  line(
+    a: Vec2,
+    b: Vec2,
+    color: RGBA,
+    width: number,
+    dash?: readonly number[] | null,
+    dashOffset?: number,
+  ): void;
   dot(p: Vec2, radius: number, color: RGBA): void;
   /** `maxWidth` in the same space as the current transform; text is clipped, never wrapped. */
   text(p: Vec2, value: string, color: RGBA, font: string, maxWidth: number): void;

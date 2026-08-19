@@ -19,6 +19,9 @@ import {
   getNode,
   hasEdge,
   hasNode,
+  insertWaypoint,
+  moveWaypoint,
+  removeWaypoint,
   listEdges,
   listNodes,
   makeEdge,
@@ -62,13 +65,55 @@ const plural = (count: number, word: string): string =>
  * Gestures whose interim commits must merge into a single undo step; every other intent is a
  * discrete command and gets its own step (08 §2.5).
  */
-const CONTINUOUS_INTENTS: ReadonlySet<Intent['t']> = new Set(['move-nodes', 'resize-node']);
+const CONTINUOUS_INTENTS: ReadonlySet<Intent['t']> = new Set([
+  'move-nodes',
+  'resize-node',
+  'edge-waypoint',
+]);
 
 const isStillGesturing = (intent: Intent): boolean =>
   CONTINUOUS_INTENTS.has(intent.t) &&
   'phase' in intent &&
   intent.phase !== 'end' &&
   intent.phase !== 'cancel';
+
+const WAYPOINT_LABELS = {
+  insert: 'add waypoint',
+  move: 'move waypoint',
+  delete: 'remove waypoint',
+} as const;
+
+const centreOf = (node: {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}): { x: number; y: number } => ({ x: node.x + node.w / 2, y: node.y + node.h / 2 });
+
+/**
+ * The waypoint list after one editing gesture, or `null` when the gesture cannot apply (a cancelled
+ * drag, a vanished endpoint). Insertion order is decided against the card centres, which is the
+ * chain the analyst sees before the router clips it to the borders (07 §8.3).
+ */
+function nextWaypoints(
+  doc: Y.Doc,
+  edge: {
+    waypoints: readonly { x: number; y: number }[];
+    source: { nodeId: string };
+    target: { nodeId: string };
+  },
+  intent: Intent & { t: 'edge-waypoint' },
+): { x: number; y: number }[] | null {
+  if (intent.op === 'delete') return removeWaypoint(edge.waypoints, intent.index);
+  if (intent.op === 'move') {
+    if (intent.phase === 'cancel') return null;
+    return moveWaypoint(edge.waypoints, intent.index, intent.at);
+  }
+  const source = getNode(doc, edge.source.nodeId);
+  const target = getNode(doc, edge.target.nodeId);
+  if (source === undefined || target === undefined) return null;
+  return insertWaypoint(edge.waypoints, centreOf(source), centreOf(target), intent.at);
+}
 
 /** Applies one engine intent. Returns true when the document changed. */
 export function applyIntent(intent: Intent, context: IntentContext): boolean {
@@ -124,6 +169,15 @@ function applyIntentToDoc(intent: Intent, context: IntentContext): boolean {
       if (nodeIds.length > 0) removeNodes(doc, nodeIds, { origin: 'local:delete', now });
       if (edgeIds.length > 0) removeEdges(doc, edgeIds, { origin: 'local:delete', now });
       return true;
+    }
+
+    case 'edge-waypoint': {
+      const edge = getEdge(doc, intent.edgeId);
+      if (edge === undefined) return false;
+      const waypoints = nextWaypoints(doc, edge, intent);
+      if (waypoints === null) return false;
+      label(WAYPOINT_LABELS[intent.op]);
+      return updateEdge(doc, intent.edgeId, { waypoints }, { origin: 'local:edit', now });
     }
 
     case 'create-edge': {
