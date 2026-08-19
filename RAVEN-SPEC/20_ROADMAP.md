@@ -82,22 +82,22 @@ This file carries prompts for **remaining** work only. The implementation prompt
 were deleted once shipped — they are in git history, and the binding description of what exists is
 the area spec plus the code. Read `AGENTS.md` first.
 
-| Phase              | PRs               | Where it lives now                                                                                                               | Spec                               |
-| ------------------ | ----------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| P1 Foundation      | #2                | monorepo, tokens, app shell, CI, bench harness                                                                                   | `00_MASTER.md`, `19_DEPLOYMENT.md` |
-| P2 Canvas engine   | #3                | `packages/canvas-engine` (camera, spatial index, FSM, renderer)                                                                  | `05_CANVAS_ENGINE.md`              |
-| P3 Document        | #4, #5            | `packages/domain` (board doc, patches, undo, autosave), `apps/web/src/data`                                                      | `08_DATA_MODEL.md`                 |
-| P4 Node system     | #6, #7, #8        | `packages/domain/src/nodes`, `apps/web/src/nodes` (9 types, inspector, hosts)                                                    | `06_NODE_SYSTEM.md`                |
+| Phase              | PRs                | Where it lives now                                                                                                               | Spec                               |
+| ------------------ | ------------------ | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| P1 Foundation      | #2                 | monorepo, tokens, app shell, CI, bench harness                                                                                   | `00_MASTER.md`, `19_DEPLOYMENT.md` |
+| P2 Canvas engine   | #3                 | `packages/canvas-engine` (camera, spatial index, FSM, renderer)                                                                  | `05_CANVAS_ENGINE.md`              |
+| P3 Document        | #4, #5             | `packages/domain` (board doc, patches, undo, autosave), `apps/web/src/data`                                                      | `08_DATA_MODEL.md`                 |
+| P4 Node system     | #6, #7, #8         | `packages/domain/src/nodes`, `apps/web/src/nodes` (9 types, inspector, hosts)                                                    | `06_NODE_SYSTEM.md`                |
 | P5 Edge system     | #11, #12, #17, #23 | edge taxonomy, 4 routing modes + cache, ports, selection, relationship UI, waypoints, flow animation, bundling                   | `07_EDGE_SYSTEM.md`                |
-| Local-first        | #9, #10, #13, #14 | `APP_MODE=local`, `WorkspaceRepository`, local persistence, first-run seed                                                       | `docs/adr/ADR-001-local-first.md`  |
-| L4.1 Transforms    | #15               | `packages/transforms` (manifests, registries, router, modes, scores, planner, catalogue)                                         | `21_TRANSFORM_SYSTEM.md`           |
-| L4.2 Transform SDK | #20               | `packages/transforms/src/sdk` (engine contract, `runEngine` host, testkit, conformance harness, `doh-resolver` reference engine) | `21_TRANSFORM_SYSTEM.md` §12a      |
-| L4.3 Run history   | #21               | `packages/transforms/src/history.ts`, `src/cache.ts` (history, replay, compare, TTL cache)                                       | `21_TRANSFORM_SYSTEM.md` §10       |
-| Layer-2 docs       | #16               | `22_ECOSYSTEM_AUDIT.md`, `23_COMPETITOR_MATRIX.md`, `24_UNIFIED_QUERY.md` (design only)                                          | those documents                    |
-| P6 Capture         | (this PR)         | `packages/domain/src/{capture,net}`, `apps/web/src/capture`, `apps/api/.../unfurl.ts` — §5.12/§5.14 still open                   | `09_BACKEND.md`, `15_SECURITY.md`  |
-| Agent memory       | #18               | `AGENTS.md`, `.mcp.json`                                                                                                         | —                                  |
+| Local-first        | #9, #10, #13, #14  | `APP_MODE=local`, `WorkspaceRepository`, local persistence, first-run seed                                                       | `docs/adr/ADR-001-local-first.md`  |
+| L4.1 Transforms    | #15                | `packages/transforms` (manifests, registries, router, modes, scores, planner, catalogue)                                         | `21_TRANSFORM_SYSTEM.md`           |
+| L4.2 Transform SDK | #20                | `packages/transforms/src/sdk` (engine contract, `runEngine` host, testkit, conformance harness, `doh-resolver` reference engine) | `21_TRANSFORM_SYSTEM.md` §12a      |
+| L4.3 Run history   | #21                | `packages/transforms/src/history.ts`, `src/cache.ts` (history, replay, compare, TTL cache)                                       | `21_TRANSFORM_SYSTEM.md` §10       |
+| Layer-2 docs       | #16                | `22_ECOSYSTEM_AUDIT.md`, `23_COMPETITOR_MATRIX.md`, `24_UNIFIED_QUERY.md` (design only)                                          | those documents                    |
+| P6 Capture         | #22                | `packages/domain/src/{capture,net}`, `apps/web/src/capture`, `apps/api/.../unfurl.ts` — §5.12/§5.14 still open                   | `09_BACKEND.md`, `15_SECURITY.md`  |
+| Agent memory       | #18                | `AGENTS.md`, `.mcp.json`                                                                                                         | —                                  |
 
-Open phases in this file: **P6**, **P7**, **P8**, **P17**, **L4.4–L4.7**. P9–P16 have
+Open phases in this file: **P7**, **P8**, **P17**, **L4.4–L4.7**. P9–P16 have
 no prompt yet; write one in this format when their turn comes.
 
 ---
