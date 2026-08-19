@@ -1537,15 +1537,15 @@ This layer is numbered separately from P1–P16 because it runs **in parallel** 
 need no runtime and no UI, while L4.4 onward depend on the integration runtime (P10) and the canvas
 UI. Nothing here changes a phase that is already done.
 
-| Phase    | Content                                                                                              | Depends on |
-| -------- | ------------------------------------------------------------------------------------------------------ | ---------- |
-| **L4.1** | Ecosystem audit, provider catalogue, transform catalogue, this spec, `packages/transforms` foundation: manifests, registries, capability router, modes, scoring, expand planner, seeded catalogue | — |
-| L4.2     | Transform SDK surface for third parties (`initialize/validateInput/execute/stream/normalize/healthCheck`) and the conformance test harness | L4.1, 17_PLUGIN_SDK |
-| L4.3     | Run history, replay, run comparison and the result cache with TTL and age labelling                   | L4.1, P3 |
-| L4.4     | Execution integration: engines become Runner jobs, streaming partial results, cancellation, budgets enforced at run time | P10 |
-| L4.5     | Canvas UX: contextual menu, hover chips, Expand with preview, result clusters, density control, data-flow disclosure | L4.4, P4/P5 |
-| L4.6     | Provider vault, provider settings UI, ecosystem health check (stale `lastVerified`, dead endpoints, deprecations) | L4.4, P9 |
-| L4.7     | Agent-driven transform planning under budgets, plan explanation, smart chaining                       | L4.4, 14_AI_AGENT |
+| Phase    | Content                                                                                                                                                                                           | Depends on          |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| **L4.1** | Ecosystem audit, provider catalogue, transform catalogue, this spec, `packages/transforms` foundation: manifests, registries, capability router, modes, scoring, expand planner, seeded catalogue | —                   |
+| L4.2     | Transform SDK surface for third parties (`initialize/validateInput/execute/stream/normalize/healthCheck`) and the conformance test harness                                                        | L4.1, 17_PLUGIN_SDK |
+| L4.3     | Run history, replay, run comparison and the result cache with TTL and age labelling                                                                                                               | L4.1, P3            |
+| L4.4     | Execution integration: engines become Runner jobs, streaming partial results, cancellation, budgets enforced at run time                                                                          | P10                 |
+| L4.5     | Canvas UX: contextual menu, hover chips, Expand with preview, result clusters, density control, data-flow disclosure                                                                              | L4.4, P4/P5         |
+| L4.6     | Provider vault, provider settings UI, ecosystem health check (stale `lastVerified`, dead endpoints, deprecations)                                                                                 | L4.4, P9            |
+| L4.7     | Agent-driven transform planning under budgets, plan explanation, smart chaining                                                                                                                   | L4.4, 14_AI_AGENT   |
 
 **L4.1 Status: DONE** — `packages/transforms` ships the frozen manifests (`types.ts`,
 `manifest.ts`), the registry with structural validation, mode filtering, the capability router with
