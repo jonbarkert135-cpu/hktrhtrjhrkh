@@ -1525,3 +1525,47 @@ move the source of truth to Postgres; the CRDT remains authoritative.
 
 `09_BACKEND.md`, `08_DATA_MODEL.md` (projection tables), `03_UX.md` §11, `19_DEPLOYMENT.md` §13
 (measured memory), runbooks, tracker.
+
+---
+
+# L4 — Transform layer (Maltego-inspired ecosystem)
+
+Source requirement: `prompts/PROMPT_4_MALTEGO_ECOSYSTEM_RU.md`. Design:
+`RAVEN-SPEC/21_TRANSFORM_SYSTEM.md`. Research: `docs/ecosystem/`.
+
+This layer is numbered separately from P1–P16 because it runs **in parallel** with them: L4.1–L4.3
+need no runtime and no UI, while L4.4 onward depend on the integration runtime (P10) and the canvas
+UI. Nothing here changes a phase that is already done.
+
+| Phase    | Content                                                                                                                                                                                           | Depends on          |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| **L4.1** | Ecosystem audit, provider catalogue, transform catalogue, this spec, `packages/transforms` foundation: manifests, registries, capability router, modes, scoring, expand planner, seeded catalogue | —                   |
+| L4.2     | Transform SDK surface for third parties (`initialize/validateInput/execute/stream/normalize/healthCheck`) and the conformance test harness                                                        | L4.1, 17_PLUGIN_SDK |
+| L4.3     | Run history, replay, run comparison and the result cache with TTL and age labelling                                                                                                               | L4.1, P3            |
+| L4.4     | Execution integration: engines become Runner jobs, streaming partial results, cancellation, budgets enforced at run time                                                                          | P10                 |
+| L4.5     | Canvas UX: contextual menu, hover chips, Expand with preview, result clusters, density control, data-flow disclosure                                                                              | L4.4, P4/P5         |
+| L4.6     | Provider vault, provider settings UI, ecosystem health check (stale `lastVerified`, dead endpoints, deprecations)                                                                                 | L4.4, P9            |
+| L4.7     | Agent-driven transform planning under budgets, plan explanation, smart chaining                                                                                                                   | L4.4, 14_AI_AGENT   |
+
+**L4.1 Status: DONE** — `packages/transforms` ships the frozen manifests (`types.ts`,
+`manifest.ts`), the registry with structural validation, mode filtering, the capability router with
+fallback chains ending in a terminal engine, explainable scores, the expand planner with budgets and
+mandatory exclusion reasons, and a seeded catalogue of 26 transforms / 37 engines / 31 providers
+whose credential classes were verified against provider documentation on 2026-08-19. 80 tests,
+100 % line and 94.9 % branch coverage (floor 90/85). Nothing executes yet: that is L4.4.
+
+## L4.1 acceptance criteria (checkable)
+
+1. `createCatalogRegistry().validate()` returns zero issues.
+2. Every `core` transform is reachable in Zero-Credential Mode.
+3. No transform can reach a network engine in Strict Local Mode.
+4. Every fallback chain ends in `external-link` or `manual-entry`.
+5. Every provider carries a `lastVerified` date that is not in the future.
+6. Every plan reports what it excluded and why; a budget cut is never silent.
+7. Code and `docs/ecosystem/*.md` cannot drift (contract test).
+
+## What NOT to break
+
+The transform layer must not become a second integration framework: execution, parsing, entity
+extraction and the `ImportProposal` write path stay in `10_INTEGRATIONS.md`. Transforms must never
+name providers directly (rule T1), and no result may reach the graph without a proposal (N4).

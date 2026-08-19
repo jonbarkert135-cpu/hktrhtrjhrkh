@@ -4,10 +4,10 @@ The product owner's original briefs, stored verbatim so an AI agent can read the
 instead of re-deriving it from chat history. **Read the relevant prompt before planning work that
 touches its area, and do not re-litigate decisions that are already written down here.**
 
-| File                                             | Covers                                                                                        | Status                                                          |
-| ------------------------------------------------ | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `../Дорожная карта для ии разроботчика сайта.md` | The master prompt and the phase roadmap (P1–P16). The live progress tracker lives at its end. | Being executed — see `RAVEN-SPEC/20_ROADMAP.md`.                |
-| `PROMPT_4_MALTEGO_ECOSYSTEM_RU.md`               | Layer 4: Maltego-ecosystem audit, transform/connector system, advanced integration layer.     | Not started. Feeds the integration phases (P10–P13) and beyond. |
+| File                                             | Covers                                                                                        | Status                                                                                                                                 |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `../Дорожная карта для ии разроботчика сайта.md` | The master prompt and the phase roadmap (P1–P16). The live progress tracker lives at its end. | Being executed — see `RAVEN-SPEC/20_ROADMAP.md`.                                                                                       |
+| `PROMPT_4_MALTEGO_ECOSYSTEM_RU.md`               | Layer 4: Maltego-ecosystem audit, transform/connector system, advanced integration layer.     | In progress — L4.1 done (`RAVEN-SPEC/21_TRANSFORM_SYSTEM.md`, `docs/ecosystem/`, `packages/transforms`); L4.2–L4.7 in `20_ROADMAP.md`. |
 
 ## Reading rules for agents
 

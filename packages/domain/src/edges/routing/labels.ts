@@ -157,10 +157,14 @@ function clamp01(v: number): number {
 export class UniformHash {
   private readonly cells = new Map<string, ScreenBox[]>();
 
-  constructor(
-    private readonly cellW: number,
-    private readonly cellH: number,
-  ) {}
+  private readonly cellW: number;
+  private readonly cellH: number;
+
+  // Plain fields, not parameter properties: see the note in routing/cache.ts.
+  constructor(cellW: number, cellH: number) {
+    this.cellW = cellW;
+    this.cellH = cellH;
+  }
 
   insert(box: ScreenBox): void {
     for (const key of this.keysFor(box)) {
