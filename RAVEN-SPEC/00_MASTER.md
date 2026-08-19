@@ -251,7 +251,7 @@ touched._ Rewriting a working subsystem without a stated reason is a gate failur
 | `17_PLUGIN_SDK.md`    | plugin manifest, permissions, extension points, lifecycle, sandbox               |
 | `18_TESTING.md`       | test strategy, layers, fixtures, visual and performance testing                  |
 | `19_DEPLOYMENT.md`    | environments, IaC, CI/CD, migrations, backup, monitoring                         |
-| `20_ROADMAP.md`       | phase-by-phase implementation prompts (P1…P16)                                   |
+| `20_ROADMAP.md`       | prompts for the open phases + the ledger of shipped ones                         |
 
 ---
 
