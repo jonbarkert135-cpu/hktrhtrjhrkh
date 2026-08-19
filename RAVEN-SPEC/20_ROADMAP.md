@@ -94,6 +94,7 @@ the area spec plus the code. Read `AGENTS.md` first.
 | L4.2 Transform SDK | #20               | `packages/transforms/src/sdk` (engine contract, `runEngine` host, testkit, conformance harness, `doh-resolver` reference engine) | `21_TRANSFORM_SYSTEM.md` §12a      |
 | L4.3 Run history   | #21               | `packages/transforms/src/history.ts`, `src/cache.ts` (history, replay, compare, TTL cache)                                       | `21_TRANSFORM_SYSTEM.md` §10       |
 | Layer-2 docs       | #16               | `22_ECOSYSTEM_AUDIT.md`, `23_COMPETITOR_MATRIX.md`, `24_UNIFIED_QUERY.md` (design only)                                          | those documents                    |
+| P6 Capture         | (this PR)         | `packages/domain/src/{capture,net}`, `apps/web/src/capture`, `apps/api/.../unfurl.ts` — §5.12/§5.14 still open                   | `09_BACKEND.md`, `15_SECURITY.md`  |
 | Agent memory       | #18               | `AGENTS.md`, `.mcp.json`                                                                                                         | —                                  |
 
 Open phases in this file: **P5 part 4**, **P6**, **P7**, **P8**, **P17**, **L4.4–L4.7**. P9–P16 have
@@ -126,6 +127,18 @@ Tests: waypoint unit tests in `packages/canvas-engine/test`, the routing propert
 ---
 
 # P6 — Capture
+
+**Status: mostly shipped (see the ledger). Still open, and why:**
+
+- §5.12 browser-extension hook `POST /api/v1/capture` — needs scoped API tokens (a `db` model, a
+  migration and a hash-at-rest scheme) which belong to the backend/auth phase; the domain side is
+  ready (`createNodesFromPlan` already accepts `origin: 'extension'`).
+- §5.14 screenshot capture — needs a headless browser in `apps/worker`, which does not exist. The
+  flag is not introduced, so there is no dead control (which is what §5.14 actually asks for).
+- The unfurl **queue**: `apps/worker` does not exist, so the unfurl runs in-request behind the same
+  contract (`09_BACKEND.md` §3.6a). The client does not wait on it — nodes are created locally.
+- Web ⇄ unfurl wiring: in `APP_MODE=local` there is no server to ask, so no capture path calls it
+  (N2). Connecting the website card to `unfurl.fetch` belongs with the server-mode work.
 
 ## 1 Objective
 

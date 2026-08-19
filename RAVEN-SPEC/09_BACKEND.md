@@ -320,6 +320,23 @@ const FileDto = z.object({ id: Id, projectId: Id, filename: z.string(), bytes: z
 }).merge(Timestamps);
 ```
 
+### 3.6a `unfurl` as shipped (P6)
+
+The queue-backed shape below is the target. What ships in P6 is the same contract without the
+queue, because `apps/worker` does not exist yet:
+
+```ts
+unfurl.fetch: mutation({ url: string, refresh: boolean })
+  => { ok: true,  cached: boolean, metadata: UnfurlMetadata }
+   | { ok: false, cached: boolean, code: UrlErrorCode, message: string }
+```
+
+`apps/api/src/trpc/routers/unfurl.ts` fetches through `safeFetch` (15_SECURITY.md §4.2a) inside the
+request, parses metadata with `parseUnfurl` (512 KB head only) and caches in-process by normalized
+URL: 7 days on success, 1 hour on failure, `refresh: true` bypasses. Concurrent calls for one key
+share a single in-flight fetch — the in-process form of the BullMQ job-id dedupe. Moving this to
+`apps/worker` + Redis is a swap of the cache and the executor, not of the contract.
+
 ### 3.6 `unfurl`
 
 ```ts
