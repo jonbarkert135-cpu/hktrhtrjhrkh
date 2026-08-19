@@ -57,6 +57,7 @@ export const COVERAGE_TARGETS = {
   'packages/domain': { lines: 90, branches: 85 },
   'packages/canvas-engine': { lines: 85, branches: 80 },
   'packages/integrations': { lines: 85, branches: 75 },
+  'packages/transforms': { lines: 90, branches: 85 },
   'packages/ui': { lines: 70, branches: 60 },
   'apps/api': { lines: 80, branches: 70 },
   'apps/sync': { lines: 75, branches: 65 },

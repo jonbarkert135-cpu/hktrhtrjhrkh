@@ -70,7 +70,13 @@ export class RouteCache {
   private hitCount = 0;
   private missCount = 0;
 
-  constructor(readonly capacity = 4096) {}
+  // Plain field + assignment, not a parameter property: the api image runs the TypeScript sources
+  // through `node --experimental-strip-types`, which cannot erase parameter properties.
+  readonly capacity: number;
+
+  constructor(capacity = 4096) {
+    this.capacity = capacity;
+  }
 
   get size(): number {
     return this.entries.size;
