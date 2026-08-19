@@ -96,6 +96,7 @@ export const ProviderManifestSchema = z
       })
       .strict(),
     attribution: z.string().min(1).optional(),
+    storeResults: z.boolean().optional(),
     lastVerified: isoDate,
     status: z.enum(PROVIDER_STATUSES),
     alternatives: z.array(id),

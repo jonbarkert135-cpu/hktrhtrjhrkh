@@ -22,7 +22,7 @@ import {
   type TransformInput,
 } from './types.ts';
 
-export type RunStatus = 'completed' | 'partial' | 'failed' | 'cancelled';
+export type EngineRunStatus = 'completed' | 'partial' | 'failed' | 'cancelled';
 
 export type FailureCode =
   | 'invalid-input'
@@ -57,7 +57,7 @@ export interface RunOptions {
 }
 
 export interface RunOutcome {
-  readonly status: RunStatus;
+  readonly status: EngineRunStatus;
   readonly entities: readonly ProposedEntity[];
   readonly relationships: readonly ProposedRelationship[];
   readonly evidence: readonly Evidence[];
@@ -152,7 +152,7 @@ export const runEngine = async (
   let timedOut = false;
 
   const finish = (
-    status: RunStatus,
+    status: EngineRunStatus,
     output: EngineOutput,
     violations: readonly string[],
   ): RunOutcome => {

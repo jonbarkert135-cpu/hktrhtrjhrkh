@@ -182,6 +182,8 @@ export interface ProviderManifest {
   readonly dataLicence?: string;
   readonly limits: ProviderLimits;
   readonly attribution?: string;
+  /** False when the provider's terms forbid storing results; gates the result cache (§10). */
+  readonly storeResults?: boolean;
   /** ISO date (YYYY-MM-DD) the credential/pricing facts were last checked against official docs. */
   readonly lastVerified: string;
   readonly status: ProviderStatus;
