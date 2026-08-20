@@ -24,6 +24,7 @@ export const serverEnv = z
     PUBLIC_APP_URL: z.string().url(),
     SYNC_URL: z.string().url(),
     SYNC_SHARED_SECRET: z.string().min(32), // API signs board tokens, sync verifies
+    SYNC_PORT: z.coerce.number().int().min(1).max(65535).default(3002),
     RUNNER_URL: z.string().url(),
     RUNNER_SHARED_SECRET: z.string().min(32),
     EGRESS_PROXY_URL: z.string().url(),
