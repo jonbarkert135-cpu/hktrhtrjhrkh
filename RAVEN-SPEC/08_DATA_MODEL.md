@@ -511,7 +511,7 @@ model Board {
 #### 4.4a Implementation status (P7, `phase/p07-projects-search`)
 
 The shipped `Project`/`Board` Prisma models (`packages/db/prisma/schema.prisma`,
-migration `0003_project_board_management`) are narrower than §4.3/§4.4 above:
+migration `0004_project_board_management`) are narrower than §4.3/§4.4 above:
 
 - `Project` gained `icon String? @db.VarChar(32)` (color already existed). **Not shipped**:
   `key`, `ProjectMember`/`ProjectRole` — no project-scoped membership model exists; project
@@ -1820,3 +1820,26 @@ become `missing` media with a repair prompt.
    a Postgres row the client reads directly. The projection of comments into Postgres is therefore
    authoritative for notifications and export, and the subdoc must be treated as untrusted input by
    the projector (validated with zod, same as everything else).
+
+---
+
+## 10. Implementation status (P8)
+
+**Shipped**: `board_snapshots`, `nodes` (`BoardProjectionNode`), `edges` (`BoardProjectionEdge`),
+`comments`, `presence_log` Prisma models and migration `0003_sync_collab`
+(`packages/db/prisma/schema.prisma`); the diff/apply projection algorithm
+(`packages/domain/src/projection/{diffDoc,projectUpdate}.ts`) with the version/`doc_updated_at`
+ordering guard from §5.3, proven idempotent and replayable by
+`packages/domain/test/projection.diff.test.ts` and `apps/sync/test/projection.{idempotent,replay}
+.test.ts`; `scripts/reproject.ts`.
+
+**Deviations**: this phase's projection covers only `nodes`/`edges` — the `groups`/`node_tags`/
+`entity_resolutions`/`history_events`/embedding-job maintenance in §5.2's full algorithm is a
+superset left to a later phase (P8's own §4 file list only names the five tables above). Comments
+follow P8 §5.10 (Postgres-only, doc holds an anchor id) rather than this document's §2.2 Y.Doc
+subdoc design — see `RAVEN-SPEC/20_ROADMAP.md` P8's status note for the reasoning.
+
+**Not yet**: the consistency-check job (§5.7, C1–C8) and the advisory-lock serialization in §5.1
+are not implemented — the current projector relies on Hocuspocus's own one-room-one-writer
+guarantee instead, which is sufficient for a single sync pod but not yet proven under the
+multi-pod Redis fanout scenario in §11's acceptance criteria.

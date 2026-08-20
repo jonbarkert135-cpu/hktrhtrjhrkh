@@ -1159,6 +1159,13 @@ Growth triggers: add a read replica when `raven_db_query_duration_seconds` p95 f
 queues onto separate deployments when one queue's backlog starves another (BullMQ groups first,
 separate deployments second).
 
+**P8 status**: `apps/sync` (`phase/p08-sync-collab`) implements the eviction and metric wiring this
+section assumes (`RoomEvictionTracker`, `raven_sync_rooms_open`/`raven_sync_doc_memory_bytes`), but
+the 80 MB/board and ~20-boards-per-2GB-pod figures above are still the _planning_ numbers, not yet
+validated against a running deployment — this sandbox has no live sync pod to measure. Alert rules
+for `SyncProjectionFailing`/`SyncBroadcastSlow`/`SyncMemoryHigh` are in `infra/alerts/sync.rules.yml`
+with runbooks in `runbooks/`, not yet deployed to a live Alertmanager.
+
 ---
 
 ## 14. Production readiness checklist

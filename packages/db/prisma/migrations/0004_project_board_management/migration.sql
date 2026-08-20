@@ -1,4 +1,4 @@
--- Migration: 0003_project_board_management — P7 project/board management + search prep.
+-- Migration: 0004_project_board_management — P7 project/board management + search prep.
 -- Lock impact: none. Every statement adds a nullable or defaulted column to an existing table;
 -- no column is dropped, retyped or renamed, so this never blocks a concurrent read or write.
 -- Estimated duration: < 50 ms at current table sizes (ADD COLUMN with a constant default on

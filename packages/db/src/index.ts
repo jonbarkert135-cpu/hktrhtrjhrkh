@@ -1,14 +1,19 @@
 export { prisma } from './client.ts';
-export type { Prisma } from '@prisma/client';
+export type { Prisma, PrismaClient } from '@prisma/client';
 export type {
   Account,
   AuditLog,
   Board,
+  BoardProjectionEdge,
+  BoardProjectionNode,
+  BoardSnapshot,
+  Comment,
   File,
   FileState,
   Membership,
   Organization,
   OrgRole,
+  PresenceLogEntry,
   Project,
   Session,
   User,
