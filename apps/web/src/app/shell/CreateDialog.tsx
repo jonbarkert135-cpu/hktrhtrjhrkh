@@ -13,6 +13,10 @@ export interface CreateDialogProps {
   /** Already mapped through lib/trpc errorMessage() by the caller. */
   error?: string | undefined;
   onSubmit: (name: string) => void;
+  /** Pre-fills the field (rename) instead of starting blank (create). */
+  initialValue?: string | undefined;
+  /** Defaults to "Create"; renaming passes "Rename". */
+  submitLabel?: string;
 }
 
 /**
@@ -28,17 +32,20 @@ export function CreateDialog({
   submitting = false,
   error,
   onSubmit,
+  initialValue,
+  submitLabel = 'Create',
 }: CreateDialogProps) {
   const formId = useId();
-  const [name, setName] = useState('');
+  const [name, setName] = useState(initialValue ?? '');
   const [fieldError, setFieldError] = useState<string | undefined>(undefined);
 
-  // Reopening must not show what the last attempt typed.
+  // Reopening must not show what the last attempt typed (create) or a stale value (rename).
   useEffect(() => {
     if (open) {
-      setName('');
+      setName(initialValue ?? '');
       setFieldError(undefined);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -64,7 +71,7 @@ export function CreateDialog({
             Cancel
           </Button>
           <Button type="submit" form={formId} loading={submitting} disabled={submitting}>
-            Create
+            {submitLabel}
           </Button>
         </>
       }

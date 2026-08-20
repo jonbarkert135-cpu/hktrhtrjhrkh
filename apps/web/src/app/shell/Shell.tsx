@@ -2,10 +2,12 @@ import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Banner, Button, Menu, MenuItem, Skeleton, SkipToContent } from '@nexus/ui';
 import { CommandPalette } from '../commands/palette';
+import { useRegisterCommands } from '../commands/useRegisterCommands';
+import type { Command } from '../commands/registry';
 import { useBoardStatus } from './boardStatus';
 import { capabilities } from '../../mode/appMode';
 
-export type ShellProject = { id: string; name: string };
+export type ShellProject = { id: string; name: string; archivedAt?: string | null };
 
 export type ShellProps = {
   children: ReactNode;
@@ -17,6 +19,11 @@ export type ShellProps = {
   projects?: ShellProject[] | undefined;
   /** Opens the "New project" dialog. Absent while the shell renders without a session. */
   onCreateProject?: (() => void) | undefined;
+  /** Viewers cannot rename/archive/delete projects (P7 §12) — every row menu item stays disabled. */
+  canMutateProjects?: boolean | undefined;
+  onRenameProject?: ((project: ShellProject) => void) | undefined;
+  onArchiveProject?: ((project: ShellProject) => void) | undefined;
+  onDeleteProject?: ((project: ShellProject) => void) | undefined;
   boardTitle?: string | undefined;
   orgName?: string | undefined;
   userName?: string | undefined;
@@ -27,12 +34,88 @@ export type ShellProps = {
   authEnabled?: boolean | undefined;
 };
 
+function ProjectRailRow({
+  project,
+  canMutate,
+  onRename,
+  onArchive,
+  onDelete,
+}: {
+  project: ShellProject;
+  canMutate: boolean;
+  onRename?: (project: ShellProject) => void;
+  onArchive?: (project: ShellProject) => void;
+  onDelete?: (project: ShellProject) => void;
+}) {
+  const rename = () => onRename?.(project);
+  const archive = () => onArchive?.(project);
+  const remove = () => onDelete?.(project);
+
+  // Same rule as BoardCard: the palette command is the exact handler the menu item calls.
+  const commands: Command[] = canMutate
+    ? [
+        {
+          id: `project:${project.id}:rename`,
+          title: `Rename project "${project.name}"`,
+          group: 'project',
+          keywords: ['rename', 'project', project.name],
+          run: rename,
+        },
+        {
+          id: `project:${project.id}:archive`,
+          title: `Archive project "${project.name}"`,
+          group: 'project',
+          keywords: ['archive', 'project', project.name],
+          run: archive,
+        },
+        {
+          id: `project:${project.id}:delete`,
+          title: `Delete project "${project.name}"`,
+          group: 'project',
+          keywords: ['delete', 'remove', 'project', project.name],
+          run: remove,
+        },
+      ]
+    : [];
+  useRegisterCommands(commands);
+
+  return (
+    <li className="nx-rail-item">
+      <NavLink className="nx-rail-row" to={`/p/${project.id}`}>
+        {project.name}
+      </NavLink>
+      <Menu
+        trigger={
+          <Button variant="ghost" size="sm" aria-label={`${project.name} actions`}>
+            ⋯
+          </Button>
+        }
+        align="end"
+      >
+        <MenuItem disabled={!canMutate} onSelect={rename}>
+          Rename
+        </MenuItem>
+        <MenuItem disabled={!canMutate} onSelect={archive}>
+          Archive
+        </MenuItem>
+        <MenuItem kind="danger" disabled={!canMutate} onSelect={remove}>
+          Delete
+        </MenuItem>
+      </Menu>
+    </li>
+  );
+}
+
 function ProjectRail({
   loading,
   error,
   onRetry,
   projects,
   onCreateProject,
+  canMutateProjects = true,
+  onRenameProject,
+  onArchiveProject,
+  onDeleteProject,
 }: Omit<ShellProps, 'children'>) {
   if (loading) {
     return (
@@ -70,11 +153,14 @@ function ProjectRail({
     <div className="nx-stack">
       <ul className="nx-stack">
         {projects.map((project) => (
-          <li key={project.id}>
-            <NavLink className="nx-rail-row" to={`/p/${project.id}`}>
-              {project.name}
-            </NavLink>
-          </li>
+          <ProjectRailRow
+            key={project.id}
+            project={project}
+            canMutate={canMutateProjects}
+            {...(onRenameProject ? { onRename: onRenameProject } : {})}
+            {...(onArchiveProject ? { onArchive: onArchiveProject } : {})}
+            {...(onDeleteProject ? { onDelete: onDeleteProject } : {})}
+          />
         ))}
       </ul>
       <Button variant="ghost" onClick={onCreateProject}>
@@ -112,6 +198,10 @@ export function Shell({
   onRetry,
   projects,
   onCreateProject,
+  canMutateProjects,
+  onRenameProject,
+  onArchiveProject,
+  onDeleteProject,
   boardTitle = 'Untitled board',
   orgName = 'Personal',
   userName = 'Account',
@@ -134,7 +224,19 @@ export function Shell({
 
       <div className="nx-body">
         <nav className="nx-rail" aria-label="Projects">
-          <ProjectRail {...{ loading, error, onRetry, projects, onCreateProject }} />
+          <ProjectRail
+            {...{
+              loading,
+              error,
+              onRetry,
+              projects,
+              onCreateProject,
+              canMutateProjects,
+              onRenameProject,
+              onArchiveProject,
+              onDeleteProject,
+            }}
+          />
         </nav>
 
         <main id="nx-main" className="nx-surface" tabIndex={-1}>
