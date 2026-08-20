@@ -22,9 +22,14 @@ prompts below still describe the server shape and remain correct for it — read
 `docs/adr/ADR-001-local-first.md`, which states the two-shape rule, and `docs/backend/BACKEND_STATUS.md`,
 which records what of the backend is built, dormant or missing. Concretely, when a phase prompt says
 "call the API", the correct implementation is a method on `WorkspaceRepository`
-(`apps/web/src/data/workspace/types.ts`) with both a local and a server implementation. Phases P8
-(sync) and P9 (backend API & auth) are the phases that switch capabilities on; they do not become
-prerequisites for anything shipping before them.
+(`apps/web/src/data/workspace/types.ts`) with both a local and a server implementation. Backend API
+and auth themselves are foundational (P1, shipped — `apps/api/src/auth`) and already dormant-but-green
+in local mode per `BACKEND_STATUS.md`. **Correction (this PR):** an earlier draft of this note called
+P9 "backend API & auth", contradicting `00_MASTER.md` §7, where P9 is the **integration framework**
+(manifest schema, runner sandbox, proposal/import UX, run history) — `00_MASTER.md` wins, and P9's
+prompt below is the integration framework. P8 (sync) and P9 (integrations) are the phases that switch
+a _new_ server capability on (`cloudSync`/`collaboration`, and `integrations` respectively); neither
+becomes a prerequisite for anything that shipped before it.
 
 ---
 
@@ -82,26 +87,28 @@ This file carries prompts for **remaining** work only. The implementation prompt
 were deleted once shipped — they are in git history, and the binding description of what exists is
 the area spec plus the code. Read `AGENTS.md` first.
 
-| Phase                | PRs                       | Where it lives now                                                                                                                                          | Spec                               |
-| -------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| P1 Foundation        | #2                        | monorepo, tokens, app shell, CI, bench harness                                                                                                              | `00_MASTER.md`, `19_DEPLOYMENT.md` |
-| P2 Canvas engine     | #3                        | `packages/canvas-engine` (camera, spatial index, FSM, renderer)                                                                                             | `05_CANVAS_ENGINE.md`              |
-| P3 Document          | #4, #5                    | `packages/domain` (board doc, patches, undo, autosave), `apps/web/src/data`                                                                                 | `08_DATA_MODEL.md`                 |
-| P4 Node system       | #6, #7, #8                | `packages/domain/src/nodes`, `apps/web/src/nodes` (9 types, inspector, hosts)                                                                               | `06_NODE_SYSTEM.md`                |
-| P5 Edge system       | #11, #12, #17, #23        | edge taxonomy, 4 routing modes + cache, ports, selection, relationship UI, waypoints, flow animation, bundling                                              | `07_EDGE_SYSTEM.md`                |
-| Local-first          | #9, #10, #13, #14         | `APP_MODE=local`, `WorkspaceRepository`, local persistence, first-run seed                                                                                  | `docs/adr/ADR-001-local-first.md`  |
-| L4.1 Transforms      | #15                       | `packages/transforms` (manifests, registries, router, modes, scores, planner, catalogue)                                                                    | `21_TRANSFORM_SYSTEM.md`           |
-| L4.2 Transform SDK   | #20                       | `packages/transforms/src/sdk` (engine contract, `runEngine` host, testkit, conformance harness, `doh-resolver` reference engine)                            | `21_TRANSFORM_SYSTEM.md` §12a      |
-| L4.3 Run history     | #21                       | `packages/transforms/src/history.ts`, `src/cache.ts` (history, replay, compare, TTL cache)                                                                  | `21_TRANSFORM_SYSTEM.md` §10       |
-| Layer-2 docs         | #16                       | `22_ECOSYSTEM_AUDIT.md`, `23_COMPETITOR_MATRIX.md`, `24_UNIFIED_QUERY.md` (design only)                                                                     | those documents                    |
-| P6 Capture           | #22                       | `packages/domain/src/{capture,net}`, `apps/web/src/capture`, `apps/api/.../unfurl.ts` — §5.12/§5.14 still open                                              | `09_BACKEND.md`, `15_SECURITY.md`  |
-| P7 Projects & search | phase/p07-projects-search | `packages/domain/src/{search,templates}`, `apps/api/.../{project,board}.ts`, `apps/web/src/{projects,app/commands,search}` — §6/§2 (partial)/§11 still open | `09_BACKEND.md`, `03_UX.md` §8–9   |
-| Agent memory         | #18                       | `AGENTS.md`, `.mcp.json`                                                                                                                                    | —                                  |
+| Phase                | PRs                | Where it lives now                                                                                                                                          | Spec                                |
+| -------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| P1 Foundation        | #2                 | monorepo, tokens, app shell, CI, bench harness                                                                                                              | `00_MASTER.md`, `19_DEPLOYMENT.md`  |
+| P2 Canvas engine     | #3                 | `packages/canvas-engine` (camera, spatial index, FSM, renderer)                                                                                             | `05_CANVAS_ENGINE.md`               |
+| P3 Document          | #4, #5             | `packages/domain` (board doc, patches, undo, autosave), `apps/web/src/data`                                                                                 | `08_DATA_MODEL.md`                  |
+| P4 Node system       | #6, #7, #8         | `packages/domain/src/nodes`, `apps/web/src/nodes` (9 types, inspector, hosts)                                                                               | `06_NODE_SYSTEM.md`                 |
+| P5 Edge system       | #11, #12, #17, #23 | edge taxonomy, 4 routing modes + cache, ports, selection, relationship UI, waypoints, flow animation, bundling                                              | `07_EDGE_SYSTEM.md`                 |
+| Local-first          | #9, #10, #13, #14  | `APP_MODE=local`, `WorkspaceRepository`, local persistence, first-run seed                                                                                  | `docs/adr/ADR-001-local-first.md`   |
+| L4.1 Transforms      | #15                | `packages/transforms` (manifests, registries, router, modes, scores, planner, catalogue)                                                                    | `21_TRANSFORM_SYSTEM.md`            |
+| L4.2 Transform SDK   | #20                | `packages/transforms/src/sdk` (engine contract, `runEngine` host, testkit, conformance harness, `doh-resolver` reference engine)                            | `21_TRANSFORM_SYSTEM.md` §12a       |
+| L4.3 Run history     | #21                | `packages/transforms/src/history.ts`, `src/cache.ts` (history, replay, compare, TTL cache)                                                                  | `21_TRANSFORM_SYSTEM.md` §10        |
+| Layer-2 docs         | #16                | `22_ECOSYSTEM_AUDIT.md`, `23_COMPETITOR_MATRIX.md`, `24_UNIFIED_QUERY.md` (design only)                                                                     | those documents                     |
+| P6 Capture           | #22                | `packages/domain/src/{capture,net}`, `apps/web/src/capture`, `apps/api/.../unfurl.ts` — §5.12/§5.14 still open                                              | `09_BACKEND.md`, `15_SECURITY.md`   |
+| P7 Projects & search | #25                | `packages/domain/src/{search,templates}`, `apps/api/.../{project,board}.ts`, `apps/web/src/{projects,app/commands,search}` — §6/§2 (partial)/§11 still open | `09_BACKEND.md`, `03_UX.md` §8–9    |
+| P8 Sync & collab     | #24                | `apps/sync` (Hocuspocus, projection, presence, eviction), `apps/web/src/collab`, `packages/domain/src/projection`                                           | `09_BACKEND.md`, `08_DATA_MODEL.md` |
+| Agent memory         | #18                | `AGENTS.md`, `.mcp.json`                                                                                                                                    | —                                   |
 
-Open phases in this file: **P8**, **P17**, **L4.4–L4.7**, plus the two deferred P6 items and the
-remaining P7 items (§6 global search, §2 member management, §11 thumbnails, §3 move-board picker,
-§10 virtualization, §14 UI disclosure). P9–P16 have
-no prompt yet; write one in this format when their turn comes.
+Open phases in this file: **P9**, **P10**, **P17**, **L4.4–L4.7**, plus the two deferred P6 items and
+the remaining P7 items (§6 global search, §2 member management, §11 thumbnails, §3 move-board
+picker, §10 virtualization, §14 UI disclosure). P11–P16 have short scope stubs below the P10 prompt;
+write their full 15-section prompt in this format when their turn comes, expanding the stub rather
+than discarding it.
 
 ---
 
@@ -110,8 +117,9 @@ no prompt yet; write one in this format when their turn comes.
 **Status: mostly shipped (see the ledger). Still open, and why:**
 
 - §5.12 browser-extension hook `POST /api/v1/capture` — needs scoped API tokens (a `db` model, a
-  migration and a hash-at-rest scheme) which belong to the backend/auth phase; the domain side is
-  ready (`createNodesFromPlan` already accepts `origin: 'extension'`).
+  migration and a hash-at-rest scheme, `09_BACKEND.md` §4.1), which **P9** introduces for its own
+  REST v1 surface (`/v1/runs`, `10_INTEGRATIONS.md` §10); the domain side is ready
+  (`createNodesFromPlan` already accepts `origin: 'extension'`).
 - §5.14 screenshot capture — needs a headless browser in `apps/worker`, which does not exist. The
   flag is not introduced, so there is no dead control (which is what §5.14 actually asks for).
 - The unfurl **queue**: `apps/worker` does not exist, so the unfurl runs in-request behind the same
@@ -127,7 +135,7 @@ boardId? }` authenticated by a scoped API token; it creates a node in the target
 13. Screenshot capture of a website node behind the `capture.screenshot` feature flag (off by
     default); when off the UI does not offer it (no dead controls).
 
-Do both together with the phase that brings scoped API tokens and `apps/worker`. Everything else
+Do both together with **P9**, which brings scoped API tokens and `apps/worker`. Everything else
 from the original P6 prompt is shipped in PR #22 — read `packages/domain/src/{capture,net}`,
 `apps/web/src/capture`, `apps/api/src/trpc/routers/unfurl.ts` plus `09_BACKEND.md` and
 `15_SECURITY.md` instead of the deleted prompt.
@@ -191,210 +199,621 @@ highlight pulse, and viewer-role control gating — read those paths plus `09_BA
 
 # P8 — Sync & collaboration
 
-**Status: mostly shipped (phase/p08-sync-collab). Still open, and why:**
+**Status: mostly shipped (PR #24, merged). Still open, and why:**
 
 - §5.13 rich-text character-wise merge and delete-vs-edit undo recovery, and the observer-based
-  edge-pruning on both replicas — these depend on `apps/web`'s rich-text binding and the undo
-  manager under real concurrent load, which needs the live e2e harness (below) to prove, not unit
-  tests. The mechanism (Yjs `Y.XmlFragment` CRDT merge, `UndoManager` origin scoping) already
-  exists from P3/P4; nothing new to build, only to verify.
+  edge-pruning on both replicas — verified only by unit tests; the live e2e/concurrency proof needs
+  a running Postgres + Redis + `apps/sync` stack (CI has it, this sandbox did not). The mechanism
+  (Yjs `Y.XmlFragment` CRDT merge, `UndoManager` origin scoping) already exists from P3/P4; nothing
+  new to build, only to verify under load.
 - The full `e2e/collab/*` suite, `load/sync-fanout.js` (k6) and the broadcast-latency/memory
-  performance numbers in §10 — all need a running Postgres + Redis + `apps/sync` stack, which this
-  sandbox does not have. The specs, fixtures and the suites' _unit-testable_ halves are done; the
-  live runs are for CI (`.github/workflows/ci.yml`), which already has the service containers P1
-  wired up.
+  performance numbers of the original §10 — same reason as above; specs, fixtures and the
+  unit-testable halves are done.
 - `08_DATA_MODEL.md` §5's `groups`/`node_tags`/`entity_resolutions`/`history_events`/embedding-job
-  projection is a superset this phase does not implement — P8's own §4 file list only names
-  `nodes`/`edges`/`board_snapshots`/`comments`/`presence_log`, so the projection here covers those
-  five and is idempotent/replayable for them; the richer projection surface is follow-on work
-  (tracked as a P8 deviation, not a new phase).
-- Comments: `08_DATA_MODEL.md` §2.2's `comments` Y.Map subdoc design is **not** built; this phase
-  follows P8's own §5.10 instead ("stored in Postgres... the doc holds only the anchor id") because
-  it is simpler and is what this phase's acceptance criteria test. The existing (unused since P3)
-  `comments` Y.Map root now holds anchor pins only.
-- Mentions email delivery is stubbed (`apps/api/src/mentions.ts`'s `EmailSink`): there is no mailer
-  in this codebase yet (P1 deferred it the same way for signup). The rate-limiting/digest logic is
-  built and tested; swapping in a real transport is a one-line change once the mailer lands.
-- `apps/web/src/data/syncProvider.ts` (client composition of `y-indexeddb` + the Hocuspocus
-  WebSocket provider) and the `apps/web/src/collab/*` components are built and unit-tested standing
-  alone, but are **not yet wired into** `BoardDocProvider` (`docProvider.tsx`) or the board canvas
-  overlay — deliberately, to avoid touching board-loading/board-UI code while
-  `phase/p07-projects-search` restructures the same area concurrently. Wiring them in is a small,
-  well-defined follow-up once both branches land.
+  projection is a superset this phase did not implement — the shipped projection covers
+  `nodes`/`edges`/`board_snapshots`/`comments`/`presence_log` only; the richer surface is a tracked
+  deviation, not a new phase.
+- Comments follow the simpler "Postgres row, doc holds only the anchor id" design
+  (`08_DATA_MODEL.md` §5.10) instead of the original Y.Map-subdoc sketch — deliberate, see the PR.
+- Mentions email delivery is stubbed (`apps/api/src/mentions.ts`'s `EmailSink`) — there is no mailer
+  in this codebase yet (P1 deferred the same for signup); rate-limit/digest logic is built and
+  tested, swapping in a real transport is a one-line change once a mailer lands.
+- `apps/web/src/data/syncProvider.ts` and `apps/web/src/collab/*` are built and unit-tested standing
+  alone, but were deliberately **not wired into** `BoardDocProvider` (`docProvider.tsx`) or the board
+  canvas overlay while `phase/p07-projects-search` (PR #25) restructures the same area concurrently.
+  Wiring them in is a small, well-defined follow-up once P7 lands — track it as the first item of
+  whichever phase next touches `docProvider.tsx` (P9 does not; note it in that phase's PR if it does).
 - Runbooks (`runbooks/projection.md`, `sync.md`, `sync-memory.md`) and the three alert rules are
-  written (`infra/alerts/sync.rules.yml`, `runbooks/*.md`) but not deployed to a live Alertmanager —
-  there is none running in this environment.
+  written but not deployed to a live Alertmanager — none runs in this environment.
+
+Everything else from the original P8 prompt is shipped in PR #24 — read `apps/sync`
+(`server.ts`, `auth.ts`, `persistence.ts`, `projection.ts`, `awareness.ts`, `eviction.ts`,
+`metrics.ts`), `packages/domain/src/projection`, `apps/web/src/collab`, `packages/db/prisma/schema.prisma`
+(`BoardSnapshot`, `Comment`, `PresenceLogEntry` models) plus `09_BACKEND.md` §7 and `08_DATA_MODEL.md`
+§3 instead of the deleted 15-section prompt.
+
+---
+
+# P9 — Integration framework
 
 ## 1 Objective
 
-Introduce the Hocuspocus sync service, the Postgres projection of the CRDT, real-time presence,
-comments, and the conflict/permission UX — turning the local-first app into a multi-user one without
-weakening offline guarantees.
+Ship the generic, tool-agnostic integration pipeline that every future tool plugs into: the
+`IntegrationManifest` schema and loader, the eight-stage pipeline (`InputAdapter → ExecutionLayer →
+OutputParser → EntityExtractor → NodeMapper → RelationshipMapper → ImportProposal → Applier`), the
+sandboxed `apps/runner` service, `apps/worker` (introduced in this phase) for the CPU-heavy parse
+stages, run history with replay/diff, the consent/legal gate, and scoped API tokens for the new
+REST v1 surface. No concrete third-party tool ships in this phase — it is proven end-to-end with the
+one `builtin` (in-process, no container) integration named in `10_INTEGRATIONS.md` §3.3: `expand-url`
+(follows redirects on a pasted/short URL and proposes the canonical URL). GitHub (P10), Sherlock
+(P11) and SpiderFoot (P12) are manifests + parsers added on top without touching this phase's code.
 
 ## 2 Context (what exists now)
 
-P3 made the board a local Y.Doc with IndexedDB persistence and undo. P7 added projects, boards and
-search (server search currently has an empty projection to read from). No WebSocket server exists;
-`SYNC_URL` and `SYNC_SHARED_SECRET` are already in the env schema from P1.
+P1 shipped `apps/api` with Better-Auth sessions and org/project RBAC (`orgProcedure`); P3/P4 gave the
+board its Y.Doc, undo (`Y.UndoManager`), node registry and `no-direct-graph-write` eslint rule; P6
+shipped the capture pipeline and `safeFetch`/URL policy (`packages/domain/src/{capture,net}`) that
+this phase reuses for `expand-url` and will reuse for every future tool's URL inputs; P7 (merged in #25)
+adds projects/boards/search — this phase's run history is scoped by the same
+`project_id`/`board_id` and must not assume P7 has landed (read the PR before touching
+`apps/api/src/trpc/routers/*`, since it may already have moved things). P8 shipped `apps/sync`,
+Hocuspocus, and the Postgres projection (`BoardProjectionNode`/`BoardProjectionEdge`,
+`packages/domain/src/projection`) — this phase's `Applier` (stage 8 of the pipeline) runs
+**client-side** against the local `Y.Doc` for the local caller, and reuses `apps/sync`'s existing
+server-side apply path (`10_INTEGRATIONS.md` §10: `POST /v1/proposals/:id/apply` "goes through the
+same Applier running in `apps/sync`") for headless/API callers — do not build a second write path.
+
+No `packages/integrations`, `apps/runner` or `apps/worker` exist yet. No `integration_runs`,
+`import_proposals`, `consents` or `api_tokens` tables exist. `packages/config/src/appMode.ts` has no
+`integrations` capability.
 
 ## 3 Existing architecture to respect
 
-- `00_MASTER.md` §2 (Hocuspocus 4, one room per board, Redis extension, projection in the same
-  transaction as the snapshot; projection is idempotent and replayable).
-- `09_BACKEND.md` §7 (sync service), `08_DATA_MODEL.md` §3 (projection tables and upsert rules).
-- `19_DEPLOYMENT.md` §10.2 (`raven_sync_*` metrics — emit exactly those), §13 (memory budget).
-- `03_UX.md` §11 (presence, comments, conflict copy), `18_TESTING.md` §7.6 (collab tests).
+- `10_INTEGRATIONS.md` — the primary reference, **all sections**; this phase implements it as
+  written. Do not redesign the pipeline, the manifest schema or the error taxonomy — they are
+  already fully specified there, including the zod schema (§4.1), the runner container flag
+  baseline (§6.3), the egress allowlist proxy (§6.4) and the job protocol (§6.5).
+- `09_BACKEND.md` §4.1 (scoped API token format `nxs_` + 32 random bytes base62, argon2id-hashed,
+  scopes incl. `runs:read`, `runs:start`) and §4.2 (endpoint list) — this phase builds
+  `auth.createApiToken` and the bearer-token middleware for the first time; `runs:*` scopes are
+  added here, the rest of the scope list is reused as-is.
+- `15_SECURITY.md` §4 (input validation boundary table — REST v1 row), §6 (SSRF), §9 (sandbox
+  container baseline is cross-referenced from `10_INTEGRATIONS.md` §6.3, do not duplicate it).
+- `docs/adr/ADR-002-feature-flags.md` — this phase adds one row: `integrations: 'INTEGRATIONS_ENABLED'`
+  requiring `backend` (same shape as `cloudSync`/`collaboration`). In `APP_MODE=local` the entire
+  integrations surface — manifests, run button, run history panel — is **absent**, not disabled;
+  follow `apps/web/src/app/localMode.test.tsx`'s existing pattern (N2). This decision is new in this
+  phase (neither `10_INTEGRATIONS.md` nor the ADRs stated it) because tool execution is inherently
+  server-side (N5: sandboxed runner, never in-process) and cannot have a meaningful local-only mode.
+- `18_TESTING.md` §7 (architecture tests), §11.3 (authz matrix), §16 (PR evidence checklist).
+- `00_MASTER.md` N4 (propose-never-write), N5 (sandboxed execution), N7 (SSRF), N9 (export
+  round-trip — `import_proposals`/`integration_runs` rows must survive board export/import).
 
 ## 4 Files/modules affected
 
 ```text
-apps/sync/src/{server.ts,auth.ts,persistence.ts,projection.ts,awareness.ts,eviction.ts,metrics.ts}
-apps/api/src/trpc/routers/{boardToken.ts,comments.ts}
-packages/db/prisma/schema.prisma        nodes, edges, board_snapshots, comments, presence_log
-apps/web/src/data/{syncProvider.ts,presence.ts,connectionState.ts}
-apps/web/src/collab/{PresenceLayer.tsx,Cursors.tsx,CommentThread.tsx,CommentPin.tsx}
-packages/domain/src/projection/{projectUpdate.ts,diffDoc.ts}
-scripts/reproject.ts
+packages/integrations/src/
+  index.ts, manifest.ts, pipeline.ts
+  extract/{normalizers.ts,patterns.ts,confidence.ts}
+  resolve/{identity.ts,merge.ts}
+  errors.ts
+  testkit/
+packages/integrations/builtin/{manifest.ts,parser.ts}       -- expand-url, the one shipped manifest
+apps/runner/src/
+  main.ts, executors/{container.ts,http.ts,builtin.ts,builtin-registry.ts}
+  sandbox/{flags.ts,egress-proxy.ts,secrets.ts}
+  artifacts.ts, runlog.ts, cancel.ts
+apps/worker/src/
+  main.ts                       -- BullMQ bootstrap, first consumer this codebase ships
+  queues/integration.parse.ts   -- stages 3-7 of the pipeline
+apps/api/src/trpc/routers/{integrations.ts,runs.ts,consents.ts,apiTokens.ts}
+apps/api/src/auth/apiToken.ts               -- auth.createApiToken, bearer middleware
+apps/api/openapi/integrations.yaml          -- REST v1 surface, 10_INTEGRATIONS.md §10
+apps/web/src/features/integrations/{IntegrationPicker.tsx,ConsentDialog.tsx,RunPanel.tsx,
+  RunHistory.tsx,ProposalReview.tsx,ApplyToast.tsx}
+apps/web/src/data/workspace/runs.ts          -- WorkspaceRepository method, local shape throws
+                                              -- (N2: capability-gated, see §3)
+packages/db/prisma/schema.prisma             -- integration_runs, run_log_entries, import_proposals,
+                                              -- consents, api_tokens (§5 below)
+packages/config/src/appMode.ts               -- + `integrations` capability
+.dependency-cruiser.cjs                      -- integrations-no-app rule
+packages/config/eslint/rules/{no-tool-names-in-core.cjs,no-child-process-in-api.cjs}
 ```
 
 ## 5 Exact requirements (numbered, testable)
 
-1. `apps/sync` runs Hocuspocus with: `onAuthenticate` verifying a short-lived board token issued by
-   the API (HMAC with `SYNC_SHARED_SECRET`, 5-minute TTL, containing `userId`, `boardId`, `role`),
-   `onLoadDocument` restoring from `board_snapshots`, `onStoreDocument` writing snapshot + projection
-   in one transaction, `onAwarenessUpdate` for presence, and the Redis extension for multi-pod fanout.
-2. Read-only enforcement: a `viewer` token connects but every incoming update is rejected
-   (Hocuspocus `beforeHandleMessage`), and the client also disables editing — server-side is the
-   authority, client-side is the courtesy.
-3. Projection: on each debounced store (2 s idle or 10 s max), compute the diff between the previous
-   projected state vector and the new document, then upsert changed `nodes`/`edges` rows and delete
-   removed ones. The projection is **idempotent** (re-running produces no changes) and **replayable**
-   (`scripts/reproject.ts --board=<id>` rebuilds from the snapshot).
-4. Projection failures never block the snapshot write: the snapshot is committed, the projection
-   error is recorded (`raven_sync_projection_failures_total`) and retried with backoff; a board
-   whose projection is stale is flagged in the admin view.
-5. Client sync provider composes `y-indexeddb` (P3) with the WebSocket provider; IndexedDB always
-   loads first so the board renders before the socket connects.
-6. Sync status extends P3's indicator with server states: `Saved` (server-acked), `Saving…`,
-   `Offline` (queued locally), `Reconnecting…`, `Read-only`, `Error`. Server ack within 2 s is
-   required by N2 and is asserted in the e2e suite.
-7. Reconnection: exponential backoff 1 s → 30 s with jitter, resume with the state vector (no full
-   document resend), and a visible "Reconnecting… attempt N" after the second failure.
-8. Presence: awareness carries `{ userId, name, color, cursor: {x,y}, selection: string[],
-viewport: rect, activeNodeId? }` throttled to 20 Hz for cursors and 4 Hz for viewport.
-9. Presence UI: cursors with name labels, colored selection outlines for remote selections, avatar
-   stack in the top bar with "follow" mode (camera follows a chosen user until any local pan).
-10. Comments: threads anchored to a node or to a canvas point; fields `id`, `boardId`, `anchor`,
-    `body` (plain text + mentions), `authorId`, `createdAt`, `resolvedAt?`, `replies[]`. Stored in
-    Postgres (not the CRDT) because they need server-side notification and permission queries;
-    the doc holds only the anchor id so comment pins move with the node.
-11. Mentions notify by email (rate-limited, digest after 3 in 10 minutes) and in an in-app inbox.
-12. Room eviction: a room with zero connections for 60 s is snapshotted and unloaded; the memory
-    gauge `raven_sync_doc_memory_bytes` is emitted per room.
-13. Concurrency semantics documented and tested: concurrent node moves converge to one position
-    (last writer per field), concurrent rich-text edits merge character-wise, delete-vs-edit yields
-    deletion with a recoverable undo for the editing user, and edges to deleted nodes are pruned by
-    the observer on both replicas.
-14. Board tokens are refreshed silently before expiry; a revoked membership invalidates the next
-    refresh and the socket is closed with code 4403 and a clear UI message.
+1. `IntegrationManifest` zod schema exactly as `10_INTEGRATIONS.md` §4.1; an invalid manifest fails
+   the build-time unit test over every shipped manifest and fails again, loudly, at runtime load.
+2. Pipeline stage contracts (`InputAdapter`, `ExecutionLayer`, `OutputParser`, `EntityExtractor`,
+   `NodeMapper`/`RelationshipMapper`, `ImportProposal`, `Applier`) exactly as §3; `packages/integrations`
+   imports only `packages/domain` and `packages/config` (dependency-cruiser `integrations-no-app`).
+3. `apps/runner`: job protocol (§6.5), container flag baseline (§6.3: `--network` via allowlist
+   proxy, `--read-only`, `--cap-drop ALL`, non-root, pid/mem/cpu caps, hard timeout), image supply
+   chain (§6.2, digest-pinned), egress allowlist proxy (§6.4) including the DNS-rebinding defense
+   shared with N7's hostile URL corpus. `builtin` executions run in the runner process without a
+   container (§3.3) but through the same job protocol, timeout and cancellation path.
+4. `apps/worker`: BullMQ + Redis consumer for queue `integration.parse`, running stages 3–7
+   (extract → map → propose) outside the runner's container slot (§2's stated rationale: parsing a
+   40 MB artifact must not halve run throughput). This is the first `apps/worker` in the codebase;
+   it reuses `packages/db` and `packages/domain`, never `apps/runner`'s sandbox code.
+5. `integration_runs`, `run_log_entries`, `import_proposals`, `consents` tables exactly as §5 and
+   §3.7; `integration_runs.project_id`/`board_id` are RLS-scoped like every other tenant table
+   (`15_SECURITY.md` §3.4).
+6. Scoped API tokens: `auth.createApiToken({ name, scopes, expiresAt? })` returns the token once
+   (never retrievable again), `nxs_` + 32 random bytes base62, argon2id-hashed at rest
+   (`09_BACKEND.md` §4.1); bearer middleware resolves a token to its owning user and intersects
+   requested scopes with the user's actual permissions per request. Scopes `runs:read`, `runs:start`
+   are introduced here; the token table and middleware are the shared primitive P6's deferred
+   `capture:write` scope and browser-extension endpoint will reuse without any change to this code.
+7. REST v1 surface exactly as §10: `GET/POST /v1/integrations|runs|runs/:id|runs/:id/log|
+runs/:id/artifacts/:name|runs/:id/cancel`, `GET /v1/proposals/:id`,
+   `POST /v1/proposals/:id/apply`; `POST /v1/runs` requires a `consentToken` from
+   `POST /v1/consents` (§12).
+8. Run lifecycle & UX contract exactly as §7: the seven states, the run surface state table,
+   progress semantics, re-run rules, diff-with-previous.
+9. Entity extraction/resolution exactly as §8: normalizers, identity keys, dedupe/merge policy
+   (fuzzy threshold 0.82, exposed later as an org setting per Open risk 5 — not in this phase),
+   confidence model, provenance attachment (every node/edge carries `Provenance` from §3.1).
+10. Error taxonomy exactly as §11 (codes, canonical user copy, retry policy, degraded modes).
+11. Legal/ethical gate exactly as §12: consent recording, allowed-target policy, rate limiting,
+    audit logging — nothing runs without a recorded, scoped consent (R6).
+12. The one shipped manifest, `expand-url` (`execution.kind: 'builtin'`): takes a URL, follows
+    redirects through `safeFetch` (`packages/domain/src/net`, P6) up to the existing redirect cap,
+    and proposes updating the node's canonical URL with the final destination as a `link-expand`
+    provenance entry — end-to-end proof that manifest → runner (builtin path) → worker → proposal →
+    apply → undo all work before any real third-party tool exists.
+13. `no-tool-names-in-core` eslint rule (R1): `apps/api`, `apps/web/src/app`, `packages/canvas-engine`
+    must not reference tool identifiers; enforced now even though only `expand-url` exists, so P10–P12
+    cannot regress it.
+14. `no-child-process-in-api` eslint rule + architecture test mirroring the existing
+    `apps/api/test/arch.no-child-process.test.ts` pattern, extended to assert `apps/runner` is the
+    only package importing `node:child_process`/container-exec libraries (N5).
+15. `packages/config/src/appMode.ts` gains capability `integrations` (env `INTEGRATIONS_ENABLED`,
+    requires `backend`); `apps/web/src/data/workspace/local.ts`'s run-related methods throw
+    (never silently no-op) so `localMode.test.tsx` catches any accidental call.
 
 ## 6 UX requirements
 
-- Presence is calm: cursors fade after 3 s of inactivity, labels only on movement or hover.
-- Remote selection uses a 30 %-opacity outline in the user's color; it never obscures local selection.
-- Conflict copy is honest and specific: "Alex moved this node while you were editing it. Your text
-  was kept." Never "conflict detected".
-- Read-only mode shows a persistent, unobtrusive banner with the reason and who can grant access.
-- Comment pins are 20 px circles at the node corner; unresolved count badges on the board card.
-- Comment composer supports `@` mentions with keyboard selection; `⌘/Ctrl+Enter` submits.
-- Offline: the indicator explains what happens ("Your changes are saved on this device and will sync
-  when you're back online") — never a bare icon.
-- Follow mode shows a border tint and an obvious exit affordance.
+- Entry points exactly as §7.1: node context menu ("Run integration…"), command palette (once P7
+  lands; until then a toolbar entry point suffices and is explicitly marked TODO-for-P7-merge in the
+  PR, not left silent).
+- Consent dialog: names the tool, the target, what data leaves the device (or "nothing, runs
+  locally" for `builtin`), and requires an explicit checkbox before "Run" enables, per §12.1.
+- Run panel: live state per §7.2's seven states, with a progress affordance per §7.4 (indeterminate
+  until the first log line, then phase-labeled).
+- Proposal review: grouped by entity kind, accept/accept-all/reject, with a "why is this here"
+  provenance chip on every candidate (source integration, run id, confidence bucket).
+- Run history: reverse-chronological per board, filterable by integration/status, each row links to
+  its log and artifacts; re-run and diff-with-previous are one click (§7.5, §7.6).
+- Errors use the canonical copy table (§11.2) verbatim — no generic "Something went wrong".
+- Empty states: no integrations installed (shows `expand-url` as the always-available example), no
+  runs yet, no results from a run (explains why, not just "no results").
 
 ## 7 Technical requirements
 
-- The sync service imports `packages/domain` for schema validation of projected rows; it never
-  imports UI or engine code.
-- Snapshot storage: `board_snapshots(board_id, seq, binary bytea, state_vector bytea, created_at)`,
-  keeping the last 10 plus daily snapshots for 30 days (`19_DEPLOYMENT.md` §11.1).
-- Updates are appended to `board_updates` between snapshots only if snapshot debouncing exceeds
-  10 s of continuous editing (bounded write amplification).
-- Awareness is never persisted.
-- Horizontal scale: Redis pub/sub extension; a pod restart must not drop edits (clients resend from
-  their state vector).
-- Graceful shutdown: on SIGTERM, stop accepting connections, flush all rooms, close sockets with
-  code 1001 so clients reconnect elsewhere within 5 s.
+- `packages/integrations` depends only on `packages/domain`/`packages/config`; `apps/runner` and
+  `apps/worker` depend on `packages/integrations`, `packages/domain`, `packages/db`, never on each
+  other's internals except through the job protocol (queue payloads) and the artifact store.
+- All outbound HTTP from any adapter goes through `safeFetch`/the egress allowlist proxy — never a
+  bare `fetch`/`http.request` in `apps/runner` or `apps/worker`.
+- Stage 8 (`Applier`) mutates the Y.Doc inside one `ydoc.transact(fn, LOCAL_ORIGIN)` so undo is one
+  step per accepted proposal (N3), matching §3.7 point 1 exactly; this is enforced by the existing
+  `no-direct-graph-write` rule plus a new pipeline property test (§11).
+- Manifest versioning: `manifestVersion` bump requires a `migrateManifest` function shipped in the
+  same PR (§14.2) — write the mechanism now even though no manifest has needed it yet.
+- Every zod boundary from `15_SECURITY.md` §4.1's table applies; REST v1 body cap 1 MB except the
+  multipart artifact-download redirect.
 
 ## 8 Edge cases
 
-- Client clock far in the future/past → irrelevant to CRDT correctness, but comment timestamps use
-  server time only.
-- A 5,000-node board opened by 10 users simultaneously → memory bound respected (one doc per room,
-  not per user).
-- Very large single update (paste of 50 nodes with images) → chunked by Yjs; the server enforces a
-  10 MB per-message cap and closes the socket with a specific code on violation.
-- Network flapping every 2 s → backoff prevents a reconnect storm; no duplicate nodes are created.
-- Two tabs of the same user → both connect; awareness dedupes by `userId+tabId` in the avatar stack.
-- Snapshot corrupt/undecodable on load → fall back to the previous snapshot, log, alert, and mark the
-  board for reprojection.
-- A user offline for 3 days reconnects with 400 local operations → merges cleanly; the test asserts
-  no data loss and bounded merge time (≤ 3 s).
+- Runner process crashes mid-run: run is marked `failed` with `RUNNER_CRASHED`, partial artifacts
+  already uploaded remain retrievable, no orphaned container (reaper sweep in `apps/runner`).
+- Worker is down: runs stay `running` (execution finished) but never reach `succeeded`/`parsing`
+  completes; a stale-run monitor flags anything in `parsing` for over 10 minutes.
+- A manifest declares a field type the UI can't render: registration fails at load time with the
+  exact field name and reason — never a blank form.
+- Two runs of the same integration/input started within the dedupe window (`input_hash`): the
+  second returns the first's run id with a "using a recent identical run" notice, unless the user
+  explicitly forces a re-run.
+- Consent token expires between dialog confirmation and click "Run": `POST /v1/runs` returns
+  `CONSENT_EXPIRED`, the dialog reopens pre-filled, no silent bypass.
+- `expand-url` target is already canonical (no redirect): proposal is empty, run reports
+  `succeeded` with `stats.itemsFound = 0`, not an error.
+- API token used from a project the caller was removed from: `403`, not a scope error message that
+  would leak the project's existence.
 
 ## 9 Security requirements
 
-- Board tokens: HMAC-signed, 5-minute TTL, single board scope, role embedded; the sync service never
-  queries permissions itself (single source: the API), and rejects unsigned/expired tokens with 4401.
-- Message size and rate limits per connection (100 msg/s, 10 MB/msg); violations disconnect.
-- Comment bodies are plain text, length-capped at 8,000 chars, sanitized on render, and mentions are
-  resolved server-side against actual project members (no arbitrary email injection).
-- Presence data exposes only display name and color — never emails.
-- The projection writer uses a dedicated DB role with no DDL rights.
+- API tokens: argon2id-hashed at rest, shown once, revocable, scoped, and a token can never exceed
+  its creating user's own permissions (evaluated per request, per `09_BACKEND.md` §4.1).
+- Sandbox: full container flag baseline (§6.3) verified by the hostile-image test suite named in
+  §13 point 4 (write to `/` fails, exec from `/work` fails, link-local metadata IP blocked, fork
+  bomb hits pid cap, 1 GiB alloc OOM-killed, 10 GiB stdout capped, secrets absent from `ps`).
+- Egress proxy: DNS-rebinding corpus shared with N7; TLS is never inspected (deliberate, §Open
+  risk 4 — documented, not "fixed" in this phase).
+- Secrets: injected into the container environment only, never logged, never present in
+  `run_log_entries` or `integration_runs.input` (redacted to `secretRef` names before storage).
+- Consent and audit exactly as §12.1/§12.4; every run start, cancel and proposal apply is audited.
+- `no-tool-names-in-core` and `no-child-process-in-api` are CI-enforced from this PR onward.
 
 ## 10 Performance requirements
 
-- Broadcast latency p95 ≤ 250 ms within a region (k6 `sync-fanout`, 200 clients / 20 boards).
-- Projection of a 5,000-node board ≤ 800 ms; incremental projection of a 50-node change ≤ 60 ms.
-- Sync pod holds ≥ 120 open rooms within a 2 GB limit (`19_DEPLOYMENT.md` §13).
-- Reconnect + resume for a 5,000-node board ≤ 1.5 s.
+- Queue latency: 50 concurrent runs, p95 enqueue-to-`starting` ≤ 5 s (k6 scenario named in §13.7).
+- Parse stage: a synthetic 5 MB `ParsedDocument` fixture extracts + maps + proposes in ≤ 500 ms in
+  `apps/worker` (bench, not a hard N-requirement, but regression-gated like N1's sibling budgets).
+- `expand-url` end-to-end (queue → builtin exec → propose) ≤ 2 s p95 with a mocked redirect target.
+- Runner container cold start ≤ 3 s (image already pulled); reported, not gated, in this phase.
 
 ## 11 Tests to write (named)
 
-- `apps/sync/test/auth.test.ts` (valid/expired/wrong-board/viewer tokens).
-- `apps/sync/test/projection.idempotent.test.ts` and `projection.replay.test.ts`.
-- `packages/domain/test/projection.diff.test.ts` (property: diff+apply == full projection).
-- `apps/sync/test/eviction.test.ts` (memory released, snapshot written).
-- `e2e/collab/two-tabs.spec.ts` (J8), `e2e/collab/concurrency-matrix.spec.ts` (5 cases from §5.13).
-- `e2e/persistence/offline-then-sync.spec.ts` (J7, extended to the server).
-- `e2e/collab/comments.spec.ts`, `e2e/collab/readonly.spec.ts` (J20 server-side).
-- `load/sync-fanout.js` (k6).
+- `packages/integrations/test/manifest.schema.test.ts` (valid/invalid manifests, including the
+  `expand-url` one; §13 point 1's five specific assertions).
+- `packages/integrations/test/pipeline.property.test.ts` (§13 point 3: extract → map → propose →
+  apply → undo returns the doc to a deep-equal prior state).
+- `apps/runner/test/sandbox.hostile.test.ts` — the seven assertions of §13 point 4, run against a
+  purpose-built `raven/test-hostile` image.
+- `apps/runner/test/egress-proxy.rebinding.test.ts` (§13 point 5, DNS-rebinding corpus).
+- `apps/worker/test/queue.integration-parse.test.ts` (happy, truncated, malformed fixtures per §13.2).
+- `apps/api/test/apiToken.test.ts` (create, scope intersection, revoke, expiry, argon2id hash at rest).
+- `apps/api/test/runs.router.test.ts` + `authz.matrix.test.ts` rows for every new procedure.
+- `apps/api/test/arch.no-child-process-worker.test.ts` (extends the existing arch test to
+  `apps/worker`/`apps/runner` boundaries).
+- `packages/config/test/no-tool-names-in-core.rule.test.ts`.
+- `e2e/integrations/expand-url-run.spec.ts` (configure → consent → run → proposal → accept → undo).
+- `e2e/integrations/consent-required.spec.ts`, `e2e/integrations/runner-down.spec.ts`.
+- `load/integration-queue.js` (k6, 50 concurrent runs).
 
 ## 12 Acceptance criteria (checkable)
 
-1. Two browsers on one board converge within 1 s for every operation type.
-2. Offline edits for 10 minutes sync without duplication or loss on reconnect.
-3. The Postgres projection matches the CRDT for a 5,000-node board (`db:verify` reports zero drift),
-   and `reproject` reproduces it exactly.
-4. A viewer's update is rejected server-side even with a tampered client.
-5. Killing a sync pod mid-edit loses nothing (clients resume on another pod).
-6. Presence cursors, follow mode and comments work with keyboard only.
-7. All `raven_sync_*` metrics from `19_DEPLOYMENT.md` §10.2 are emitted.
+1. Installing zero third-party tools, a user can still run `expand-url` on a pasted short URL,
+   review the proposal and accept it, producing one undo step.
+2. A manifest with a schema violation fails registration with a specific, actionable message and
+   never appears in the picker.
+3. A run started with a tampered/expired consent token is rejected server-side (`403`/`CONSENT_…`).
+4. Killing the runner mid-run marks the run `failed` with a specific code; no orphaned container;
+   restarting the runner drains the queue without duplicate runs.
+5. `apps/api` has zero `child_process` imports and zero tool-name identifiers (CI-enforced).
+6. An API token's effective permissions never exceed its creating user's; revoking it takes effect
+   on the next request.
+7. `expand-url` end-to-end run completes and matches the acceptance chain in requirement 12.
 
 ## 13 Definition of Done
 
-Acceptance criteria pass; runbooks `runbooks/projection.md`, `runbooks/sync.md`,
-`runbooks/sync-memory.md` written; alerts `SyncProjectionFailing`, `SyncBroadcastSlow`,
-`SyncMemoryHigh` configured; `09_BACKEND.md` §7 updated; tracker ticked.
+Acceptance criteria pass; `10_INTEGRATIONS.md` has no undocumented deviation (any taken is recorded
+in its own status note, mirroring how P6/P8 record theirs); `09_BACKEND.md` §4 matches the shipped
+token/REST implementation; authz matrix covers every new procedure; both trackers ticked.
 
 ## 14 What NOT to break
 
-N2 and the offline-first guarantee: the app must still fully work with the sync service down. Undo
-must remain local-origin-scoped (N3) — a remote change must never be undone by a local `⌘Z`. Do not
-move the source of truth to Postgres; the CRDT remains authoritative.
+N2: with `INTEGRATIONS_ENABLED` off (local mode default), the app has zero references to
+`apps/runner`/`apps/worker` reachability and no dead "Run integration" controls (localMode test).
+N4: nothing reaches the graph outside `applyProposal`/the Applier transaction. N5: no tool code path
+exists outside `apps/runner`. Existing capture (P6), sync (P8) and undo (P3/P4) behavior is
+untouched — this phase adds a new write path parallel to, not through, the existing board-mutation
+surfaces.
 
 ## 15 Documentation to update
 
-`09_BACKEND.md`, `08_DATA_MODEL.md` (projection tables), `03_UX.md` §11, `19_DEPLOYMENT.md` §13
-(measured memory), runbooks, tracker.
+`10_INTEGRATIONS.md` (mark shipped, note any deviation), `09_BACKEND.md` §4 (token/REST as built),
+`15_SECURITY.md` (sandbox baseline as shipped), `docs/adr/ADR-002-feature-flags.md` (`integrations`
+row), `docs/backend/BACKEND_STATUS.md` (tool runner row — currently stale, says "roadmap P7"),
+tracker.
+
+---
+
+# P10 — GitHub integration
+
+## 1 Objective
+
+Ship the first real, non-`builtin` integration on top of P9's pipeline: GitHub repository nodes,
+canonicalization of pasted GitHub URLs, README/releases/contributors/languages/license fetch, and
+the deterministic (non-LLM-authoritative) Repository Analysis Agent that produces a structured
+`RepositoryAnalysis` and an `ImportProposal` of related entities (contributors as `person` nodes,
+linked domains/homepages, related repos). No sandbox container is used — GitHub is HTTP-only
+(`11_GITHUB.md` §1 table), so this phase adds **no** new runner container image, only a manifest,
+an HTTP adapter and parsers.
+
+## 2 Context (what exists now)
+
+P9 shipped the manifest schema, `apps/runner` (container + `http` + `builtin` executors),
+`apps/worker`'s `integration.parse` queue, run history, scoped API tokens, the consent gate and one
+proof manifest (`expand-url`). This phase is the first to exercise the `http` executor kind and the
+first to exercise a manifest with `consent.required` beyond the trivial `builtin` case. `packages/domain/src/capture`
+(P6) already recognizes pasted URLs generically; this phase adds the GitHub-specific pure canonicalizer
+that the paste pipeline calls **before** falling back to a generic `link` node
+(`06_NODE_SYSTEM.md` §3 fallback kind), so a pasted `github.com/owner/repo` URL becomes a `repository`
+node candidate even before any run — the integration only enriches an already-created node.
+
+## 3 Existing architecture to respect
+
+- `11_GITHUB.md` — the primary reference, **all sections**; this phase implements it as written:
+  authentication modes (§2: unauthenticated / PAT / GitHub App), URL detection and canonicalization
+  (§3), the `Repository` node (§4), the Repository Analysis Agent (§5), the Integration Proposal
+  (§6), graph mapping (§7), rate limiting and budget accounting (§8), error copy and quota UX (§9),
+  job definitions (§10).
+- `10_INTEGRATIONS.md` §1 (R1–R7, especially R2: adding a tool touches only
+  `packages/integrations/github/*` + one registry line + an icon + this spec doc) and §4 (manifest
+  shape this integration's `manifest.ts` must satisfy).
+- `06_NODE_SYSTEM.md` §3 (node type registry, fallback-to-`link` rule for a removed integration).
+- `15_SECURITY.md` §6 (SSRF: `raw.githubusercontent.com` and API host allowlisted explicitly, no
+  redirect-following to arbitrary hosts), §4 (PAT storage — encrypted at rest, never logged).
+
+## 4 Files/modules affected
+
+```text
+packages/integrations/github/
+  manifest.ts, adapter.ts                 -- API client, canonicalizer, capability probe (§2.5)
+  parsers/{readme.ts,releases.ts,contributors.ts,languages.ts,license.ts,issues.ts}
+  analysis/{cloneless.ts,summarize.ts,scoring.ts}    -- Repository Analysis Agent, §5
+  mapper.ts                                -- node + relationship mapping, §7
+  fixtures/                                -- recorded raw API responses (parser golden tests)
+packages/domain/src/url/github.ts          -- pure canonicalizer, called from the paste pipeline (P6)
+apps/worker/src/queues/github.ts           -- job queue named in §10, separate from integration.parse
+apps/web/src/features/github/
+  RepositoryPanel.tsx, ContributorsList.tsx, ReleasesTab.tsx, AnalysisSummary.tsx,
+  TokenSettings.tsx                        -- PAT/App connection UI, §2
+packages/db/prisma/schema.prisma           -- github_connections (per-user token/App install ref)
+```
+
+## 5 Exact requirements (numbered, testable)
+
+1. Three auth modes exactly as §2: unauthenticated (default, budget read from rate-limit headers,
+   conservative fallback of 60 req/h/instance if headers are absent), user PAT (encrypted at rest,
+   scoped to `repo:read`/`public_repo` only, never logged), GitHub App (org-level, higher budget).
+   The active mode is per user per project; an org can pin one via project settings.
+2. URL detection/canonicalization exactly as §3: a pure, client-side function
+   (`packages/domain/src/url/github.ts`) recognizes repo/issue/PR/user/gist URLs, strips tracking
+   params, resolves default-branch-relative paths, and runs inside the P6 paste pipeline with the
+   same ≤ 1 ms budget as the other pure selectors it sits beside.
+3. `Repository` node exactly as §4: fields, sub-panels (README rendered sanitized markdown,
+   releases, contributors first page, languages bar, license badge, topics), refresh action that
+   re-runs the manifest for that node.
+4. Repository Analysis Agent exactly as §5: clone-less (API + raw file fetch only, no `git clone`
+   in `apps/runner`/`apps/worker` — GitHub needs no sandbox per §1's table), deterministic scoring,
+   producing a `RepositoryAnalysis` object with the fields §5 defines; LLM enrichment (if configured)
+   is additive and marked as such, never authoritative (14_AI_AGENT.md is out of scope, §15 below).
+5. Integration Proposal exactly as §6: contributors above a configurable threshold become `person`
+   node candidates, homepage/social links become `url`/`domain` candidates, related repos (from
+   "used by"/topics overlap) become `repository` candidates — every candidate carries full
+   provenance (P9 §3.1) with `tool: 'github'`.
+6. Graph mapping and dedupe exactly as §7: identity key is the canonical `owner/repo` (case-folded),
+   re-running an analysis updates the existing node rather than creating a duplicate.
+7. Rate limiting and budget accounting exactly as §8: the adapter self-throttles to the
+   header-reported budget, queues requests past the budget with a visible ETA rather than failing,
+   and the unauthenticated-mode shared-IP caveat is surfaced in the UI (§9).
+8. Error copy and quota UX exactly as §9 (canonical strings, not generic errors — N-requirement).
+9. Job definitions exactly as §10: `apps/worker` queue `github`, separate from P9's generic
+   `integration.parse` queue because GitHub jobs are I/O-bound network calls, not CPU-bound parsing.
+10. Manifest conforms to P9's schema; `packages/integrations/github` is the only place any
+    `github`-specific identifier may appear outside spec docs and UI icons (R1, enforced by P9's
+    `no-tool-names-in-core` rule — this phase must not need an exception).
+11. Removing `packages/integrations/github` entirely leaves the app compiling with existing
+    `repository` nodes degrading to the `link` fallback kind (§1, `06_NODE_SYSTEM.md` §3) — write
+    the test that proves this, do not just assert it in prose.
+
+## 6 UX requirements
+
+- Paste a GitHub URL: a `repository` node appears immediately (client-side canonicalization, no
+  network wait) in a "not yet analyzed" state; "Analyze" is one click away, not automatic (N4 —
+  analysis is a proposal, never automatic enrichment on paste).
+- Token settings: connect a PAT or GitHub App, see current budget/remaining/reset time live, a
+  "why unauthenticated mode is limited" explainer with a one-click path to connect.
+- Repository panel sub-tabs (README, releases, contributors, languages) each have their own
+  loading/empty/error state — a slow releases fetch must not block the README tab from rendering.
+- Analysis summary shows its deterministic score/fields first; any LLM-derived text is visually
+  distinct and labeled "AI summary — verify against the data above".
+- Proposal review reuses P9's `ProposalReview.tsx` — no GitHub-specific review UI fork.
+- Quota-exceeded state explains what to do (wait until reset, or connect a token) with the exact
+  reset time, never a bare 403.
+
+## 7 Technical requirements
+
+- Adapter uses `safeFetch`; only `api.github.com` and `raw.githubusercontent.com` are in the egress
+  allowlist for this manifest (P9 §6.4's per-manifest allowlist mechanism, not a global allowlist
+  change).
+- No `child_process`, no `git clone` — the analysis agent is clone-less by design (§5), matching
+  the "Nothing" row in `11_GITHUB.md` §1's execution-split table for `apps/runner`.
+- Parsers are pure functions over recorded fixtures (golden tests, P9 §13.2's convention), version-gated
+  per P9 §4.6 so a GitHub API shape change is absorbed by editing one parser module (R5).
+- PAT/App tokens encrypted at rest (same KMS/encryption story as any other secret in
+  `15_SECURITY.md` §4/§7 — reuse it, do not invent a second scheme).
+
+## 8 Edge cases
+
+- Repo renamed/transferred since the node was created: refresh follows GitHub's redirect once,
+  updates the canonical identity key, and records the rename in provenance (not a silent duplicate).
+- Repo deleted/made private after a node exists: refresh reports `REPO_UNAVAILABLE` with the exact
+  reason from the API response, node is marked stale, not deleted.
+- Unauthenticated shared budget exhausted mid-analysis: run goes `partial` with the exact fields
+  fetched so far, a clear "connect a token to finish this" affordance, not a failed run.
+- A gist or non-repo GitHub URL is pasted: canonicalizer recognizes it as a different, documented
+  entity kind (§3) rather than forcing it into the `repository` shape.
+- Contributor with a deleted/renamed GitHub account: proposal candidate uses the login snapshot at
+  fetch time with a note that the account may no longer resolve.
+- Rate-limit headers missing entirely (some GitHub Enterprise setups): adapter uses the documented
+  conservative fallback (60 req/h/instance) rather than assuming unlimited.
+
+## 9 Security requirements
+
+- SSRF: only the two documented hosts are reachable for this manifest; redirects off those hosts
+  are rejected, not followed (`15_SECURITY.md` §6, N7).
+- PATs are scoped to read-only (`repo:read`/`public_repo`), encrypted at rest, never included in
+  logs, run records or error messages (mirrors P9's secret-redaction rule for `integration_runs.input`).
+- Raw file fetches (`raw.githubusercontent.com`) enforce the same size cap and content-type sniffing
+  as any other file ingestion path (`15_SECURITY.md` §5).
+- Webhook-free in this phase: GitHub App installation does not register a webhook receiver yet (no
+  inbound endpoint to secure) — refresh is pull-only, explicitly out of scope (§15 below).
+
+## 10 Performance requirements
+
+- Canonicalization ≤ 1 ms (paste-pipeline budget, shared with P6's other selectors).
+- A full repository analysis (README + releases first page + contributors first page + languages)
+  completes ≤ 3 s p95 in authenticated mode, ≤ 6 s p95 unauthenticated (budget-limited, reported not
+  hard-gated).
+- Golden-fixture parser tests run in-process, no network, ≤ 50 ms each.
+
+## 11 Tests to write (named)
+
+- `packages/domain/test/url.github.test.ts` (valid repo/issue/PR/user/gist URLs, hostile inputs,
+  tracking-param stripping, default-branch resolution).
+- `packages/integrations/github/test/manifest.schema.test.ts` (conforms to P9's manifest schema).
+- `packages/integrations/github/test/parsers.golden.test.ts` (≥ 3 fixtures per parser: happy,
+  truncated, malformed, per P9's parser golden-test convention).
+- `packages/integrations/github/test/analysis.scoring.test.ts` (deterministic score reproducible
+  from a fixed fixture, no network, no LLM call).
+- `packages/integrations/github/test/mapper.dedupe.test.ts` (re-analysis updates, never duplicates).
+- `apps/worker/test/queue.github.test.ts`.
+- `e2e/integrations/github-paste-and-analyze.spec.ts`, `e2e/integrations/github-quota-exceeded.spec.ts`.
+- `e2e/integrations/github-remove-degrades-to-link.spec.ts` (requirement 11's test).
+
+## 12 Acceptance criteria (checkable)
+
+1. Pasting a GitHub repo URL creates a `repository` node with no network call, in an
+   "not yet analyzed" state.
+2. Clicking "Analyze" in unauthenticated mode returns README, releases, contributors and languages
+   within budget, or a clear `partial` state naming what was skipped and why.
+3. Connecting a PAT raises the effective budget and the UI reflects the new limit immediately.
+4. Re-running analysis on the same repo updates the existing node; no duplicate `repository` node
+   is ever created.
+5. Deleting `packages/integrations/github` and rebuilding leaves the app compiling, with existing
+   repository nodes rendering via the `link` fallback kind.
+6. Every contributor/related-repo/link candidate proposed carries full provenance naming `github`,
+   the run id and a confidence bucket.
+
+## 13 Definition of Done
+
+Acceptance criteria pass; `11_GITHUB.md` has no undocumented deviation; parser fixtures are
+committed raw tool output (not hand-written); coverage ≥ 85% on `packages/integrations/github`
+and the new `packages/domain/src/url/github.ts`; tracker ticked.
+
+## 14 What NOT to break
+
+R1 (no tool-specific code outside `packages/integrations/github`) and R2 (adding this tool touched
+only the files R2 promises) — a PR that touches `apps/api`/`apps/web/src/app`/`packages/canvas-engine`
+beyond icon registration must justify why in "What was intentionally not touched" per the roadmap's
+PR-body convention. P9's manifest schema, runner, worker queue infrastructure and consent gate are
+reused unmodified — this phase does not fork or extend the pipeline contracts.
+
+## 15 Documentation to update
+
+`11_GITHUB.md` (mark shipped, note any deviation), `10_INTEGRATIONS.md` (github as the reference
+example of a real, non-`builtin` manifest, if the example section references one), `15_SECURITY.md`
+(per-manifest egress allowlist as shipped), tracker. Out of scope for this phase's docs: webhook
+receiver (no inbound endpoint exists yet — first candidate for a later hardening pass, not
+re-litigated here), AI-driven analysis narrative (`14_AI_AGENT.md`, P13).
+
+---
+
+# P11 — Sherlock integration (scope stub)
+
+Full 15-section prompt not yet written; expand this stub when P11's turn comes. Canonical scope
+per `00_MASTER.md` §7 and `13_SHERLOCK.md` (already fully specified, ready to implement against):
+
+- Manifest + sandboxed container adapter for Sherlock, on top of P9's `apps/runner` container
+  executor (not the `http`/`builtin` path P10 used — Sherlock is untrusted third-party code, N5).
+- `username` node → run → `profile` nodes per site, with claimed/available/error semantics and a
+  version-gated, defensively-parsed JSON artifact contract (`13_SHERLOCK.md` §3).
+- Confidence derivation and dedupe against existing `person`/`profile` nodes (P9's identity-key and
+  merge machinery, reused, not forked).
+- Re-run diffing that feeds a watchlist (new/changed/disappeared sites since the last run).
+- Ethics/consent gating reusing P9's consent gate, with Sherlock-specific scope text.
+- Depends on: P9 (runner sandbox, manifest pipeline). Independent of P10.
+
+---
+
+# P12 — SpiderFoot integration (scope stub)
+
+Full 15-section prompt not yet written; expand this stub when P12's turn comes. Canonical scope
+per `00_MASTER.md` §7 and `12_SPIDERFOOT.md` (already fully specified):
+
+- `SpiderFootClient` adapter with a mandatory capability probe, supporting both a user-provided
+  instance and a Raven-managed container (two deployment models, `12_SPIDERFOOT.md` §2).
+- Scan configuration UX with a legal consent gate (reuses P9's consent gate, adds a scan-specific
+  scope/target confirmation step).
+- Event-type → Raven entity mapping with confidence and dedupe rules on top of P9's resolver.
+- Volume control so a scan emitting tens of thousands of events never floods the canvas (batched
+  proposals, capped per-review-page counts — new UI, not a P9 change).
+- The weekly canary run against a known fixture target (Open risk 1 in `10_INTEGRATIONS.md`,
+  explicitly deferred to this phase) to catch silent semantic drift in either tool.
+- Depends on: P9. Independent of P10/P11.
+
+---
+
+# P13 — AI layer (scope stub)
+
+Full 15-section prompt not yet written; expand this stub when P13's turn comes. Canonical scope per
+`00_MASTER.md` §7 and `14_AI_AGENT.md` (already fully specified — see its own Scope section for the
+exact dependency list: P3, P4, P7, P9):
+
+- Provider abstraction (`AIProvider` interface), model routing, cost accounting and the user-facing
+  AI activity log.
+- `AIProposal` write model — reuses P9's Proposal/Apply layer verbatim (`14_AI_AGENT.md` Scope:
+  "Out of scope: integration execution", i.e. this phase does not touch `apps/runner`).
+- The twelve shipped capabilities (summarize, explain, suggest links, dedupe, cluster, investigation
+  summary, etc.) each as trigger → context → prompt → schema → validation → UX.
+- Retrieval: embeddings, chunking, pgvector (already reserved in `00_MASTER.md` §2's database row),
+  hybrid search on top of P7's FTS.
+- Guardrails: prompt-injection, hallucination, PII handling, retention limits.
+- Depends on: P3, P4, P7, P9. Ships no execution sandbox of its own — it is a proposer, like every
+  integration, never a direct writer (N4).
+
+---
+
+# P14 — Views (scope stub)
+
+Full 15-section prompt not yet written; expand this stub when P14's turn comes. Canonical scope per
+`00_MASTER.md` §7 and `03_UX.md` §16 (view modes already specified) and the `?view=` route param
+already reserved in `03_UX.md` §2:
+
+- Graph (force-directed), timeline (chronology by `observed_at`, already speced in `03_UX.md` §16),
+  table, list and map view modes as canvas-area replacements, sharing the same underlying node/edge
+  selection and the existing keyboard map (`Ctrl+Alt+1..6`, already reserved in `03_UX.md` §15).
+- Auto-layout suite (the structure-is-earned-not-demanded principle, `00_MASTER.md` §3.3): a
+  reversible, previewable layout pass per view, never applied without an explicit accept (same
+  Proposal discipline, though this is a layout diff, not new nodes).
+- View state (which view, per board) is UI state, not document state (N2's "Zustand for ephemeral
+  UI state only" rule) — must not enter the CRDT.
+- Depends on: P2 (canvas engine), P4/P5 (nodes/edges) — no dependency on P9-P13.
+
+---
+
+# P15 — Groups, presentation & export (scope stub)
+
+Full 15-section prompt not yet written; expand this stub when P15's turn comes. Canonical scope per
+`00_MASTER.md` §7; the groups/tags projection surface is already reserved (P8's status note: the
+richer `08_DATA_MODEL.md` §5 projection — `groups`/`node_tags`/`entity_resolutions`/`history_events`
+— was explicitly deferred here, not implemented in P8):
+
+- Node/edge groups (visual + semantic clustering) with their own Postgres projection tables, filling
+  the gap P8 deliberately left open.
+- Presentation mode: a scripted, ordered walkthrough of board regions for handing off an
+  investigation, reusing P7's boards/templates machinery.
+- Report export (formats extend P7's board-export baseline; §12 acceptance criterion 3 of P7 already
+  requires templates to "create working boards" that this phase's export must round-trip, N9).
+- Archives: cold-storage export of a full project (boards + files + run history) for offline retention.
+- Depends on: P7 (boards/templates), P8 (projection pattern to extend), P4/P5 (node/edge model).
+
+---
+
+# P16 — Hardening (scope stub)
+
+Full 15-section prompt not yet written; expand this stub when P16's turn comes. Canonical scope per
+`00_MASTER.md` §7 — the closing phase, gated by `00_MASTER.md` §8's quality gate applied
+retroactively across everything shipped P1–P15:
+
+- Performance pass: re-run every phase's `bench`/k6 numbers together at realistic combined load
+  (N1's 5,000/10,000 budget under sync + integrations + AI concurrently, not each in isolation).
+- Security audit: closes the Open risks recorded across `10_INTEGRATIONS.md`, `12_SPIDERFOOT.md`,
+  `15_SECURITY.md` (e.g. the fuzzy-dedupe-threshold-as-org-setting item, the run `coverage` field
+  for partial Sherlock/SpiderFoot runs — both explicitly flagged as P16 follow-ups in
+  `10_INTEGRATIONS.md`'s Open risks 5 and 6).
+- Accessibility audit: axe-core + manual checklist across every surface shipped since P1 (N6).
+- Observability: the `raven_sync_*`/`raven_runner_*`/`raven_worker_*` metrics families unified into
+  one dashboard set; alerting reviewed end-to-end, not per-phase.
+- GA readiness checklist and sign-off against every N1–N10 non-negotiable, evidenced, not asserted.
+- Depends on: everything (P1–P15). This is intentionally the only phase allowed to touch code across
+  every package without being "two phases at once" (`00_MASTER.md` §10.2) — it is explicitly the
+  cross-cutting closing phase.
 
 ---
 
@@ -604,7 +1023,7 @@ Source requirement: `prompts/PROMPT_4_MALTEGO_ECOSYSTEM_RU.md`. Design:
 `RAVEN-SPEC/21_TRANSFORM_SYSTEM.md`. Research: `docs/ecosystem/`.
 
 This layer is numbered separately from P1–P16 because it runs **in parallel** with them: L4.1–L4.3
-need no runtime and no UI, while L4.4 onward depend on the integration runtime (P10) and the canvas
+need no runtime and no UI, while L4.4 onward depend on the integration runtime (P9) and the canvas
 UI. Nothing here changes a phase that is already done.
 
 | Phase    | Content                                                                                                                                                                                           | Depends on          |
@@ -612,7 +1031,7 @@ UI. Nothing here changes a phase that is already done.
 | **L4.1** | Ecosystem audit, provider catalogue, transform catalogue, this spec, `packages/transforms` foundation: manifests, registries, capability router, modes, scoring, expand planner, seeded catalogue | —                   |
 | **L4.2** | Transform SDK surface for third parties and the conformance test harness — **shipped** (PR #20), see the ledger                                                                                   | L4.1, 17_PLUGIN_SDK |
 | ~~L4.3~~ | Run history, replay, run comparison and the result cache with TTL and age labelling — **shipped** (PR #21), see the ledger                                                                        | L4.1, P3            |
-| L4.4     | Execution integration: engines become Runner jobs, streaming partial results, cancellation, budgets enforced at run time                                                                          | P10                 |
+| L4.4     | Execution integration: engines become Runner jobs, streaming partial results, cancellation, budgets enforced at run time                                                                          | P9                  |
 | L4.5     | Canvas UX: contextual menu, hover chips, Expand with preview, result clusters, density control, data-flow disclosure                                                                              | L4.4, P4/P5         |
 | L4.6     | Provider vault, provider settings UI, ecosystem health check (stale `lastVerified`, dead endpoints, deprecations)                                                                                 | L4.4, P9            |
 | L4.7     | Agent-driven transform planning under budgets, plan explanation, smart chaining                                                                                                                   | L4.4, 14_AI_AGENT   |
