@@ -217,7 +217,10 @@ export const boardRouter = router({
     .mutation(async ({ ctx, input }) => {
       const board = await requireBoard(input.boardId, ctx.org.id);
       // Soft delete: the row is purged by the maintenance job after the undo window.
-      await prisma.board.update({ where: { id: board.id }, data: { deletedAt: systemClock.now() } });
+      await prisma.board.update({
+        where: { id: board.id },
+        data: { deletedAt: systemClock.now() },
+      });
       await audit(
         {
           action: 'board.deleted',

@@ -121,9 +121,9 @@ describe('board.rename', () => {
 
   it('throws NOT_FOUND for a board in another org', async () => {
     prismaMock.board.findFirst.mockResolvedValue(null);
-    await expect(
-      caller(ctx()).board.rename({ boardId: BOARD_ID, title: 'x' }),
-    ).rejects.toThrow(/no longer exists/i);
+    await expect(caller(ctx()).board.rename({ boardId: BOARD_ID, title: 'x' })).rejects.toThrow(
+      /no longer exists/i,
+    );
   });
 
   it('denies a viewer', async () => {
@@ -222,7 +222,9 @@ describe('board.saveAsTemplate', () => {
     prismaMock.board.findFirst.mockResolvedValue(board);
     prismaMock.board.update.mockResolvedValue({ ...board, isTemplate: true });
 
-    const result = await caller(ctx({ role: 'editor' })).board.saveAsTemplate({ boardId: BOARD_ID });
+    const result = await caller(ctx({ role: 'editor' })).board.saveAsTemplate({
+      boardId: BOARD_ID,
+    });
     expect(result.isTemplate).toBe(true);
   });
 });
