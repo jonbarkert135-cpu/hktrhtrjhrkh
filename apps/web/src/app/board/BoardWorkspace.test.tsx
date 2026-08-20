@@ -141,6 +141,21 @@ describe('<BoardWorkspace>', () => {
     await waitFor(() => expect(screen.getByText(/Version restored/)).toBeInTheDocument());
   });
 
+  it('tracks the pointer over the board so a paste/drop can re-aim at it', async () => {
+    const { container } = view();
+    await waitFor(() => expect(screen.getByTestId('sync-status')).toBeInTheDocument());
+
+    const main = container.querySelector('.nx-board-main');
+    expect(main).not.toBeNull();
+    fireEvent.pointerMove(main as Element, { clientX: 123, clientY: 45 });
+    // No engine in this render, so `aim()` falls back to the origin — the assertion here is just
+    // that tracking the pointer over the board doesn't throw, and note creation still works after.
+    fireEvent.click(screen.getByTestId('add-note'));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Undo: create 1 node/ })).toBeEnabled(),
+    );
+  });
+
   it('applies a snapshot update onto the live document', () => {
     const doc = createBoardDoc({ boardId: 'b_apply', now: NOW });
     addNode(doc, makeNode({ id: 'n1', x: 0, y: 0 }, NOW), { origin: 'local:create', now: NOW });
