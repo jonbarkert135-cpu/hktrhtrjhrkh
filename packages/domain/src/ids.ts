@@ -14,6 +14,8 @@ export const ID_KINDS = [
   'board',
   'file',
   'audit',
+  'comment',
+  'boardToken',
 ] as const;
 
 export type IdKind = (typeof ID_KINDS)[number];
@@ -32,6 +34,8 @@ export type ProjectId = Id<'project'>;
 export type BoardId = Id<'board'>;
 export type FileId = Id<'file'>;
 export type AuditId = Id<'audit'>;
+export type CommentId = Id<'comment'>;
+export type BoardTokenId = Id<'boardToken'>;
 
 // cuid2's own `isCuid` accepts any 2–32 char lowercase token ('nope' passes), which is useless as a
 // trust-boundary check. We generate ids at the default length, so we validate that exact shape.
@@ -78,4 +82,6 @@ export const newId = {
   board: factory('board'),
   file: factory('file'),
   audit: factory('audit'),
+  comment: factory('comment'),
+  boardToken: factory('boardToken'),
 } as const;

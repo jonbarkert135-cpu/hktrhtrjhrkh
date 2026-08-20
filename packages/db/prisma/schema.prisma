@@ -146,23 +146,140 @@ model Project {
 }
 
 model Board {
-  id            String    @id
-  orgId         String    @map("org_id")
-  projectId     String    @map("project_id")
-  title         String    @db.VarChar(300)
-  description   String?   @db.VarChar(2000)
-  schemaVersion Int       @default(1) @map("schema_version")
-  lastEditedAt  DateTime? @map("last_edited_at")
-  deletedAt     DateTime? @map("deleted_at")
-  createdBy     String    @map("created_by")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  id               String    @id
+  orgId            String    @map("org_id")
+  projectId        String    @map("project_id")
+  title            String    @db.VarChar(300)
+  description      String?   @db.VarChar(2000)
+  schemaVersion    Int       @default(1) @map("schema_version")
+  lastEditedAt     DateTime? @map("last_edited_at")
+  /// P8 5.4/5.7: bumped by the projector on every successful projection; a board whose
+  /// lastProjectedAt falls far behind lastEditedAt is flagged stale in the admin view.
+  lastProjectedAt  DateTime? @map("last_projected_at")
+  projectionFailed Boolean   @default(false) @map("projection_failed")
+  deletedAt        DateTime? @map("deleted_at")
+  createdBy        String    @map("created_by")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  nodes     BoardProjectionNode[]
+  edges     BoardProjectionEdge[]
+  snapshots BoardSnapshot[]
+  comments  Comment[]
+  presence  PresenceLogEntry[]
 
   @@index([projectId, deletedAt])
   @@index([orgId, lastEditedAt(sort: Desc)])
   @@map("boards")
+}
+
+/// The queryable projection of one board's Y.Doc `nodes` map (08_DATA_MODEL.md 5, P8 3).
+/// Written only by the sync-service projector, never by application code
+/// (`no-direct-projection-write`); the CRDT snapshot below remains authoritative.
+model BoardProjectionNode {
+  id           String    @id
+  boardId      String    @map("board_id")
+  type         String    @db.VarChar(64)
+  title        String    @db.VarChar(500)
+  x            Float
+  y            Float
+  tags         String[]
+  status       String    @db.VarChar(16)
+  data         Json      @default("{}")
+  /// Copied from the doc entry; guards out-of-order projection writes (08 5.3).
+  version      Int
+  docUpdatedAt DateTime  @map("doc_updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([boardId, deletedAt])
+  @@map("nodes")
+}
+
+/// The queryable projection of one board's Y.Doc `edges` map.
+model BoardProjectionEdge {
+  id           String    @id
+  boardId      String    @map("board_id")
+  type         String    @db.VarChar(64)
+  sourceNodeId String    @map("source_node_id")
+  targetNodeId String    @map("target_node_id")
+  status       String    @db.VarChar(16)
+  data         Json      @default("{}")
+  version      Int
+  docUpdatedAt DateTime  @map("doc_updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([boardId, deletedAt])
+  @@index([boardId, sourceNodeId])
+  @@index([boardId, targetNodeId])
+  @@map("edges")
+}
+
+/// The CRDT's durable bytes (P8 7 / 00_MASTER.md 2.2). The binary is authoritative; the
+/// projection rows above are disposable and rebuilt from this by `scripts/reproject.ts`.
+model BoardSnapshot {
+  id          String   @id
+  boardId     String   @map("board_id")
+  seq         Int
+  binary      Bytes
+  stateVector Bytes    @map("state_vector")
+  /// 'current' is overwritten every store cycle; 'daily' is retained per P8 7 (last 10 + 30 days).
+  kind        String   @default("current") @db.VarChar(16)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@unique([boardId, seq])
+  @@index([boardId, kind, createdAt(sort: Desc)])
+  @@map("board_snapshots")
+}
+
+/// Comment threads (P8 5.10): stored in Postgres, not the CRDT, because they need server-side
+/// notification and permission queries. The doc only holds the anchor id (`comments` Y.Map),
+/// so a pin moves with its node without a round trip here.
+model Comment {
+  id         String    @id
+  boardId    String    @map("board_id")
+  /// Thread replies point at the thread's head comment; null for the head itself.
+  parentId   String?   @map("parent_id")
+  /// `{ kind: 'node', nodeId }` or `{ kind: 'point', x, y }` (P8 5.10).
+  anchor     Json
+  body       String    @db.VarChar(8000)
+  authorId   String    @map("author_id")
+  resolvedAt DateTime? @map("resolved_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  board   Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies Comment[] @relation("CommentReplies")
+
+  @@index([boardId, resolvedAt])
+  @@index([parentId])
+  @@map("comments")
+}
+
+/// Append-only connect/leave events (P8 5.1/5.12) - presence itself is awareness, never
+/// persisted; this is the audit trail eviction and admin tooling read.
+model PresenceLogEntry {
+  id      String   @id
+  boardId String   @map("board_id")
+  userId  String   @map("user_id")
+  event   String   @db.VarChar(16) // 'join' | 'leave'
+  at      DateTime @default(now())
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([boardId, at(sort: Desc)])
+  @@map("presence_log")
 }
 
 /// Append-only. There is no update or delete path in application code (15_SECURITY.md C-42).

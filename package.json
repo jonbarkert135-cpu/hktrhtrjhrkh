@@ -15,6 +15,7 @@
     "db:migrate": "pnpm --filter @nexus/db exec prisma migrate deploy",
     "db:push": "pnpm --filter @nexus/db exec prisma db push",
     "db:seed": "pnpm --filter @nexus/db run seed",
+    "db:reproject": "pnpm --filter @nexus/db exec tsx ../../scripts/reproject.ts",
     "bench": "pnpm --filter @nexus/bench exec tsx ../bench/harness.ts",
     "e2e": "playwright test -c e2e/playwright.config.ts",
     "check:gates": "node scripts/check-no-todo.mjs && node scripts/check-skips.mjs && node scripts/check-bundle-secrets.mjs && node scripts/check-migration-safety.mjs && node scripts/check-runtime-sources.mjs",
