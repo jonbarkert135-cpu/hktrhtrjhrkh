@@ -508,6 +508,27 @@ model Board {
 }
 ```
 
+#### 4.4a Implementation status (P7, `phase/p07-projects-search`)
+
+The shipped `Project`/`Board` Prisma models (`packages/db/prisma/schema.prisma`,
+migration `0003_project_board_management`) are narrower than §4.3/§4.4 above:
+
+- `Project` gained `icon String? @db.VarChar(32)` (color already existed). **Not shipped**:
+  `key`, `ProjectMember`/`ProjectRole` — no project-scoped membership model exists; project
+  operations authorize on the existing org-level `Membership` (§3.1 of `09_BACKEND.md`) until P9.
+- `Board` gained `icon`, `templateOf String? @map("template_of")`, `isTemplate Boolean @default(false)`,
+  `archivedAt`, `lastOpenedAt`, `nodeCount Int @default(0)`, `edgeCount Int @default(0)`, plus
+  `@@index([projectId, archivedAt, lastOpenedAt(sort: Desc)])` for the board grid's default sort.
+  `nodeCount`/`edgeCount` are reported by the client on save and clamped to `≥ 0` server-side
+  (`board.reportCounts`), exactly as §5.1 of the P7 roadmap phase describes "until the projection
+  lands" — **not** yet driven by the `Node`/`Edge` projection tables below, which P8 populates.
+  **Not shipped**: `schemaVersion`, `lastEditedAt`/`lastEditedBy`, `projectionSeq`, `thumbnailFileId`
+  (no `apps/worker` to generate a thumbnail) — these arrive with P8's sync/projection work.
+- The `nodes_fts`/`nodes_title_trgm`/`edges_*` search indexes in §4.5/§4.6 below are exactly the
+  server search columns P7 §6/§7 (`20_ROADMAP.md`) would need — they are correctly **not yet
+  created** because the `Node`/`Edge` projection tables themselves do not exist until P8. P7 ships
+  a local-only search index instead (`09_BACKEND.md` §6a).
+
 ### 4.5 Node (projection)
 
 ```prisma

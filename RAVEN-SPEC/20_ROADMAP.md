@@ -82,22 +82,25 @@ This file carries prompts for **remaining** work only. The implementation prompt
 were deleted once shipped — they are in git history, and the binding description of what exists is
 the area spec plus the code. Read `AGENTS.md` first.
 
-| Phase              | PRs                | Where it lives now                                                                                                               | Spec                               |
-| ------------------ | ------------------ | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| P1 Foundation      | #2                 | monorepo, tokens, app shell, CI, bench harness                                                                                   | `00_MASTER.md`, `19_DEPLOYMENT.md` |
-| P2 Canvas engine   | #3                 | `packages/canvas-engine` (camera, spatial index, FSM, renderer)                                                                  | `05_CANVAS_ENGINE.md`              |
-| P3 Document        | #4, #5             | `packages/domain` (board doc, patches, undo, autosave), `apps/web/src/data`                                                      | `08_DATA_MODEL.md`                 |
-| P4 Node system     | #6, #7, #8         | `packages/domain/src/nodes`, `apps/web/src/nodes` (9 types, inspector, hosts)                                                    | `06_NODE_SYSTEM.md`                |
-| P5 Edge system     | #11, #12, #17, #23 | edge taxonomy, 4 routing modes + cache, ports, selection, relationship UI, waypoints, flow animation, bundling                   | `07_EDGE_SYSTEM.md`                |
-| Local-first        | #9, #10, #13, #14  | `APP_MODE=local`, `WorkspaceRepository`, local persistence, first-run seed                                                       | `docs/adr/ADR-001-local-first.md`  |
-| L4.1 Transforms    | #15                | `packages/transforms` (manifests, registries, router, modes, scores, planner, catalogue)                                         | `21_TRANSFORM_SYSTEM.md`           |
-| L4.2 Transform SDK | #20                | `packages/transforms/src/sdk` (engine contract, `runEngine` host, testkit, conformance harness, `doh-resolver` reference engine) | `21_TRANSFORM_SYSTEM.md` §12a      |
-| L4.3 Run history   | #21                | `packages/transforms/src/history.ts`, `src/cache.ts` (history, replay, compare, TTL cache)                                       | `21_TRANSFORM_SYSTEM.md` §10       |
-| Layer-2 docs       | #16                | `22_ECOSYSTEM_AUDIT.md`, `23_COMPETITOR_MATRIX.md`, `24_UNIFIED_QUERY.md` (design only)                                          | those documents                    |
-| P6 Capture         | #22                | `packages/domain/src/{capture,net}`, `apps/web/src/capture`, `apps/api/.../unfurl.ts` — §5.12/§5.14 still open                   | `09_BACKEND.md`, `15_SECURITY.md`  |
-| Agent memory       | #18                | `AGENTS.md`, `.mcp.json`                                                                                                         | —                                  |
+| Phase                | PRs                       | Where it lives now                                                                                                                                          | Spec                               |
+| -------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| P1 Foundation        | #2                        | monorepo, tokens, app shell, CI, bench harness                                                                                                              | `00_MASTER.md`, `19_DEPLOYMENT.md` |
+| P2 Canvas engine     | #3                        | `packages/canvas-engine` (camera, spatial index, FSM, renderer)                                                                                             | `05_CANVAS_ENGINE.md`              |
+| P3 Document          | #4, #5                    | `packages/domain` (board doc, patches, undo, autosave), `apps/web/src/data`                                                                                 | `08_DATA_MODEL.md`                 |
+| P4 Node system       | #6, #7, #8                | `packages/domain/src/nodes`, `apps/web/src/nodes` (9 types, inspector, hosts)                                                                               | `06_NODE_SYSTEM.md`                |
+| P5 Edge system       | #11, #12, #17, #23        | edge taxonomy, 4 routing modes + cache, ports, selection, relationship UI, waypoints, flow animation, bundling                                              | `07_EDGE_SYSTEM.md`                |
+| Local-first          | #9, #10, #13, #14         | `APP_MODE=local`, `WorkspaceRepository`, local persistence, first-run seed                                                                                  | `docs/adr/ADR-001-local-first.md`  |
+| L4.1 Transforms      | #15                       | `packages/transforms` (manifests, registries, router, modes, scores, planner, catalogue)                                                                    | `21_TRANSFORM_SYSTEM.md`           |
+| L4.2 Transform SDK   | #20                       | `packages/transforms/src/sdk` (engine contract, `runEngine` host, testkit, conformance harness, `doh-resolver` reference engine)                            | `21_TRANSFORM_SYSTEM.md` §12a      |
+| L4.3 Run history     | #21                       | `packages/transforms/src/history.ts`, `src/cache.ts` (history, replay, compare, TTL cache)                                                                  | `21_TRANSFORM_SYSTEM.md` §10       |
+| Layer-2 docs         | #16                       | `22_ECOSYSTEM_AUDIT.md`, `23_COMPETITOR_MATRIX.md`, `24_UNIFIED_QUERY.md` (design only)                                                                     | those documents                    |
+| P6 Capture           | #22                       | `packages/domain/src/{capture,net}`, `apps/web/src/capture`, `apps/api/.../unfurl.ts` — §5.12/§5.14 still open                                              | `09_BACKEND.md`, `15_SECURITY.md`  |
+| P7 Projects & search | phase/p07-projects-search | `packages/domain/src/{search,templates}`, `apps/api/.../{project,board}.ts`, `apps/web/src/{projects,app/commands,search}` — §6/§2 (partial)/§11 still open | `09_BACKEND.md`, `03_UX.md` §8–9   |
+| Agent memory         | #18                       | `AGENTS.md`, `.mcp.json`                                                                                                                                    | —                                  |
 
-Open phases in this file: **P7**, **P8**, **P17**, **L4.4–L4.7**, plus the two deferred P6 items. P9–P16 have
+Open phases in this file: **P8**, **P17**, **L4.4–L4.7**, plus the two deferred P6 items and the
+remaining P7 items (§6 global search, §2 member management, §11 thumbnails, §3 move-board picker,
+§10 virtualization, §14 UI disclosure). P9–P16 have
 no prompt yet; write one in this format when their turn comes.
 
 ---
@@ -119,9 +122,9 @@ no prompt yet; write one in this format when their turn comes.
 ## Remaining requirements (the only P6 work left)
 
 12. Browser-extension hook: `POST /api/v1/capture` accepting `{ url, title?, selection?, imageUrl?,
-    boardId? }` authenticated by a scoped API token; it creates a node in the target board's inbox
+boardId? }` authenticated by a scoped API token; it creates a node in the target board's inbox
     area (a reserved region 2,000 px left of the origin) and returns the node id. Rate limit 60/min.
-14. Screenshot capture of a website node behind the `capture.screenshot` feature flag (off by
+13. Screenshot capture of a website node behind the `capture.screenshot` feature flag (off by
     default); when off the UI does not offer it (no dead controls).
 
 Do both together with the phase that brings scoped API tokens and `apps/worker`. Everything else
@@ -133,161 +136,56 @@ from the original P6 prompt is shipped in PR #22 — read `packages/domain/src/{
 
 # P7 — Projects & search
 
-## 1 Objective
+**Status: mostly shipped. Still open, and why:**
 
-Ship multi-project organization (orgs → projects → boards), board management (create, rename,
-duplicate, archive, delete, templates), global search across boards with Postgres FTS + `pg_trgm`,
-and the `⌘/Ctrl+K` command palette that exposes every action in the product.
+- §6 global search (Postgres FTS + `pg_trgm`, `websearch_to_tsquery`, `ts_headline`, permission-
+  scoped) — the roadmap's own §2 context note says the projection this needs (`nodes`/`edges` in
+  Postgres) does not exist yet and is P8's job (the sync service owns the projection). This phase
+  ships the **local-only** search path only, exactly as §2 scoped it, and defers §6/§7's
+  server-merge half to P8.
+- §2 project member management (invite by email, per-project roles, remove) — no project-scoped
+  membership model exists (only the org-level `Membership` role, `09_BACKEND.md` §3.1), and invites
+  need a mailer that is not built. Reuses the org role for authorization today; a project-scoped
+  membership model belongs with the auth/backend phase (P9) that can add the mailer and the invite
+  token model together.
+- §11 worker-generated thumbnails (refreshed every ≤10 min) — needs `apps/worker`, which does not
+  exist (same gap P6 §5.14 hit). The grid shows a deterministic per-board placeholder instead of a
+  stub or a dead control.
+- §3 "move board to another project" has no picker UI yet; `WorkspaceRepository.moveBoard` and the
+  `board.move` procedure are shipped and tested, just not wired to a menu control.
+- §10 perf requirement (board grid virtualized above 60 cards, k6 `search` scenario @ 1M nodes) —
+  the grid pages in slices of 60 ("Show more") rather than a virtualization library; the k6 scenario
+  has no server search to test yet (see the first bullet). e2e journeys J15/J16/J20 and
+  `a11y/palette-keyboard.spec.ts` were not run in the implementing sandbox (no seeded Postgres, no
+  confirmed Playwright browser binaries) — write these before merging into a environment that has
+  both.
+- P7 §14's undo-semantics disclosure ("board metadata operations are not in the CRDT undo stack;
+  state this explicitly in the UI") is not yet surfaced anywhere in the UI copy.
 
-## 2 Context (what exists now)
+## Remaining requirements (the only P7 work left)
 
-P1 created `organizations`, `projects`, `boards` tables and a palette stub. P3–P6 fill boards with
-content stored primarily in the CRDT; the Postgres `nodes`/`edges` projection does not exist yet —
-this phase introduces a **local-only** search index path and defers the server projection to P8,
-where the sync service owns it.
+- **§6** Global search (server): Postgres FTS + `pg_trgm`, permission-filtered, merged into local
+  results with a "N more from other boards" divider. Do this with P8, once the projection exists.
+- **§2** Project member management: invite by email, per-project roles, remove — do this with P9
+  (backend/auth), which is what gives an invite flow a mailer and a place to verify tokens.
+- **§11** Worker-generated board thumbnails, refreshed on a snapshot cadence — do this once
+  `apps/worker` exists (same dependency as P6 §5.14/§5.12).
+- **§3** "Move to another project" picker UI on top of the already-shipped `moveBoard` procedure.
+- **§10** Board-grid virtualization above 60 cards (a real virtualization library, not
+  page-slicing) once boards-per-project counts in the thousands are a realistic target.
+- **§14** The "operations on board metadata are not undoable with Ctrl/Cmd+Z" disclosure in the UI
+  (rename/archive/delete dialogs), plus the deferred e2e journeys (J15/J16/J20,
+  `palette-keyboard.spec.ts`).
 
-## 3 Existing architecture to respect
-
-- `00_MASTER.md` §2 (Postgres FTS + pg_trgm now; pgvector later in P11/P13), §2 "Yjs as the
-  document, Postgres as the projection".
-- `09_BACKEND.md` §3 (projects/boards API), §6 (search), `08_DATA_MODEL.md` §5 (indexes).
-- `03_UX.md` §8 (command palette rules), §9 (search UX).
-- `18_TESTING.md` §11.3 (authz matrix — every new procedure must be added).
-
-## 4 Files/modules affected
-
-```text
-packages/db/prisma/schema.prisma            projects, boards, board_members, search columns
-apps/api/src/trpc/routers/{project.ts,board.ts,search.ts}
-apps/api/src/search/{query.ts,rank.ts}
-apps/web/src/projects/{ProjectList.tsx,ProjectSwitcher.tsx,BoardGrid.tsx,BoardCard.tsx}
-apps/web/src/search/{GlobalSearch.tsx,useLocalSearch.ts,results.ts}
-apps/web/src/palette/{CommandPalette.tsx,registry.ts,commands/*.ts}
-packages/domain/src/search/{localIndex.ts,tokenize.ts,score.ts}
-```
-
-## 5 Exact requirements (numbered, testable)
-
-1. Data model: `organizations 1—* projects 1—* boards`; `board` has `title`, `icon`, `archivedAt`,
-   `templateOf?`, `lastOpenedAt`, `nodeCount`, `edgeCount` (denormalized counters updated by the
-   projection in P8; until then updated on save from the client with a server-side sanity clamp).
-2. Project operations: create, rename, set color/icon, archive, delete (soft, 30-day purge),
-   member management (invite by email, role assignment, remove) — all audited.
-3. Board operations: create (blank or from template), rename, duplicate (deep copy of doc + files),
-   move to another project, archive, delete, export (P15 extends formats).
-4. Templates: three built-ins shipped as JSON board exports — "Investigation starter" (person +
-   accounts + evidence scaffold), "Repository review", "Blank with legend". Templates are ordinary
-   boards flagged `isTemplate`, so users can save any board as a template.
-5. Local search (works offline): an in-memory inverted index built from the open board's node
-   `searchText()` (P4), incremental on doc changes, supporting prefix and fuzzy (Levenshtein ≤ 1
-   for terms ≥ 4 chars) matching, returning ranked results in ≤ 30 ms for 5,000 nodes.
-6. Global search (server): Postgres FTS over the projection with `websearch_to_tsquery`, plus
-   `pg_trgm` similarity for names/titles; filters by project, board, node type, tag, date range,
-   provenance source/tool; results are permission-filtered by the caller's memberships.
-7. Search UX: a single input; results grouped by board; each result shows node type, title, a
-   highlighted snippet (server-side `ts_headline` or client-side highlighting), board and project;
-   `Enter` opens the board and animates the camera to the node with a 1.2 s highlight pulse.
-8. Command palette: fuzzy over a registry of commands with `id`, `title`, `group`, `keywords`,
-   `shortcut?`, `when(context)`, `run(context)`. Every user-facing action in the app registers here
-   — a test asserts that each menu item has a corresponding command.
-9. Palette modes: default (commands), `>` (commands only), `#` (tags), `@` (nodes on this board),
-   `/` (boards and projects), `?` (help topics). Recent commands rank first (stored per user, local).
-10. Keyboard: `⌘/Ctrl+K` palette, `⌘/Ctrl+P` board switcher, `/` focuses search, `Esc` closes;
-    all with full arrow-key navigation and screen-reader announcements of the result count.
-11. Board list surfaces: grid with thumbnails (generated by the worker from the board snapshot at
-    most every 10 min), sorted by last opened; filters for archived and templates.
-12. Permissions: viewers cannot create/rename/delete anything; every mutating control is disabled
-    with a tooltip explaining why (N-requirement for honest UI, J20).
-
-## 6 UX requirements
-
-- Project switcher in the top-left: current project, search field, recent projects, "New project".
-- Board grid cards: thumbnail, title, node/edge count, last opened, a menu (rename, duplicate,
-  move, archive, export, delete). Destructive items are separated and require typed confirmation
-  for delete ("type the board name").
-- Empty states: no projects, no boards, no search results (with suggestions: check filters, try a
-  different term), and archived-only view.
-- Search feels instant: local results render in the same frame as typing; server results merge in
-  with a subtle "N more from other boards" divider, never reordering what the user is already
-  reading (append below).
-- Palette shows the shortcut for each command and a "no results" state that offers the closest
-  matches by edit distance.
-- Loading: skeleton cards for the board grid; a shimmer-free spinner for server search after 300 ms.
-
-## 7 Technical requirements
-
-- Local index lives in the web app, rebuilt incrementally from Y.Doc observers; it must not block
-  the main thread for more than 4 ms per update batch (chunk if larger).
-- Server search columns: `search_tsv tsvector GENERATED ALWAYS AS (...) STORED` on the projection
-  `nodes` table with a GIN index, plus a `gin_trgm_ops` index on `title`.
-- All search input is parameterized; `websearch_to_tsquery` handles user syntax so raw tsquery
-  parsing errors cannot occur.
-- Palette command registry is typed; `when(context)` gates by permission, selection and view mode.
-- Board duplication copies files by server-side object copy (no download/upload round-trip).
-
-## 8 Edge cases
-
-- Search terms with special characters, quotes, or 500 characters → handled by `websearch_to_tsquery`
-  and a 200-char input cap.
-- A board with 0 nodes has no thumbnail → deterministic placeholder derived from the board id.
-- Deleting a project with 50 boards → a background job soft-deletes, the UI returns immediately and
-  shows the operation in a "recently deleted" area for 30 days.
-- Two users renaming the same board concurrently → last write wins on the metadata row (metadata is
-  not CRDT), with a toast if the value changed underneath.
-- Search while offline → local results only, with a clear "Searching this board only (offline)" note.
-- A user removed from a project while viewing a board → the next call returns `FORBIDDEN`; the app
-  shows a full-screen explanation and a link back to their projects (no silent blank page).
-
-## 9 Security requirements
-
-- Every search query is scoped by membership at the SQL level (a join on memberships), never by
-  post-filtering in JS.
-- Cross-org resources return 404, not 403, to avoid existence leaks (`18_TESTING.md` §11.3).
-- Invitations are single-use, expire in 7 days, and are bound to the invited email.
-- Board duplication re-checks permissions on the source and the destination project.
-- Audit entries for: project/board create, rename, archive, delete, member add/remove/role change.
-
-## 10 Performance requirements
-
-- Local search: ≤ 30 ms p95 on a 5,000-node board; index build ≤ 400 ms on open.
-- Server search p95 ≤ 300 ms at 1 M projected nodes (k6 scenario `search`).
-- Palette opens in ≤ 80 ms with 500 registered commands.
-- Board grid with 200 boards renders in ≤ 200 ms (virtualized above 60 cards).
-
-## 11 Tests to write (named)
-
-- `packages/domain/test/search.localIndex.test.ts` (prefix, fuzzy, ranking, incremental updates).
-- `apps/api/test/search.query.test.ts` (filters, permission scoping, injection attempts).
-- `apps/api/test/project.board.crud.test.ts` + authz matrix rows for every new procedure.
-- `apps/web/src/palette/registry.test.ts` (every menu action has a command; `when` gating).
-- `e2e/journeys/J15-global-search.spec.ts`, `J16-command-palette.spec.ts`, `J20-viewer-readonly.spec.ts`.
-- `e2e/a11y/palette-keyboard.spec.ts`.
-
-## 12 Acceptance criteria (checkable)
-
-1. A user can create a project, three boards, rename, duplicate, archive and delete them, all
-   audited and permission-checked.
-2. Searching a term present in a node on another board finds it and jumps to it.
-3. Local search returns results within 30 ms on a 5,000-node board while offline.
-4. The palette can run every action available in menus, and the test proving that passes.
-5. A viewer sees disabled controls with reasons and cannot mutate anything (server-verified).
-6. Templates create working boards.
-
-## 13 Definition of Done
-
-Acceptance criteria pass; `09_BACKEND.md` §3/§6 match the implementation; the authz matrix covers
-all new procedures; palette command list is documented; tracker ticked.
-
-## 14 What NOT to break
-
-Offline behavior (search must degrade, not fail), the shortcut reserved in P1, N1 (indexing must not
-run on the frame path), and undo semantics for board-level operations (board metadata operations are
-server-side and are _not_ in the CRDT undo stack — they get their own confirmation instead; state
-this explicitly in the UI).
-
-## 15 Documentation to update
-
-`09_BACKEND.md`, `03_UX.md` §8–9, `08_DATA_MODEL.md` (search columns/indexes), tracker.
+Everything else from the original P7 prompt is shipped: data model (`Board`/`Project` columns +
+migration `0003_project_board_management`), project/board CRUD + audit + authz
+(`apps/api/src/trpc/routers/{project,board}.ts`), the three built-in templates
+(`packages/domain/src/templates/boardTemplates.ts`), local search
+(`packages/domain/src/search/{tokenize,score,localIndex,boardIndex}.ts`), the board grid with
+filters/menus (`apps/web/src/projects/{BoardGrid,BoardCard}.tsx`), the command palette with all six
+modes and menu-command parity (`apps/web/src/app/commands/{registry,palette}.tsx`), camera-jump +
+highlight pulse, and viewer-role control gating — read those paths plus `09_BACKEND.md` and
+`03_UX.md` §8–9 instead of the deleted prompt.
 
 ---
 
