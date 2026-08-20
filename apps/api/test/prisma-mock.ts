@@ -9,6 +9,27 @@ export const prismaMock = {
   membership: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn() },
   organization: { create: vi.fn() },
   comment: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
+  // P9 integration framework.
+  integrationRun: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    findUnique: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    updateMany: vi.fn(),
+    count: vi.fn(),
+  },
+  importProposal: { findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
+  consent: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
+  apiToken: {
+    findFirst: vi.fn(),
+    findUnique: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    count: vi.fn(),
+  },
+  runLogEntry: { findMany: vi.fn(), findFirst: vi.fn(), createMany: vi.fn() },
 };
 
 export const recordAuditMock = vi.fn();

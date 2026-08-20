@@ -8,7 +8,7 @@
  * is what makes the property test in `test/pipeline.property.test.ts` possible at all.
  */
 
-import { IntegrationError } from './errors.ts';
+import { IntegrationError, type IntegrationErrorPayload } from './errors.ts';
 import {
   computeConfidence,
   DEFAULT_SELECTION_THRESHOLD,
@@ -167,7 +167,7 @@ export interface RawRunResult {
   readonly stdoutRef?: ArtifactRef;
   readonly stderrRef?: ArtifactRef;
   readonly stats: RunStats;
-  readonly error?: import('./errors.ts').IntegrationErrorPayload;
+  readonly error?: IntegrationErrorPayload;
 }
 
 export interface ExecutionLayer {
@@ -562,6 +562,13 @@ function coerceField(
   }
 }
 
+/** Stringifies a pointer result without ever producing "[object Object]". */
+function asText(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return JSON.stringify(value) ?? '';
+}
+
 /* --------------------------------------------------------------- defaults: extractor */
 
 const TRANSFORMS: Readonly<Record<string, (raw: unknown) => unknown>> = {
@@ -654,7 +661,7 @@ function applyMapping(
   issues: UserMessage[],
 ): ExtractedEntity | undefined {
   const rawValue = jsonPointer(record.data, mapping.entity.valueFrom);
-  if (rawValue === undefined || rawValue === null || String(rawValue).trim() === '') {
+  if (rawValue === undefined || rawValue === null || asText(rawValue).trim() === '') {
     issues.push({
       level: 'warn',
       message: `mapping ${mapping.id ?? mapping.when.recordType}: empty identity value at ${mapping.entity.valueFrom}`,
@@ -663,7 +670,7 @@ function applyMapping(
     return undefined;
   }
 
-  const identity = identityFor(mapping.entity.kind, String(rawValue), {
+  const identity = identityFor(mapping.entity.kind, asText(rawValue), {
     ...(ctx.defaultRegion === undefined ? {} : { defaultRegion: ctx.defaultRegion }),
   });
   if (!identity.ok || identity.key === undefined || identity.value === undefined) {
@@ -696,7 +703,7 @@ function applyMapping(
   const title =
     mapping.entity.titleFrom === undefined
       ? (identity.display ?? identity.value)
-      : String(
+      : asText(
           jsonPointer(record.data, mapping.entity.titleFrom) ?? identity.display ?? identity.value,
         );
 
@@ -1043,7 +1050,7 @@ export function effectiveLimits(
   },
 ): EffectiveLimits {
   const allow =
-    policy?.networkAllow == null
+    policy?.networkAllow === null || policy?.networkAllow === undefined
       ? network.allow
       : network.allow.filter((host) => policy.networkAllow?.includes(host));
   return {

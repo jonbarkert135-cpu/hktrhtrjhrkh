@@ -22,6 +22,7 @@ import { IndexeddbPersistence } from 'y-indexeddb';
 import * as Y from 'yjs';
 
 import { createBlobStore } from '../opfs.ts';
+import { localRuns } from './runs.ts';
 import { boardStoreName } from '../persistence.ts';
 import { WorkspaceError, type WorkspaceBoard, type WorkspaceProject } from './types.ts';
 import type { ListBoardsOptions, ListProjectsOptions, WorkspaceRepository } from './types.ts';
@@ -394,6 +395,10 @@ export function createLocalWorkspaceRepository(
       if (row === undefined || row.deletedAt !== null) return;
       await putRow(BOARDS, { ...row, lastOpenedAt: now() });
     },
+
+    // P9: integrations are server-only. These throw rather than no-op so an accidental call in
+    // local mode fails loudly (localMode.test.tsx).
+    runs: localRuns(),
 
     async reportBoardCounts({ boardId, nodeCount, edgeCount }) {
       const row = await getRow<BoardRow>(BOARDS, boardId);

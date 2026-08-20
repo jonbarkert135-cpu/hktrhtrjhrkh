@@ -11,7 +11,7 @@
  */
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import { connect as tcpConnect, type Socket } from 'node:net';
+import { connect as tcpConnect } from 'node:net';
 import { lookup as dnsLookup } from 'node:dns/promises';
 import type { Duplex } from 'node:stream';
 
@@ -217,7 +217,7 @@ export function createEgressProxy(resolve: ResolveHost = systemResolver): ProxyS
   const server = createServer((request: IncomingMessage, response: ServerResponse) => {
     void (async () => {
       const target = new URL(request.url ?? '/', 'http://invalid.invalid');
-      const token = tokenOf({ headers: request.headers as Record<string, unknown> });
+      const token = tokenOf({ headers: request.headers });
       const result = await authorize(
         store,
         { token, host: target.hostname, port: Number(target.port || 80) },
@@ -242,7 +242,7 @@ export function createEgressProxy(resolve: ResolveHost = systemResolver): ProxyS
       const upstream = tcpConnect(result.decision.port, result.address ?? '', () => {
         response.writeHead(200);
         response.flushHeaders();
-        (response.socket as Socket | null)?.pipe(upstream).pipe(response.socket as Socket);
+        response.socket?.pipe(upstream).pipe(response.socket);
       });
       upstream.on('error', () => {
         response.writeHead(502);
@@ -254,7 +254,7 @@ export function createEgressProxy(resolve: ResolveHost = systemResolver): ProxyS
   server.on('connect', (request: IncomingMessage, clientSocket: Duplex, head: Buffer) => {
     void (async () => {
       const [rawHost = '', rawPort = '443'] = (request.url ?? '').split(':');
-      const token = tokenOf({ headers: request.headers as Record<string, unknown> });
+      const token = tokenOf({ headers: request.headers });
       const result = await authorize(
         store,
         { token, host: rawHost, port: Number(rawPort) },

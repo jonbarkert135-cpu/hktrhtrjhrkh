@@ -151,6 +151,7 @@ export function memoryParseContext(
     logger,
     readArtifact: () =>
       Promise.resolve(
+        // eslint-disable-next-line @typescript-eslint/require-await
         (async function* stream() {
           yield new TextEncoder().encode(content);
         })(),

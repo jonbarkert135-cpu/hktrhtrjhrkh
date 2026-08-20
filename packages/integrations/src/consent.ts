@@ -79,7 +79,7 @@ export function assertConsentValid(check: ConsentCheck): ConsentRecord {
       why: 'Authorization is personal; the person starting the run must give it.',
     });
   }
-  if (consent.revokedAt != null) {
+  if (consent.revokedAt !== null && consent.revokedAt !== undefined) {
     throw new IntegrationError('CONSENT_EXPIRED', { why: 'This authorization was revoked.' });
   }
   if (Date.parse(consent.expiresAt) <= Date.parse(check.now)) {
@@ -96,7 +96,7 @@ export function assertConsentValid(check: ConsentCheck): ConsentRecord {
     });
   }
   // A high-risk consent is good for exactly one run (§12.1).
-  if (manifest.risk.label === 'high' && consent.usedAt != null) {
+  if (manifest.risk.label === 'high' && consent.usedAt !== null && consent.usedAt !== undefined) {
     throw new IntegrationError('CONSENT_EXPIRED', {
       why: 'High-risk tools require a fresh authorization for every run.',
     });

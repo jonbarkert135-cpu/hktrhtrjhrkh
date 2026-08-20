@@ -1900,3 +1900,48 @@ undo` returns the document to a deep-equal prior state (N3, N9).
    `costHints` assume gVisor; if a self-hoster uses `runc`, the estimates over-predict. Acceptable.
 8. **Proposal expiry at 7 days** may frustrate long investigations that pause. Chosen over infinite
    retention because applying stale results silently is worse; revisit with usage data.
+
+---
+
+## 15. Implementation status (P9, backend half — `phase/p09-integration-framework`)
+
+Shipped, and where it lives:
+
+| §                  | Shipped as                                                                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| §3 stage contracts | `packages/integrations/src/pipeline.ts` (+ `apply.ts` for stage 8)                                                              |
+| §4 manifest        | `packages/integrations/src/manifest.ts`; loader/registry in `src/index.ts`                                                      |
+| §5 tables          | `packages/db/prisma/schema.prisma` + migration `0005_integration_framework`                                                     |
+| §6 runner          | `apps/runner/` (job protocol, container/http/builtin executors, sandbox flags, egress proxy, artifacts, runlog, cancel, reaper) |
+| §7 lifecycle       | `apps/api/src/trpc/routers/runs.ts` (states, re-run rules, diff-with-previous); the UI half is the P9 web PR                    |
+| §8 extract/resolve | `packages/integrations/src/extract/*`, `src/resolve/*`                                                                          |
+| §10 REST v1        | `apps/api/src/rest/v1.ts`, `apps/api/openapi/integrations.yaml`                                                                 |
+| §11 errors         | `packages/integrations/src/errors.ts` (codes, canonical copy, retry policy)                                                     |
+| §12 legal gate     | `packages/integrations/src/consent.ts` + `apps/api/src/trpc/routers/consents.ts`                                                |
+| §13 tests          | see the phase spec §11; the hostile-image suite is written and skips by name without Docker                                     |
+
+### Deviations (each deliberate, none silent)
+
+1. **Public-suffix list.** §8.1 asks for the bundled `psl`. `extract/normalizers.ts` ships a small
+   multi-label suffix set plus the label-count rule instead, because the framework must not pull a
+   250 KB quarterly-refreshed dependency before a single tool needs the long tail. Swapping in `psl`
+   is a one-function change (`domain` normalizer).
+2. **Phone numbers.** §8.1 asks for `libphonenumber-js`; the normalizer canonicalizes international
+   form and prefixes a known calling code for a national number, and reports "not parseable"
+   otherwise (which the caller downgrades per the spec). Same reason, same one-function swap.
+3. **Fuzzy dedupe** (§8.3) is computed with a `pg_trgm`-compatible trigram similarity in
+   `resolve/merge.ts` rather than a server-side `similarity()` query. The proposal build is the
+   same function on both sides, so client preview and server result agree; the Postgres path becomes
+   an optimisation when boards get large enough to need it.
+4. **`sha256` field transform** (§4.5) is a pass-through in the declarative extractor: hashing there
+   would make the whole extractor async for one rarely-used field. Parsers, which already hold the
+   bytes, do it instead.
+5. **`awaiting_approval`** (§4.4/§7.2 step 3a) exists in the enum, the schema and the state model,
+   but no `integration_policies` table ships in this phase — no manifest can set `require_approver`
+   yet, so nothing can enter the state. The row goes in with the first org policy UI.
+6. **Egress proxy plain-HTTP path** tunnels rather than rewrites, so the proxy never buffers a body
+   it is not allowed to inspect. TLS is still never intercepted (§6.4 point 8, Open risk 4).
+7. **`proposals.apply` is `proposals.applySelected` in tRPC** — `apply` is a reserved router key in
+   tRPC v11. The REST path is unchanged (`POST /v1/proposals/:id/apply`).
+8. **Argon2id** for API tokens comes from `@noble/hashes` (pure JS, no native module), with the
+   OWASP baseline m=19 MiB / t=2 / p=1.

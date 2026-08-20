@@ -25,7 +25,7 @@ import {
   type RawRunResult,
 } from '@nexus/integrations';
 
-import { collectArtifact, type ArtifactSink } from './artifacts.ts';
+import type { ArtifactSink } from './artifacts.ts';
 import { watchCancel, type CancelBackend } from './cancel.ts';
 import { createBuiltinExecutor } from './executors/builtin.ts';
 import { createContainerExecutor, dockerRuntime } from './executors/container.ts';
@@ -81,7 +81,9 @@ const prismaRunLogStore: RunLogStore = {
         level: entry.level,
         phase: entry.phase,
         message: entry.message,
-        ...(entry.data === undefined ? {} : { data: entry.data as object }),
+        // Prisma's Json input rejects `undefined` under exactOptionalPropertyTypes; an entry with
+        // no structured data stores `{}` rather than a column-level null.
+        data: (entry.data ?? {}) as unknown as Record<string, never>,
       })),
       skipDuplicates: true,
     });
@@ -124,16 +126,20 @@ const prismaReaperStore: ReaperStore = {
       data: {
         status: 'failed',
         errorCode: code,
-        errorDetail: { ...payloadFor(code, { runId }), ...detail } as object,
+        errorDetail: { ...payloadFor(code, { runId }), ...detail } as unknown as Record<
+          string,
+          never
+        >,
         finishedAt: new Date(),
       },
     });
   },
-  async flagStaleParsing(runId) {
+  flagStaleParsing(runId): Promise<void> {
     log.warn(
       { event: 'run.parse.stale', run_id: runId },
       'run has been parsing for over 10 minutes',
     );
+    return Promise.resolve();
   },
 };
 
@@ -189,7 +195,7 @@ export async function runJob(deps: RunnerDeps, raw: unknown): Promise<RawRunResu
       data: {
         status: 'failed',
         errorCode: payload.code,
-        errorDetail: payload as unknown as object,
+        errorDetail: payload as unknown as Record<string, never>,
         finishedAt: new Date(),
       },
     });
@@ -278,7 +284,7 @@ export async function runJob(deps: RunnerDeps, raw: unknown): Promise<RawRunResu
   const request: ExecutionRequest = {
     runId: run.id,
     manifest,
-    input: run.input as Record<string, unknown>,
+    input: run.input,
     secretsRef: Object.values(
       manifest.execution.kind === 'container' ? manifest.execution.secretEnv : {},
     ),
@@ -324,11 +330,14 @@ export async function runJob(deps: RunnerDeps, raw: unknown): Promise<RawRunResu
       exitCode: result.exitCode,
       finishedAt: new Date(result.finishedAt),
       durationMs: result.durationMs,
-      stats: result.stats as unknown as object,
-      artifacts: result.artifacts as unknown as object[],
+      stats: result.stats as unknown as Record<string, never>,
+      artifacts: result.artifacts as unknown as Record<string, never>[],
       ...(result.error === undefined
         ? {}
-        : { errorCode: result.error.code, errorDetail: result.error as unknown as object }),
+        : {
+            errorCode: result.error.code,
+            errorDetail: result.error as unknown as Record<string, never>,
+          }),
     },
   });
 

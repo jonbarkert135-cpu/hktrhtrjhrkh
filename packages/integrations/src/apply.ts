@@ -102,7 +102,7 @@ function appendProvenance(
   provenance: Provenance,
 ): unknown[] {
   const existing = props[PROVENANCE_PROP];
-  const list = Array.isArray(existing) ? [...existing] : [];
+  const list: unknown[] = Array.isArray(existing) ? [...(existing as unknown[])] : [];
   list.push(provenance);
   // Capped at 50 entries, oldest collapsed with a count (§8.3).
   if (list.length > 50) {
@@ -119,8 +119,8 @@ function applyPatch(props: Record<string, unknown>, patch: FieldPatch): void {
     return;
   }
   const current = props[field];
-  const list = Array.isArray(current)
-    ? [...current]
+  const list: unknown[] = Array.isArray(current)
+    ? [...(current as unknown[])]
     : current === undefined || current === null
       ? []
       : [current];

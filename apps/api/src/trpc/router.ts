@@ -6,6 +6,10 @@ import { boardTokenRouter } from './routers/boardToken.ts';
 import { commentsRouter } from './routers/comments.ts';
 import { filesRouter } from './routers/files.ts';
 import { unfurlRouter } from './routers/unfurl.ts';
+import { integrationsRouter } from './routers/integrations.ts';
+import { runsRouter, proposalsRouter } from './routers/runs.ts';
+import { consentsRouter } from './routers/consents.ts';
+import { apiTokensRouter } from './routers/apiTokens.ts';
 
 export const appRouter = router({
   auth: authRouter,
@@ -15,6 +19,11 @@ export const appRouter = router({
   comments: commentsRouter,
   files: filesRouter,
   unfurl: unfurlRouter,
+  integrations: integrationsRouter,
+  runs: runsRouter,
+  proposals: proposalsRouter,
+  consents: consentsRouter,
+  apiTokens: apiTokensRouter,
 });
 
 /** Consumed by `apps/web` as a type-only import — the client never imports the runtime router. */

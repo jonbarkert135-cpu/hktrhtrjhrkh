@@ -49,6 +49,7 @@ export const serverEnv = z
     CLOUD_SYNC_ENABLED: z.string().optional(),
     REMOTE_DATABASE_ENABLED: z.string().optional(),
     COLLABORATION_ENABLED: z.string().optional(),
+    INTEGRATIONS_ENABLED: z.string().optional(),
   })
   .superRefine((v, ctx) => {
     if (v.NODE_ENV === 'production' && v.NEXUS_TEST_ENDPOINTS)
@@ -77,6 +78,7 @@ export const clientEnvShape = z.object({
   VITE_CLOUD_SYNC_ENABLED: z.string().optional(),
   VITE_REMOTE_DATABASE_ENABLED: z.string().optional(),
   VITE_COLLABORATION_ENABLED: z.string().optional(),
+  VITE_INTEGRATIONS_ENABLED: z.string().optional(),
 });
 
 export const clientEnv = clientEnvShape.superRefine((v, ctx) => {

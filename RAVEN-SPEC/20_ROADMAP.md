@@ -236,6 +236,24 @@ Everything else from the original P8 prompt is shipped in PR #24 — read `apps/
 
 # P9 — Integration framework
 
+**Status: backend shipped on `phase/p09-integration-framework`; the web UI (§6) ships in the
+companion PR.** Backend covers `packages/integrations`, `apps/runner`, `apps/worker`, the five new
+tables (migration `0005_integration_framework`), the tRPC routers, REST v1 + OpenAPI, scoped API
+tokens, the `integrations` capability and the two new eslint rules. Deliberately deferred, with the
+reason:
+
+- **§6 UX** (picker, consent dialog, run panel, proposal review, run history) and the client-side
+  Applier wiring into `BoardWorkspace` — the second subagent's PR; `apps/web/src/data/workspace/runs.ts`
+  ships here as the capability-gated seam that throws in local mode.
+- **`integration_policies`** (§4.4) and therefore the `awaiting_approval` state: the enum, schema and
+  state model exist, but no manifest can request an approver until the org policy surface lands.
+- **e2e** (`e2e/integrations/*.spec.ts`) and **k6** (`load/integration-queue.js`): both need a live
+  Postgres + Redis + runner stack, which this environment does not have; the runner's own suites
+  cover the same behaviour at unit level.
+- **Hostile-image sandbox suite** is written (`apps/runner/test/sandbox.hostile.test.ts`) and skips
+  by name where Docker or `raven/test-hostile` is absent — CI's docker job runs it for real.
+- Deviations from `10_INTEGRATIONS.md` are recorded in that document's own §15 status note.
+
 ## 1 Objective
 
 Ship the generic, tool-agnostic integration pipeline that every future tool plugs into: the

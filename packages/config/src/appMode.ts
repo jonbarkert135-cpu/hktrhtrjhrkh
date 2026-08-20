@@ -34,6 +34,7 @@ export const CAPABILITY_ENV = {
   cloudSync: 'CLOUD_SYNC_ENABLED',
   remoteDatabase: 'REMOTE_DATABASE_ENABLED',
   collaboration: 'COLLABORATION_ENABLED',
+  integrations: 'INTEGRATIONS_ENABLED',
 } as const;
 
 export type Capability = keyof typeof CAPABILITY_ENV;
@@ -53,6 +54,10 @@ const REQUIRES: Readonly<Record<Capability, readonly Capability[]>> = {
   cloudSync: ['backend'],
   remoteDatabase: ['backend'],
   collaboration: ['backend', 'cloudSync'],
+  // Tool execution is inherently server-side (N5: sandboxed runner, never in-process), so there is
+  // no meaningful local-only mode for it. In APP_MODE=local the whole integrations surface is
+  // absent, not disabled (ADR-002, P9 §3).
+  integrations: ['backend'],
 };
 
 const ALL_OFF: Capabilities = {
@@ -62,6 +67,7 @@ const ALL_OFF: Capabilities = {
   cloudSync: false,
   remoteDatabase: false,
   collaboration: false,
+  integrations: false,
 };
 
 /**

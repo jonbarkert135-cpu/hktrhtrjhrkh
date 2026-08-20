@@ -39,7 +39,7 @@ export function s3ArtifactReader(env: ReturnType<typeof loadServerEnvFromProcess
       if (!response.ok || response.body === null) {
         throw new Error(`artifact ${ref.key} could not be read (${String(response.status)})`);
       }
-      const reader = response.body.getReader();
+      const reader = (response.body as ReadableStream<Uint8Array>).getReader();
       return (async function* stream() {
         for (;;) {
           const { done, value } = await reader.read();
@@ -109,8 +109,8 @@ export const prismaParseStore: ParseStore = {
         boardId: run.boardId,
         runId: run.id,
         integrationId: proposal.integrationId,
-        payload: proposal as unknown as object,
-        summary: proposal.summary as unknown as object,
+        payload: proposal as unknown as Record<string, never>,
+        summary: proposal.summary as unknown as Record<string, never>,
         expiresAt: new Date(proposal.expiresAt),
       },
     });
@@ -138,7 +138,7 @@ export const prismaParseStore: ParseStore = {
       data: {
         status: 'failed',
         errorCode: payload.code,
-        errorDetail: payload as unknown as object,
+        errorDetail: payload as unknown as Record<string, never>,
       },
     });
   },
@@ -165,7 +165,7 @@ export const prismaParseStore: ParseStore = {
   },
 };
 
-export async function start(): Promise<() => Promise<void>> {
+export function start(): Promise<() => Promise<void>> {
   const env = loadServerEnvFromProcess();
   const connection = new IORedis(env.REDIS_URL, { maxRetriesPerRequest: null });
   const publisher = new IORedis(env.REDIS_URL, { maxRetriesPerRequest: null });
@@ -195,11 +195,11 @@ export async function start(): Promise<() => Promise<void>> {
 
   log.info({ event: 'worker.started' }, 'worker is consuming integration.parse');
 
-  return async () => {
+  return Promise.resolve(async () => {
     await worker.close();
     connection.disconnect();
     publisher.disconnect();
-  };
+  });
 }
 
 if (process.argv[1]?.endsWith('main.ts') === true) {

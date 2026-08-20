@@ -37,6 +37,7 @@ const ok = (value: string, display: string, meta?: Record<string, unknown>): Nor
   ...(meta ? { meta } : {}),
 });
 
+// eslint-disable-next-line no-control-regex -- finding control characters is the point
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
 
 /** Tracking parameters dropped from every URL (§8.1). */

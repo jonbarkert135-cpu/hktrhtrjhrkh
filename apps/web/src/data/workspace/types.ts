@@ -1,3 +1,4 @@
+import type { RunsRepository } from './runs.ts';
 /**
  * The workspace repository: the one interface the UI uses to see projects and boards.
  *
@@ -75,6 +76,14 @@ export interface WorkspaceRepository {
    * palette `when()` gate (P7 §12) — never post-filtered in the UI alone.
    */
   role: () => WorkspaceRole;
+
+  /**
+   * Tool runs and their import proposals (P9). Present only where the `integrations` capability is
+   * on, which is what makes the feature *absent* rather than disabled in local mode (ADR-002). The
+   * local build still installs a repository whose every method throws, so a stray call made behind
+   * a missed capability check is a loud test failure and not a silent no-op.
+   */
+  runs?: RunsRepository;
 
   listProjects: (options?: ListProjectsOptions) => Promise<WorkspaceProject[]>;
   createProject: (input: {

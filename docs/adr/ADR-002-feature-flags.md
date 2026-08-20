@@ -21,6 +21,7 @@ Every optional subsystem is declared once, in `packages/config/src/appMode.ts`:
 | `cloudSync`      | `CLOUD_SYNC_ENABLED`      | `backend`              |
 | `remoteDatabase` | `REMOTE_DATABASE_ENABLED` | `backend`              |
 | `collaboration`  | `COLLABORATION_ENABLED`   | `backend`, `cloudSync` |
+| `integrations`   | `INTEGRATIONS_ENABLED`    | `backend`              |
 
 - `APP_MODE` sets the defaults (`local` → everything off; `server` → backend, auth, remote database).
 - An explicit variable may only _narrow_ a local deployment; switching a networked capability on
@@ -28,6 +29,11 @@ Every optional subsystem is declared once, in `packages/config/src/appMode.ts`:
 - Values are strict: `true`/`false`/`1`/`0`. `AUTH_ENABLED=yes` fails the boot instead of silently
   meaning "off".
 - The browser reads the same names under the `VITE_` prefix, so one deployment describes itself once.
+- `integrations` (P9) is the first capability with no conceivable local implementation: tool
+  execution is sandboxed and server-side by definition (N5), so with the flag off the entire
+  surface — manifests, the "Run tool" entry point, run history — is **absent**, not disabled, and
+  `apps/web/src/data/workspace/runs.ts` throws rather than no-ops so `localMode.test.tsx` catches an
+  accidental call.
 
 These flags gate **unfinished or optional surfaces**. They are never a security control: the API
 authorizes every request regardless of what the bundle believes.
