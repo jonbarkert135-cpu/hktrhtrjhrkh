@@ -43,7 +43,7 @@ export async function buildServer(env: ServerEnv): Promise<FastifyInstance> {
   await app.register(metricsPlugin);
   await app.register(cookie);
   await app.register(cors, { origin: env.AUTH_TRUSTED_ORIGINS, credentials: true });
-  const apiRule = resolveApiRule(env.NEXUS_ENV, process.env['API_RATE_LIMIT']);
+  const apiRule = resolveApiRule(env.NEXUS_ENV, process.env['NEXUS_API_RATE_LIMIT']);
   await app.register(rateLimit, {
     max: apiRule.limit,
     timeWindow: apiRule.windowMs,

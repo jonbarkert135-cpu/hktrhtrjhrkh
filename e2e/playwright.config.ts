@@ -40,7 +40,10 @@ export default defineConfig({
           env: {
             AUTH_SIGNUP_LIMIT: '500',
             // Whole suite shares one IP, so the unauthenticated requests share one budget bucket.
-            API_RATE_LIMIT: '100000',
+            // Named NEXUS_* on purpose: turbo runs `dev` in strict env mode and only forwards the
+            // patterns listed in turbo.json globalPassThroughEnv, so an API_RATE_LIMIT here would
+            // never reach the API process.
+            NEXUS_API_RATE_LIMIT: '100000',
             VITE_APP_MODE: 'server',
             APP_MODE: 'server',
           },

@@ -94,7 +94,7 @@ export function resolveSignupRule(
  * Same escape hatch for the per-key API budget. The e2e suite drives the whole stack from one IP,
  * and the unauthenticated share of that traffic (signup POSTs and the pre-session bootstrap) all
  * lands in a single bucket; P7 added the project-rail query on top, which pushed the suite past
- * 100 req/min and made later specs see a 429 instead of a signed-in shell. `API_RATE_LIMIT` raises
+ * 100 req/min and made later specs see a 429 instead of a signed-in shell. `NEXUS_API_RATE_LIMIT` raises
  * the ceiling for dev/CI only — in `production` the constant always wins.
  */
 export function resolveApiRule(
