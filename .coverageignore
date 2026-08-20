@@ -7,17 +7,24 @@
 # the e2e job (apps/api/vitest.config.ts excludes it from coverage for the same reason).
 apps/api/src/server.ts
 
+# Process bootstrap: boots a real Hocuspocus/WS listener plus DB/Redis connections. Excluded from
+# vitest coverage in apps/sync/vitest.config.ts for the same reason as apps/api/src/server.ts;
+# exercised by the e2e collab suite instead.
+apps/sync/src/server.ts
+
 # Better-Auth wiring: constructs the auth instance against a live Prisma client, so unit tests
 # cannot import it without a database. Exercised end to end by the e2e job (J01 signup).
 apps/api/src/auth/index.ts
 
 # Pure re-export barrels (no executable statements, so v8 reports no coverage entry at all).
+apps/sync/src/awareness.ts
 packages/config/src/index.ts
 packages/db/src/index.ts
 packages/domain/src/index.ts
 packages/domain/src/nodes/index.ts
 packages/domain/src/edges/index.ts
 packages/domain/src/edges/routing/index.ts
+packages/domain/src/projection/index.ts
 packages/canvas-engine/src/index.ts
 packages/transforms/src/index.ts
 packages/transforms/src/catalog/index.ts
