@@ -7,7 +7,24 @@ import { expect, type Page } from '@playwright/test';
 
 export const unique = (): string => `e2e-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 
+/**
+ * Diagnostics: turbo buffers the API's own logs until it exits, so a spec that fails because the
+ * browser could not reach the API leaves no trace in CI. Echoing failed requests and non-2xx API
+ * responses into the Playwright log makes the difference between a 429, a 500 and a dead socket
+ * visible in the run output.
+ */
+export function traceApiFailures(page: Page): void {
+  page.on('requestfailed', (req) => {
+    console.log(`[requestfailed] ${req.method()} ${req.url()} — ${req.failure()?.errorText}`);
+  });
+  page.on('response', (res) => {
+    if (res.status() >= 400)
+      console.log(`[http ${res.status()}] ${res.request().method()} ${res.url()}`);
+  });
+}
+
 export async function signUp(page: Page): Promise<void> {
+  traceApiFailures(page);
   await page.goto('/signup');
   await page.getByLabel(/email/i).fill(`${unique()}@example.test`);
   await page
