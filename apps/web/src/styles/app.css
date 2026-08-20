@@ -916,4 +916,29 @@
     box-shadow: var(--focus-ring-shadow);
     border-radius: var(--nx-radius-2);
   }
+
+  /* ------------------------------------------------------------- search (P7 §7) */
+
+  /* The 1.2 s highlight pulse a search result gets when the camera lands on it. */
+  @keyframes nx-search-pulse {
+    0%,
+    100% {
+      box-shadow: var(--focus-ring-shadow);
+    }
+    50% {
+      box-shadow: var(--focus-ring-shadow), var(--focus-ring-shadow);
+    }
+  }
+
+  .nx-search-pulse {
+    animation: nx-search-pulse 1.2s ease-in-out;
+    border-radius: var(--nx-radius-2);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nx-search-pulse {
+      animation: none;
+      box-shadow: var(--focus-ring-shadow);
+    }
+  }
 }

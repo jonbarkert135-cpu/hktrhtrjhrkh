@@ -16,8 +16,12 @@ import { IDBFactory, IDBKeyRange } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
 
+import { MemoryRouter } from 'react-router-dom';
+
 import { BoardDocProvider } from '../../data/docProvider';
 import { snapshotOf, type SnapshotRecord, type SnapshotStore } from '../../data/snapshots';
+import { WorkspaceProvider } from '../../data/workspace/context';
+import { fakeWorkspaceRepository } from '../../data/workspace/testFakes';
 import { BoardWorkspace } from './BoardWorkspace';
 
 const NOW = '2026-08-17T12:00:00.000Z';
@@ -47,9 +51,13 @@ function memoryStore(records: SnapshotRecord[] = []): SnapshotStore {
 
 function view(store: SnapshotStore = memoryStore()) {
   return render(
-    <BoardDocProvider boardId="b_work" snapshotStoreImpl={store}>
-      <BoardWorkspace />
-    </BoardDocProvider>,
+    <MemoryRouter>
+      <WorkspaceProvider repository={fakeWorkspaceRepository()}>
+        <BoardDocProvider boardId="b_work" snapshotStoreImpl={store}>
+          <BoardWorkspace />
+        </BoardDocProvider>
+      </WorkspaceProvider>
+    </MemoryRouter>,
   );
 }
 
