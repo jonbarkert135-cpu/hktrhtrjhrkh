@@ -4,6 +4,8 @@ import {
   LOGIN_RULE,
   SIGNUP_RULE,
   loginKey,
+  USER_API_RULE,
+  resolveApiRule,
   resolveSignupRule,
   signupKey,
 } from '../src/auth/rate-limit.ts';
@@ -61,5 +63,24 @@ describe('resolveSignupRule', () => {
     expect(resolveSignupRule('local', 'lots')).toEqual(SIGNUP_RULE);
     expect(resolveSignupRule('local', '0')).toEqual(SIGNUP_RULE);
     expect(resolveSignupRule('preview', '2.5')).toEqual(SIGNUP_RULE);
+  });
+});
+
+describe('resolveApiRule', () => {
+  it('ignores the override in production', () => {
+    expect(resolveApiRule('production', '100000')).toEqual(USER_API_RULE);
+  });
+
+  it('raises only the limit outside production', () => {
+    expect(resolveApiRule('local', '100000')).toEqual({
+      limit: 100000,
+      windowMs: USER_API_RULE.windowMs,
+    });
+  });
+
+  it('falls back to the constant for absent or nonsense values', () => {
+    expect(resolveApiRule('local', undefined)).toEqual(USER_API_RULE);
+    expect(resolveApiRule('local', 'many')).toEqual(USER_API_RULE);
+    expect(resolveApiRule('preview', '0')).toEqual(USER_API_RULE);
   });
 });
