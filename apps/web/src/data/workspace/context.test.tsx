@@ -6,25 +6,21 @@ import { describe, expect, it, vi } from 'vitest';
 import { useBoards, useCreateBoard, useCreateProject, useProjects, useWorkspace } from './context';
 import { WorkspaceProvider } from './context';
 import { workspaceErrorMessage } from './errors';
+import { fakeBoard, fakeProject, fakeWorkspaceRepository } from './testFakes';
 import { WorkspaceError, type WorkspaceRepository } from './types';
 
 function fakeRepository(overrides: Partial<WorkspaceRepository> = {}): WorkspaceRepository {
-  const projects = [{ id: 'p1', name: 'Atlas', createdAt: '2026-01-01T00:00:00.000Z' }];
-  const boards = [
-    { id: 'b1', projectId: 'p1', title: 'Timeline', createdAt: '2026-01-01T00:00:00.000Z' },
-  ];
-  return {
-    kind: 'local',
-    listProjects: vi.fn(() => Promise.resolve([...projects])),
+  return fakeWorkspaceRepository({
+    listProjects: vi.fn(() => Promise.resolve([fakeProject()])),
     createProject: vi.fn((input: { name: string }) =>
-      Promise.resolve({ id: 'p2', name: input.name, createdAt: '2026-01-02T00:00:00.000Z' }),
+      Promise.resolve(fakeProject({ id: 'p2', name: input.name })),
     ),
-    listBoards: vi.fn(() => Promise.resolve([...boards])),
+    listBoards: vi.fn(() => Promise.resolve([fakeBoard()])),
     createBoard: vi.fn((input: { projectId: string; title: string }) =>
-      Promise.resolve({ id: 'b2', ...input, createdAt: '2026-01-02T00:00:00.000Z' }),
+      Promise.resolve(fakeBoard({ id: 'b2', ...input })),
     ),
     ...overrides,
-  };
+  });
 }
 
 function withRepository(repository: WorkspaceRepository, ui: React.ReactNode) {

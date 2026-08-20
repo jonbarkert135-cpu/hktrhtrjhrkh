@@ -9,15 +9,11 @@ import { describe, expect, it } from 'vitest';
 
 import { AppProviders } from './providers';
 import { useWorkspace } from '../data/workspace/context.tsx';
+import { fakeWorkspaceRepository } from '../data/workspace/testFakes.ts';
 import type { WorkspaceRepository } from '../data/workspace/types.ts';
 
-const fakeRepository = (kind: 'local' | 'server'): WorkspaceRepository => ({
-  kind,
-  listProjects: () => Promise.resolve([]),
-  createProject: () => Promise.reject(new Error('not used')),
-  listBoards: () => Promise.resolve([]),
-  createBoard: () => Promise.reject(new Error('not used')),
-});
+const fakeRepository = (kind: 'local' | 'server'): WorkspaceRepository =>
+  fakeWorkspaceRepository({ kind });
 
 function ShowKind() {
   const repository = useWorkspace();

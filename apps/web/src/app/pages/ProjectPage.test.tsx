@@ -5,22 +5,23 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { WorkspaceProvider } from '../../data/workspace/context';
+import { fakeBoard, fakeProject, fakeWorkspaceRepository } from '../../data/workspace/testFakes';
 import { WorkspaceError, type WorkspaceRepository } from '../../data/workspace/types';
 import ProjectPage from './ProjectPage';
 
-const project = { id: 'p1', name: 'Atlas', createdAt: '2026-01-01T00:00:00.000Z' };
+const project = fakeProject({ id: 'p1', name: 'Atlas' });
 
 let repository: WorkspaceRepository;
 
-const base = (): WorkspaceRepository => ({
-  kind: 'local',
-  listProjects: vi.fn(() => Promise.resolve([project])),
-  createProject: vi.fn(() => Promise.reject(new Error('not used here'))),
-  listBoards: vi.fn(() => Promise.resolve([])),
-  createBoard: vi.fn((input: { projectId: string; title: string }) =>
-    Promise.resolve({ id: 'b-new', ...input, createdAt: '2026-01-02T00:00:00.000Z' }),
-  ),
-});
+const base = (): WorkspaceRepository =>
+  fakeWorkspaceRepository({
+    listProjects: vi.fn(() => Promise.resolve([project])),
+    createProject: vi.fn(() => Promise.reject(new Error('not used here'))),
+    listBoards: vi.fn(() => Promise.resolve([])),
+    createBoard: vi.fn((input: { projectId: string; title: string }) =>
+      Promise.resolve(fakeBoard({ id: 'b-new', ...input })),
+    ),
+  });
 
 beforeEach(() => {
   repository = base();
@@ -65,9 +66,7 @@ describe('ProjectPage', () => {
 
   it('links every existing board and offers another one', async () => {
     repository.listBoards = vi.fn(() =>
-      Promise.resolve([
-        { id: 'b1', projectId: 'p1', title: 'Sweep', createdAt: '2026-01-01T00:00:00.000Z' },
-      ]),
+      Promise.resolve([fakeBoard({ id: 'b1', projectId: 'p1', title: 'Sweep' })]),
     );
     renderPage();
     expect(await screen.findByRole('link', { name: 'Sweep' })).toHaveAttribute('href', '/b/b1');

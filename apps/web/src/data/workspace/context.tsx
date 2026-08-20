@@ -1,6 +1,6 @@
 /**
- * Wiring for the workspace repository: one provider, four hooks, no component that knows whether
- * the data came from IndexedDB or from the API.
+ * Wiring for the workspace repository: one provider, and a hook per query/mutation, so no
+ * component knows whether the data came from IndexedDB or from the API.
  *
  * `WorkspaceProvider` is the seam. In local mode `main.tsx` hands it the IndexedDB implementation;
  * in server mode `TrpcWorkspaceBridge` builds the tRPC-backed one. Tests hand it a fake.
@@ -11,7 +11,13 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 
 import { trpc } from '../../lib/trpc.tsx';
 import { createServerWorkspaceRepository } from './server.ts';
-import type { WorkspaceBoard, WorkspaceProject, WorkspaceRepository } from './types.ts';
+import type {
+  ListBoardsOptions,
+  ListProjectsOptions,
+  WorkspaceBoard,
+  WorkspaceProject,
+  WorkspaceRepository,
+} from './types.ts';
 
 const WorkspaceContext = createContext<WorkspaceRepository | null>(null);
 
@@ -33,6 +39,11 @@ export function useWorkspace(): WorkspaceRepository {
   return repository;
 }
 
+/** The caller's capability in this workspace (P7 §12) — see `WorkspaceRepository.role`. */
+export function useWorkspaceRole() {
+  return useWorkspace().role();
+}
+
 /**
  * Server mode only: adapts the tRPC client to the repository interface. Mounted inside
  * `TRPCProvider`, so it may use `useUtils()`; local mode never renders it, which is what keeps the
@@ -45,39 +56,99 @@ export function TrpcWorkspaceBridge({ children }: { children: ReactNode }) {
       createServerWorkspaceRepository({
         listProjects: (input) => utils.client.project.list.query(input),
         createProject: (input) => utils.client.project.create.mutate(input),
+        renameProject: (input) => utils.client.project.rename.mutate(input),
+        setProjectAppearance: (input) => utils.client.project.setAppearance.mutate(input),
+        archiveProject: (input) => utils.client.project.archive.mutate(input),
+        restoreProject: (input) => utils.client.project.restore.mutate(input),
+        deleteProject: (input) => utils.client.project.delete.mutate(input),
         listBoards: (input) => utils.client.board.list.query(input),
         createBoard: (input) => utils.client.board.create.mutate(input),
+        renameBoard: (input) => utils.client.board.rename.mutate(input),
+        moveBoard: (input) => utils.client.board.move.mutate(input),
+        archiveBoard: (input) => utils.client.board.archive.mutate(input),
+        restoreBoard: (input) => utils.client.board.restore.mutate(input),
+        deleteBoard: (input) => utils.client.board.delete.mutate(input),
+        duplicateBoard: (input) => utils.client.board.duplicate.mutate(input),
+        saveBoardAsTemplate: (input) => utils.client.board.saveAsTemplate.mutate(input),
+        touchBoardOpened: (input) => utils.client.board.touchOpened.mutate(input),
+        reportBoardCounts: (input) => utils.client.board.reportCounts.mutate(input),
       }),
     [utils],
   );
   return <WorkspaceProvider repository={repository}>{children}</WorkspaceProvider>;
 }
 
-export const projectsKey = ['workspace', 'projects'] as const;
-export const boardsKey = (projectId: string) => ['workspace', 'boards', projectId] as const;
+export const projectsKey = (options: ListProjectsOptions = {}) =>
+  ['workspace', 'projects', options] as const;
+export const boardsKey = (projectId: string, options: ListBoardsOptions = {}) =>
+  ['workspace', 'boards', projectId, options] as const;
 
-export function useProjects(): UseQueryResult<WorkspaceProject[]> {
+export function useProjects(options: ListProjectsOptions = {}): UseQueryResult<WorkspaceProject[]> {
   const repository = useWorkspace();
-  return useQuery({ queryKey: projectsKey, queryFn: () => repository.listProjects() });
+  return useQuery({
+    queryKey: projectsKey(options),
+    queryFn: () => repository.listProjects(options),
+  });
 }
 
 export function useCreateProject(onCreated: (project: WorkspaceProject) => void | Promise<void>) {
   const repository = useWorkspace();
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (input: { name: string }) => repository.createProject(input),
+    mutationFn: (input: { name: string; color?: string; icon?: string }) =>
+      repository.createProject(input),
     onSuccess: async (project) => {
-      await client.invalidateQueries({ queryKey: projectsKey });
+      await client.invalidateQueries({ queryKey: ['workspace', 'projects'] });
       await onCreated(project);
     },
   });
 }
 
-export function useBoards(projectId: string): UseQueryResult<WorkspaceBoard[]> {
+/** Shared invalidation for any project mutation: every `useProjects` view goes stale. */
+function useProjectMutation<TInput>(
+  fn: (repository: WorkspaceRepository, input: TInput) => Promise<WorkspaceProject>,
+) {
+  const repository = useWorkspace();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: TInput) => fn(repository, input),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ['workspace', 'projects'] });
+    },
+  });
+}
+
+export const useRenameProject = () =>
+  useProjectMutation<{ projectId: string; name: string }>((r, i) => r.renameProject(i));
+export const useSetProjectAppearance = () =>
+  useProjectMutation<{ projectId: string; color?: string | null; icon?: string | null }>((r, i) =>
+    r.setProjectAppearance(i),
+  );
+export const useArchiveProject = () =>
+  useProjectMutation<{ projectId: string }>((r, i) => r.archiveProject(i));
+export const useRestoreProject = () =>
+  useProjectMutation<{ projectId: string }>((r, i) => r.restoreProject(i));
+
+export function useDeleteProject() {
+  const repository = useWorkspace();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { projectId: string; confirmName: string }) =>
+      repository.deleteProject(input),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ['workspace', 'projects'] });
+    },
+  });
+}
+
+export function useBoards(
+  projectId: string,
+  options: ListBoardsOptions = {},
+): UseQueryResult<WorkspaceBoard[]> {
   const repository = useWorkspace();
   return useQuery({
-    queryKey: boardsKey(projectId),
-    queryFn: () => repository.listBoards(projectId),
+    queryKey: boardsKey(projectId, options),
+    queryFn: () => repository.listBoards(projectId, options),
     enabled: projectId !== '',
   });
 }
@@ -89,10 +160,61 @@ export function useCreateBoard(
   const repository = useWorkspace();
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (input: { title: string }) => repository.createBoard({ projectId, ...input }),
+    mutationFn: (input: { title: string; templateId?: string }) =>
+      repository.createBoard({ projectId, ...input }),
     onSuccess: async (board) => {
-      await client.invalidateQueries({ queryKey: boardsKey(projectId) });
+      await client.invalidateQueries({ queryKey: ['workspace', 'boards', projectId] });
       await onCreated(board);
     },
   });
+}
+
+/** Shared invalidation for any board mutation: both the source and (if moved) target project. */
+function useBoardMutation<TInput extends { boardId: string }, TOut>(
+  fn: (repository: WorkspaceRepository, input: TInput) => Promise<TOut>,
+) {
+  const repository = useWorkspace();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: TInput) => fn(repository, input),
+    onSuccess: async () => {
+      // Board membership of any project may have changed (move); invalidating every board list is
+      // simpler and cheaper than tracking which project ids are affected.
+      await client.invalidateQueries({ queryKey: ['workspace', 'boards'] });
+    },
+  });
+}
+
+export const useRenameBoard = () =>
+  useBoardMutation<{ boardId: string; title: string }, WorkspaceBoard>((r, i) => r.renameBoard(i));
+export const useMoveBoard = () =>
+  useBoardMutation<{ boardId: string; projectId: string }, WorkspaceBoard>((r, i) =>
+    r.moveBoard(i),
+  );
+export const useArchiveBoard = () =>
+  useBoardMutation<{ boardId: string }, WorkspaceBoard>((r, i) => r.archiveBoard(i));
+export const useRestoreBoard = () =>
+  useBoardMutation<{ boardId: string }, WorkspaceBoard>((r, i) => r.restoreBoard(i));
+export const useDeleteBoard = () =>
+  useBoardMutation<{ boardId: string }, { ok: true }>((r, i) => r.deleteBoard(i));
+export const useDuplicateBoard = () =>
+  useBoardMutation<{ boardId: string; title?: string }, WorkspaceBoard>((r, i) =>
+    r.duplicateBoard(i),
+  );
+export const useSaveBoardAsTemplate = () =>
+  useBoardMutation<{ boardId: string }, WorkspaceBoard>((r, i) => r.saveBoardAsTemplate(i));
+
+/** Fire-and-forget: no loading/error UI, just an invalidation once it settles. */
+export function useTouchBoardOpened() {
+  const repository = useWorkspace();
+  return (boardId: string): void => {
+    void repository.touchBoardOpened({ boardId });
+  };
+}
+
+export function useReportBoardCounts() {
+  const repository = useWorkspace();
+  return (boardId: string, nodeCount: number, edgeCount: number): void => {
+    void repository.reportBoardCounts({ boardId, nodeCount, edgeCount });
+  };
 }

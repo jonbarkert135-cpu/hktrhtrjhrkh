@@ -1,12 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  projectsKey,
-  useCreateProject,
-  useProjects,
-  useWorkspace,
-} from '../../data/workspace/context';
+import { useCreateProject, useProjects, useWorkspace } from '../../data/workspace/context';
 import { ensureLocalWorkspace } from '../../data/workspace/bootstrap';
 import { capabilities } from '../../mode/appMode';
 import { workspaceErrorMessage } from '../../data/workspace/errors';
@@ -31,7 +26,8 @@ function useLocalBootstrap(projects: readonly unknown[] | undefined): void {
     // work on the scratch board and the rail keeps offering "Create your first project".
     void ensureLocalWorkspace(repository)
       .then(async (created) => {
-        if (created !== null) await client.invalidateQueries({ queryKey: projectsKey });
+        if (created !== null)
+          await client.invalidateQueries({ queryKey: ['workspace', 'projects'] });
       })
       .catch(() => undefined);
   }, [projects, repository, client]);

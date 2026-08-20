@@ -25,16 +25,10 @@ vi.mock('../mode/appMode', () => ({
 
 const { AppRoutes } = await import('./router');
 const { AppProviders } = await import('./providers');
-const { WorkspaceError } = await import('../data/workspace/types');
+const { fakeWorkspaceRepository } = await import('../data/workspace/testFakes');
 
 /** The rail's data is irrelevant here; the guard is what is under test. */
-const repository = {
-  kind: 'local' as const,
-  listProjects: () => Promise.resolve([]),
-  createProject: () => Promise.reject(new WorkspaceError('not used')),
-  listBoards: () => Promise.resolve([]),
-  createBoard: () => Promise.reject(new WorkspaceError('not used')),
-};
+const repository = fakeWorkspaceRepository();
 
 const app = () => (
   <AppProviders repository={repository} backendEnabled={false}>
