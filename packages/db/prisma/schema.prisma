@@ -36,6 +36,10 @@ model Organization {
   projects  Project[]
   auditLogs AuditLog[]
   files     File[]
+  runs      IntegrationRun[]
+  proposals ImportProposal[]
+  consents  Consent[]
+  apiTokens ApiToken[]
 
   @@map("organizations")
 }
@@ -58,6 +62,9 @@ model User {
   sessions    Session[]
   accounts    Account[]
   auditLogs   AuditLog[]
+  runs        IntegrationRun[]
+  consents    Consent[]
+  apiTokens   ApiToken[]
 
   @@index([lastSeenAt])
   @@map("users")
@@ -139,6 +146,7 @@ model Project {
   org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   boards Board[]
   files  File[]
+  runs   IntegrationRun[]
 
   @@unique([orgId, key])
   @@index([orgId, archivedAt])
@@ -363,4 +371,170 @@ model File {
   @@index([projectId, deletedAt, createdAt(sort: Desc)])
   @@index([orgId, sha256, state])
   @@map("files")
+}
+
+// ---------------------------------------------------------------------------------------------
+// P9 — integration framework (10_INTEGRATIONS.md §5, §12.1; 09_BACKEND.md §4.1).
+// Every table here is tenant-scoped by org_id (and project_id where a run belongs to a project),
+// the same scoping every other tenant table uses, so the RLS grants in 15_SECURITY.md §3.4 apply
+// unchanged. Run rows outlive artifacts and proposals on purpose: they are the provenance backbone.
+
+enum RunStatus {
+  queued
+  awaiting_approval
+  starting
+  running
+  parsing
+  succeeded
+  partial
+  failed
+  cancelled
+  timed_out
+
+  @@map("run_status")
+}
+
+/// One execution of one integration. `input` is redacted (secretRef fields hold the secret *name*).
+model IntegrationRun {
+  id             String    @id
+  orgId          String    @map("org_id")
+  projectId      String    @map("project_id")
+  boardId        String    @map("board_id")
+  integrationId  String    @map("integration_id") @db.VarChar(64)
+  adapterVersion String    @map("adapter_version") @db.VarChar(40)
+  toolVersion    String    @map("tool_version") @db.VarChar(40)
+  imageDigest    String?   @map("image_digest") @db.VarChar(80)
+  actorUserId    String    @map("actor_user_id")
+  anchorNodeId   String?   @map("anchor_node_id")
+  input          Json
+  /// sha256 of the canonical JSON input; the re-run dedupe key (§7.5).
+  inputHash      String    @map("input_hash") @db.VarChar(64)
+  targets        Json
+  consentId      String?   @map("consent_id")
+  status         RunStatus
+  attempt        Int       @default(1)
+  exitCode       Int?      @map("exit_code")
+  errorCode      String?   @map("error_code") @db.VarChar(48)
+  errorDetail    Json?     @map("error_detail")
+  startedAt      DateTime? @map("started_at")
+  finishedAt     DateTime? @map("finished_at")
+  durationMs     Int?      @map("duration_ms")
+  stats          Json      @default("{}")
+  artifacts      Json      @default("[]")
+  proposalId     String?   @map("proposal_id")
+  appliedAt      DateTime? @map("applied_at")
+  parentRunId    String?   @map("parent_run_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  org        Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project    Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  actor      User             @relation(fields: [actorUserId], references: [id])
+  consent    Consent?         @relation(fields: [consentId], references: [id])
+  proposal   ImportProposal?  @relation("RunProposal", fields: [proposalId], references: [id])
+  parentRun  IntegrationRun?  @relation("RunReruns", fields: [parentRunId], references: [id])
+  reruns     IntegrationRun[] @relation("RunReruns")
+  logEntries RunLogEntry[]
+  proposals  ImportProposal[] @relation("ProposalRun")
+
+  @@index([projectId, createdAt(sort: Desc)])
+  @@index([boardId, createdAt(sort: Desc)])
+  @@index([integrationId, inputHash, createdAt(sort: Desc)])
+  @@index([orgId, status])
+  @@map("integration_runs")
+}
+
+/// The rendered run log (§6.10). 90-day retention; pruned by the same sweeper as presence logs.
+model RunLogEntry {
+  runId   String   @map("run_id")
+  seq     Int
+  at      DateTime
+  level   String   @db.VarChar(8)
+  phase   String   @db.VarChar(16)
+  message String   @db.VarChar(2000)
+  data    Json?
+
+  run IntegrationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@id([runId, seq])
+  @@map("run_log_entries")
+}
+
+/// The reviewable result of a run (§3.7). Immutable except `appliedItems`; expires after 7 days.
+model ImportProposal {
+  id            String    @id
+  orgId         String    @map("org_id")
+  projectId     String    @map("project_id")
+  boardId       String    @map("board_id")
+  runId         String    @map("run_id")
+  integrationId String    @map("integration_id") @db.VarChar(64)
+  payload       Json
+  summary       Json      @default("{}")
+  /// itemId → created entity id; makes apply idempotent per (proposalId, itemId) (§3.8 point 4).
+  appliedItems  Json      @default("{}")
+  appliedAt     DateTime? @map("applied_at")
+  appliedBy     String?   @map("applied_by")
+  discardedAt   DateTime? @map("discarded_at")
+  expiresAt     DateTime  @map("expires_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  org  Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  run  IntegrationRun   @relation("ProposalRun", fields: [runId], references: [id], onDelete: Cascade)
+  runs IntegrationRun[] @relation("RunProposal")
+
+  @@index([boardId, createdAt(sort: Desc)])
+  @@index([expiresAt])
+  @@map("import_proposals")
+}
+
+/// Recorded authorization for a scoped run (§12.1). Proves *which wording* was shown, and when.
+model Consent {
+  id            String    @id
+  orgId         String    @map("org_id")
+  projectId     String    @map("project_id")
+  userId        String    @map("user_id")
+  integrationId String    @map("integration_id") @db.VarChar(64)
+  scope         String    @db.VarChar(24)
+  targetsHash   String    @map("targets_hash") @db.VarChar(64)
+  scopeTextHash String    @map("scope_text_hash") @db.VarChar(64)
+  acceptedAt    DateTime  @map("accepted_at")
+  expiresAt     DateTime  @map("expires_at")
+  revokedAt     DateTime? @map("revoked_at")
+  usedAt        DateTime? @map("used_at")
+  ip            String?   @db.VarChar(45)
+  userAgent     String?   @map("user_agent") @db.VarChar(400)
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  org  Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  runs IntegrationRun[]
+
+  @@index([projectId, integrationId, userId, expiresAt])
+  @@map("consents")
+}
+
+/// Scoped API tokens for the REST v1 surface (09_BACKEND.md §4.1). Only the argon2id hash is
+/// stored; the plaintext is shown once at creation and can never be retrieved again.
+model ApiToken {
+  id         String    @id
+  orgId      String    @map("org_id")
+  userId     String    @map("user_id")
+  name       String    @db.VarChar(120)
+  /// First 12 characters of the token, for "which token is this?" in the UI. Not a secret.
+  prefix     String    @db.VarChar(16)
+  hash       String    @db.VarChar(255)
+  scopes     String[]
+  lastUsedAt DateTime? @map("last_used_at")
+  expiresAt  DateTime? @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([prefix])
+  @@index([orgId, userId])
+  @@map("api_tokens")
 }
