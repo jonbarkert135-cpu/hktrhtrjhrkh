@@ -13,6 +13,9 @@ interface ProjectRow {
   key: string;
   name: string;
   description: string | null;
+  color: string | null;
+  icon: string | null;
+  archivedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,6 +26,9 @@ const toDto = (p: ProjectRow) => ({
   key: p.key,
   name: p.name,
   description: p.description,
+  color: p.color,
+  icon: p.icon,
+  archivedAt: p.archivedAt,
   createdAt: p.createdAt,
   updatedAt: p.updatedAt,
 });
@@ -43,12 +49,34 @@ function projectKey(name: string): string {
   return `${base === '' ? 'project' : base}-${suffix}`;
 }
 
+/** A live (not soft-deleted) project of the caller's org, or a user-facing not-found error. */
+async function requireProject(projectId: string, orgId: string): Promise<ProjectRow> {
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, orgId, deletedAt: null },
+  });
+  if (!project) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'That project no longer exists.' });
+  }
+  return project;
+}
+
 export const projectRouter = router({
   list: orgProcedure('viewer')
-    .input(z.object({ limit: z.number().int().min(1).max(200).default(50) }).default({}))
+    .input(
+      z
+        .object({
+          limit: z.number().int().min(1).max(200).default(50),
+          includeArchived: z.boolean().default(false),
+        })
+        .default({}),
+    )
     .query(async ({ ctx, input }) => {
       const projects = await prisma.project.findMany({
-        where: { orgId: ctx.org.id, deletedAt: null },
+        where: {
+          orgId: ctx.org.id,
+          deletedAt: null,
+          ...(input.includeArchived ? {} : { archivedAt: null }),
+        },
         orderBy: { updatedAt: 'desc' },
         take: input.limit,
       });
@@ -60,6 +88,8 @@ export const projectRouter = router({
       z.object({
         name: z.string().trim().min(1).max(120),
         description: z.string().max(2000).optional(),
+        color: z.string().max(40).optional(),
+        icon: z.string().max(32).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -70,6 +100,8 @@ export const projectRouter = router({
           key: projectKey(input.name),
           name: input.name,
           description: input.description ?? null,
+          color: input.color ?? null,
+          icon: input.icon ?? null,
           createdBy: ctx.user.id,
         },
       });
@@ -88,16 +120,112 @@ export const projectRouter = router({
       return toDto(project);
     }),
 
+  rename: orgProcedure('editor')
+    .input(z.object({ projectId: Id, name: z.string().trim().min(1).max(120) }))
+    .mutation(async ({ ctx, input }) => {
+      await requireProject(input.projectId, ctx.org.id);
+      const project = await prisma.project.update({
+        where: { id: input.projectId },
+        data: { name: input.name },
+      });
+      await audit(
+        {
+          action: 'project.renamed',
+          outcome: 'success',
+          actorId: ctx.user.id,
+          orgId: ctx.org.id,
+          targetKind: 'project',
+          targetId: project.id,
+          ip: ctx.ip,
+        },
+        ctx.logger,
+      );
+      return toDto(project);
+    }),
+
+  setAppearance: orgProcedure('editor')
+    .input(
+      z.object({
+        projectId: Id,
+        color: z.string().max(40).nullable().optional(),
+        icon: z.string().max(32).nullable().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await requireProject(input.projectId, ctx.org.id);
+      const project = await prisma.project.update({
+        where: { id: input.projectId },
+        data: {
+          ...(input.color !== undefined ? { color: input.color } : {}),
+          ...(input.icon !== undefined ? { icon: input.icon } : {}),
+        },
+      });
+      await audit(
+        {
+          action: 'project.appearance_changed',
+          outcome: 'success',
+          actorId: ctx.user.id,
+          orgId: ctx.org.id,
+          targetKind: 'project',
+          targetId: project.id,
+          ip: ctx.ip,
+        },
+        ctx.logger,
+      );
+      return toDto(project);
+    }),
+
+  archive: orgProcedure('editor')
+    .input(z.object({ projectId: Id }))
+    .mutation(async ({ ctx, input }) => {
+      await requireProject(input.projectId, ctx.org.id);
+      const project = await prisma.project.update({
+        where: { id: input.projectId },
+        data: { archivedAt: systemClock.now() },
+      });
+      await audit(
+        {
+          action: 'project.archived',
+          outcome: 'success',
+          actorId: ctx.user.id,
+          orgId: ctx.org.id,
+          targetKind: 'project',
+          targetId: project.id,
+          ip: ctx.ip,
+        },
+        ctx.logger,
+      );
+      return toDto(project);
+    }),
+
+  restore: orgProcedure('editor')
+    .input(z.object({ projectId: Id }))
+    .mutation(async ({ ctx, input }) => {
+      await requireProject(input.projectId, ctx.org.id);
+      const project = await prisma.project.update({
+        where: { id: input.projectId },
+        data: { archivedAt: null },
+      });
+      await audit(
+        {
+          action: 'project.restored',
+          outcome: 'success',
+          actorId: ctx.user.id,
+          orgId: ctx.org.id,
+          targetKind: 'project',
+          targetId: project.id,
+          ip: ctx.ip,
+        },
+        ctx.logger,
+      );
+      return toDto(project);
+    }),
+
   delete: orgProcedure('admin')
     // N8: destructive actions are confirmed — the caller must retype the project name.
     .input(z.object({ projectId: Id, confirmName: z.string().max(120) }))
     .mutation(async ({ ctx, input }) => {
-      const project = await prisma.project.findFirst({
-        where: { id: input.projectId, orgId: ctx.org.id, deletedAt: null },
-      });
-      if (!project) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'That project no longer exists.' });
-      }
+      const project = await requireProject(input.projectId, ctx.org.id);
       if (project.name !== input.confirmName) {
         throw new TRPCError({
           code: 'BAD_REQUEST',

@@ -29,7 +29,7 @@ describe('project.list', () => {
     const result = await caller(ctx({ role: 'viewer' })).project.list({ limit: 10 });
 
     expect(prismaMock.project.findMany).toHaveBeenCalledWith({
-      where: { orgId: ORG_ID, deletedAt: null },
+      where: { orgId: ORG_ID, deletedAt: null, archivedAt: null },
       orderBy: { updatedAt: 'desc' },
       take: 10,
     });
@@ -172,5 +172,67 @@ describe('project.delete', () => {
         confirmName: 'Atlas',
       }),
     ).rejects.toThrow(/access/i);
+  });
+});
+
+describe('project.rename', () => {
+  it('renames a live project and audits it', async () => {
+    prismaMock.project.findFirst.mockResolvedValue(row());
+    prismaMock.project.update.mockResolvedValue(row({ name: 'Atlas 2' }));
+
+    const result = await caller(ctx({ role: 'editor' })).project.rename({
+      projectId: PROJECT_ID,
+      name: 'Atlas 2',
+    });
+
+    expect(prismaMock.project.update).toHaveBeenCalledWith({
+      where: { id: PROJECT_ID },
+      data: { name: 'Atlas 2' },
+    });
+    expect(result.name).toBe('Atlas 2');
+    expect(recordAuditMock).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'project.renamed', targetId: PROJECT_ID }),
+    );
+  });
+
+  it('denies a viewer', async () => {
+    await expect(
+      caller(ctx({ role: 'viewer' })).project.rename({ projectId: PROJECT_ID, name: 'x' }),
+    ).rejects.toThrow(/access/i);
+  });
+});
+
+describe('project.setAppearance', () => {
+  it('updates color and icon independently', async () => {
+    prismaMock.project.findFirst.mockResolvedValue(row());
+    prismaMock.project.update.mockResolvedValue(row({ color: '--project-blue' }));
+
+    const result = await caller(ctx({ role: 'editor' })).project.setAppearance({
+      projectId: PROJECT_ID,
+      color: '--project-blue',
+    });
+
+    expect(prismaMock.project.update).toHaveBeenCalledWith({
+      where: { id: PROJECT_ID },
+      data: { color: '--project-blue' },
+    });
+    expect(result.color).toBe('--project-blue');
+  });
+});
+
+describe('project.archive / project.restore', () => {
+  it('archives then restores a project', async () => {
+    prismaMock.project.findFirst.mockResolvedValue(row());
+    prismaMock.project.update.mockResolvedValue(row({ archivedAt: new Date('2024-02-01') }));
+    const archived = await caller(ctx({ role: 'editor' })).project.archive({
+      projectId: PROJECT_ID,
+    });
+    expect(archived.archivedAt).not.toBeNull();
+
+    prismaMock.project.update.mockResolvedValue(row({ archivedAt: null }));
+    const restored = await caller(ctx({ role: 'editor' })).project.restore({
+      projectId: PROJECT_ID,
+    });
+    expect(restored.archivedAt).toBeNull();
   });
 });

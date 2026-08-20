@@ -129,6 +129,7 @@ model Project {
   name        String    @db.VarChar(200)
   description String?   @db.VarChar(2000)
   color       String?   @db.VarChar(40)
+  icon        String?   @db.VarChar(32)
   archivedAt  DateTime? @map("archived_at")
   deletedAt   DateTime? @map("deleted_at")
   createdBy   String    @map("created_by")
@@ -151,7 +152,18 @@ model Board {
   projectId     String    @map("project_id")
   title         String    @db.VarChar(300)
   description   String?   @db.VarChar(2000)
+  icon          String?   @db.VarChar(32)
   schemaVersion Int       @default(1) @map("schema_version")
+  /// The board (built-in template id or another board's id) this one was created from.
+  templateOf    String?   @map("template_of")
+  /// Flagged reusable via "save as template" (P7 §5.4); ordinary boards otherwise.
+  isTemplate    Boolean   @default(false) @map("is_template")
+  archivedAt    DateTime? @map("archived_at")
+  lastOpenedAt  DateTime? @map("last_opened_at")
+  /// Denormalized counters (P7 §5.1): owned by the sync projection once P8 ships; until then the
+  /// client reports its own save and `reportCounts` clamps it to a sane, non-negative range.
+  nodeCount     Int       @default(0) @map("node_count")
+  edgeCount     Int       @default(0) @map("edge_count")
   lastEditedAt  DateTime? @map("last_edited_at")
   deletedAt     DateTime? @map("deleted_at")
   createdBy     String    @map("created_by")
@@ -161,6 +173,7 @@ model Board {
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, deletedAt])
+  @@index([projectId, archivedAt, lastOpenedAt(sort: Desc)])
   @@index([orgId, lastEditedAt(sort: Desc)])
   @@map("boards")
 }
