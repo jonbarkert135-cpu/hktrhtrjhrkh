@@ -15,7 +15,11 @@ export async function signUp(page: Page): Promise<void> {
     .first()
     .fill('e2e-password-1234');
   await page.getByRole('button', { name: /create account|sign up/i }).click();
-  await expect(page.getByRole('button', { name: /create (your first )?project/i })).toBeVisible();
+  // Signup + the first project-list fetch can exceed the 5s default under CI load (P7 added the
+  // project rail query on top of the session bootstrap), so wait explicitly.
+  await expect(page.getByRole('button', { name: /create (your first )?project/i })).toBeVisible({
+    timeout: 20_000,
+  });
 }
 
 /** Signs up and lands on a fresh board; returns its URL so the spec can reopen it. */
