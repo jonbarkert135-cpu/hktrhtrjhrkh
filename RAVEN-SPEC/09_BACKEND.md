@@ -1239,3 +1239,27 @@ and support `--dry-run` through `admin.jobs` for operators.
 | R9  | Blob GC deleting a blob still referenced by an unprojected board version                    | Broken file reference                              | Two-phase GC, 7-day quarantine, reference check against the projection **and** a `projected_version >= doc_version` precondition per board                  |
 | R10 | Archive listing and docx/pdf rendering pull heavy native dependencies into the worker image | Image size, CVE surface                            | Derivative generation isolated in its own worker deployment with a minimal image; failure is non-fatal (glyph fallback)                                     |
 | R11 | Search hybrid ranking weights (0.6/0.4) are unvalidated against real corpora                | Poor result quality                                | Weights are configuration (`search.rankWeights`), an offline relevance harness with a labelled fixture set runs in CI (`18_TESTING.md` §8)                  |
+
+---
+
+## 15. Implementation status (P8, `apps/sync`)
+
+**Shipped**: `Server.configure` with the Redis and Database extensions wired (`apps/sync/src/
+server.ts`); board-token `onAuthenticate` (HMAC, 5-minute TTL, single-board scope,
+`packages/domain/src/auth/boardToken.ts`, shared with the API's `boardToken` router); read-only
+enforcement in `beforeHandleMessage`; snapshot + projection in `onStoreDocument`'s `Database`
+hooks, retried with backoff and never blocking the snapshot (`apps/sync/src/projection.ts`); room
+idle eviction at 60s (`apps/sync/src/eviction.ts`); awareness shaping/throttling/dedupe shared with
+the client (`packages/domain/src/collab/awareness.ts`); all `raven_sync_*` metrics from §10.2
+except the RUM ones (`apps/sync/src/metrics.ts`); `scripts/reproject.ts`.
+
+**Deviations from this document's §5.2 design**: §5.2 describes an HTTP `internalApi.
+authorizeBoard` call from `onAuthenticate`; this phase instead verifies a self-contained HMAC
+token (P8's own §5.1/§9), which needs no synchronous call back to the API per connection and is
+what P8's acceptance criteria test. The API-issued token still has the API as the single source of
+authorization truth — it just does not re-check on every connect, only on issue and on the 60s
+re-check the client's silent-refresh performs (P8 §14).
+
+**Not yet**: the `/events` channel (§5.6) is unrelated to P8 and untouched; live k6 fanout numbers
+and the Kubernetes HPA wiring for `raven_sync_rooms_open` (needs a real cluster). See
+`RAVEN-SPEC/20_ROADMAP.md` P8's status note for the full list.

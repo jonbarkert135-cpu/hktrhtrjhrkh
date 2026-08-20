@@ -119,9 +119,9 @@ no prompt yet; write one in this format when their turn comes.
 ## Remaining requirements (the only P6 work left)
 
 12. Browser-extension hook: `POST /api/v1/capture` accepting `{ url, title?, selection?, imageUrl?,
-    boardId? }` authenticated by a scoped API token; it creates a node in the target board's inbox
+boardId? }` authenticated by a scoped API token; it creates a node in the target board's inbox
     area (a reserved region 2,000 px left of the origin) and returns the node id. Rate limit 60/min.
-14. Screenshot capture of a website node behind the `capture.screenshot` feature flag (off by
+13. Screenshot capture of a website node behind the `capture.screenshot` feature flag (off by
     default); when off the UI does not offer it (no dead controls).
 
 Do both together with the phase that brings scoped API tokens and `apps/worker`. Everything else
@@ -292,6 +292,40 @@ this explicitly in the UI).
 ---
 
 # P8 — Sync & collaboration
+
+**Status: mostly shipped (phase/p08-sync-collab). Still open, and why:**
+
+- §5.13 rich-text character-wise merge and delete-vs-edit undo recovery, and the observer-based
+  edge-pruning on both replicas — these depend on `apps/web`'s rich-text binding and the undo
+  manager under real concurrent load, which needs the live e2e harness (below) to prove, not unit
+  tests. The mechanism (Yjs `Y.XmlFragment` CRDT merge, `UndoManager` origin scoping) already
+  exists from P3/P4; nothing new to build, only to verify.
+- The full `e2e/collab/*` suite, `load/sync-fanout.js` (k6) and the broadcast-latency/memory
+  performance numbers in §10 — all need a running Postgres + Redis + `apps/sync` stack, which this
+  sandbox does not have. The specs, fixtures and the suites' _unit-testable_ halves are done; the
+  live runs are for CI (`.github/workflows/ci.yml`), which already has the service containers P1
+  wired up.
+- `08_DATA_MODEL.md` §5's `groups`/`node_tags`/`entity_resolutions`/`history_events`/embedding-job
+  projection is a superset this phase does not implement — P8's own §4 file list only names
+  `nodes`/`edges`/`board_snapshots`/`comments`/`presence_log`, so the projection here covers those
+  five and is idempotent/replayable for them; the richer projection surface is follow-on work
+  (tracked as a P8 deviation, not a new phase).
+- Comments: `08_DATA_MODEL.md` §2.2's `comments` Y.Map subdoc design is **not** built; this phase
+  follows P8's own §5.10 instead ("stored in Postgres... the doc holds only the anchor id") because
+  it is simpler and is what this phase's acceptance criteria test. The existing (unused since P3)
+  `comments` Y.Map root now holds anchor pins only.
+- Mentions email delivery is stubbed (`apps/api/src/mentions.ts`'s `EmailSink`): there is no mailer
+  in this codebase yet (P1 deferred it the same way for signup). The rate-limiting/digest logic is
+  built and tested; swapping in a real transport is a one-line change once the mailer lands.
+- `apps/web/src/data/syncProvider.ts` (client composition of `y-indexeddb` + the Hocuspocus
+  WebSocket provider) and the `apps/web/src/collab/*` components are built and unit-tested standing
+  alone, but are **not yet wired into** `BoardDocProvider` (`docProvider.tsx`) or the board canvas
+  overlay — deliberately, to avoid touching board-loading/board-UI code while
+  `phase/p07-projects-search` restructures the same area concurrently. Wiring them in is a small,
+  well-defined follow-up once both branches land.
+- Runbooks (`runbooks/projection.md`, `sync.md`, `sync-memory.md`) and the three alert rules are
+  written (`infra/alerts/sync.rules.yml`, `runbooks/*.md`) but not deployed to a live Alertmanager —
+  there is none running in this environment.
 
 ## 1 Objective
 

@@ -1,0 +1,31 @@
+# Prometheus alerting rules for the P8 sync service (19_DEPLOYMENT.md §10.5).
+# Not yet wired to a running Alertmanager in this environment — see RAVEN-SPEC/20_ROADMAP.md P8
+# status note. Load with `--rule-files infra/alerts/*.rules.yml` once one exists.
+groups:
+  - name: raven-sync
+    rules:
+      - alert: SyncProjectionFailing
+        expr: rate(raven_sync_projection_failures_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: 'Sync projection is failing for at least one board.'
+          runbook: runbooks/projection.md
+
+      - alert: SyncBroadcastSlow
+        expr: histogram_quantile(0.95, raven_sync_broadcast_latency_seconds) > 1
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: 'Sync broadcast p95 latency exceeds 1s.'
+          runbook: runbooks/sync.md
+
+      - alert: SyncMemoryHigh
+        expr: raven_sync_doc_memory_bytes > 1.5e9
+        labels:
+          severity: ticket
+        annotations:
+          summary: 'Sync service resident memory for open rooms is approaching the pod budget.'
+          runbook: runbooks/sync-memory.md
