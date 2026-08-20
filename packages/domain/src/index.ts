@@ -30,3 +30,8 @@ export * from './export/schema.v1.ts';
 export * from './export/richtext.ts';
 export * from './export/exportBoard.ts';
 export * from './export/importBoard.ts';
+export * from './search/tokenize.ts';
+export * from './search/score.ts';
+export * from './search/localIndex.ts';
+export * from './search/boardIndex.ts';
+export * from './templates/boardTemplates.ts';
