@@ -4,7 +4,7 @@ import type { Context } from '../src/trpc/context.ts';
 /** The slice of prisma the routers touch, all mocked. */
 export const prismaMock = {
   project: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
-  board: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn() },
+  board: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
   file: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
   membership: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn() },
   organization: { create: vi.fn() },

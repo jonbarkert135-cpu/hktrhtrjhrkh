@@ -1,23 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_BOARD_TITLE, SCRATCH_BOARD_ID, ensureLocalWorkspace } from './bootstrap.ts';
-import type { WorkspaceBoard, WorkspaceProject, WorkspaceRepository } from './types.ts';
+import { fakeBoard, fakeProject, fakeWorkspaceRepository } from './testFakes.ts';
+import type { WorkspaceProject, WorkspaceRepository } from './types.ts';
 
-const project: WorkspaceProject = { id: 'p1', name: 'My research', createdAt: '2026-01-01' };
-const board: WorkspaceBoard = {
-  id: SCRATCH_BOARD_ID,
-  projectId: 'p1',
-  title: DEFAULT_BOARD_TITLE,
-  createdAt: '2026-01-01',
-};
+const project: WorkspaceProject = fakeProject({ id: 'p1', name: 'My research' });
+const board = fakeBoard({ id: SCRATCH_BOARD_ID, projectId: 'p1', title: DEFAULT_BOARD_TITLE });
 
-const repository = (projects: WorkspaceProject[]): WorkspaceRepository => ({
-  kind: 'local',
-  listProjects: vi.fn(() => Promise.resolve(projects)),
-  createProject: vi.fn(() => Promise.resolve(project)),
-  listBoards: vi.fn(() => Promise.resolve([])),
-  createBoard: vi.fn(() => Promise.resolve(board)),
-});
+const repository = (projects: WorkspaceProject[]): WorkspaceRepository =>
+  fakeWorkspaceRepository({
+    listProjects: vi.fn(() => Promise.resolve(projects)),
+    createProject: vi.fn(() => Promise.resolve(project)),
+    listBoards: vi.fn(() => Promise.resolve([])),
+    createBoard: vi.fn(() => Promise.resolve(board)),
+  });
 
 describe('ensureLocalWorkspace', () => {
   it('seeds one project holding the scratch board on a fresh device', async () => {

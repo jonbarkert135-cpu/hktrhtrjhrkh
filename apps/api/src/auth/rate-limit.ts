@@ -87,8 +87,30 @@ export function resolveSignupRule(
   ravenEnv: 'local' | 'preview' | 'staging' | 'production',
   raw: string | undefined,
 ): RateLimitRule {
-  if (ravenEnv === 'production' || raw === undefined) return SIGNUP_RULE;
+  return resolveRuleOverride(ravenEnv, raw, SIGNUP_RULE);
+}
+
+/**
+ * Same escape hatch for the per-key API budget. The e2e suite drives the whole stack from one IP,
+ * and the unauthenticated share of that traffic (signup POSTs and the pre-session bootstrap) all
+ * lands in a single bucket; P7 added the project-rail query on top, which pushed the suite past
+ * 100 req/min and made later specs see a 429 instead of a signed-in shell. `NEXUS_API_RATE_LIMIT` raises
+ * the ceiling for dev/CI only — in `production` the constant always wins.
+ */
+export function resolveApiRule(
+  ravenEnv: 'local' | 'preview' | 'staging' | 'production',
+  raw: string | undefined,
+): RateLimitRule {
+  return resolveRuleOverride(ravenEnv, raw, USER_API_RULE);
+}
+
+function resolveRuleOverride(
+  ravenEnv: 'local' | 'preview' | 'staging' | 'production',
+  raw: string | undefined,
+  base: RateLimitRule,
+): RateLimitRule {
+  if (ravenEnv === 'production' || raw === undefined) return base;
   const limit = Number(raw);
-  if (!Number.isInteger(limit) || limit <= 0) return SIGNUP_RULE;
-  return { limit, windowMs: SIGNUP_RULE.windowMs };
+  if (!Number.isInteger(limit) || limit <= 0) return base;
+  return { limit, windowMs: base.windowMs };
 }

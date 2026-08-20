@@ -5,27 +5,25 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { WorkspaceProvider } from '../../data/workspace/context';
+import { fakeBoard, fakeProject, fakeWorkspaceRepository } from '../../data/workspace/testFakes';
 import { WorkspaceError, type WorkspaceRepository } from '../../data/workspace/types';
 import { ShellContainer } from './ShellContainer';
 
 let repository: WorkspaceRepository;
 
-const base = (): WorkspaceRepository => ({
-  kind: 'local',
-  listProjects: vi.fn(() => Promise.resolve([])),
-  createProject: vi.fn((input: { name: string }) =>
-    Promise.resolve({ id: 'p-new', name: input.name, createdAt: '2026-01-01T00:00:00.000Z' }),
-  ),
-  listBoards: vi.fn(() => Promise.resolve([])),
-  createBoard: vi.fn((input: { projectId: string; title: string; id?: string | undefined }) =>
-    Promise.resolve({
-      id: input.id ?? 'b-new',
-      projectId: input.projectId,
-      title: input.title,
-      createdAt: '2026-01-01T00:00:00.000Z',
-    }),
-  ),
-});
+const base = (): WorkspaceRepository =>
+  fakeWorkspaceRepository({
+    listProjects: vi.fn(() => Promise.resolve([])),
+    createProject: vi.fn((input: { name: string }) =>
+      Promise.resolve(fakeProject({ id: 'p-new', name: input.name })),
+    ),
+    listBoards: vi.fn(() => Promise.resolve([])),
+    createBoard: vi.fn((input: { projectId: string; title: string; id?: string | undefined }) =>
+      Promise.resolve(
+        fakeBoard({ id: input.id ?? 'b-new', projectId: input.projectId, title: input.title }),
+      ),
+    ),
+  });
 
 beforeEach(() => {
   repository = base();
@@ -92,7 +90,7 @@ describe('ShellContainer', () => {
 
   it('lists the projects it read', async () => {
     repository.listProjects = vi.fn(() =>
-      Promise.resolve([{ id: 'p1', name: 'Atlas', createdAt: '2026-01-01T00:00:00.000Z' }]),
+      Promise.resolve([fakeProject({ id: 'p1', name: 'Atlas' })]),
     );
     renderContainer();
     expect(await screen.findByRole('link', { name: 'Atlas' })).toBeInTheDocument();

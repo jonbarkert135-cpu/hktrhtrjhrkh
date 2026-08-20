@@ -1,15 +1,23 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
+import { WorkspaceProvider } from '../../data/workspace/context';
+import { fakeWorkspaceRepository } from '../../data/workspace/testFakes';
 import { Shell } from './Shell';
 
 function renderShell(props: Partial<Parameters<typeof Shell>[0]> = {}) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter>
-      <Shell {...props}>
-        <p>board</p>
-      </Shell>
-    </MemoryRouter>,
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <WorkspaceProvider repository={fakeWorkspaceRepository()}>
+          <Shell {...props}>
+            <p>board</p>
+          </Shell>
+        </WorkspaceProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 

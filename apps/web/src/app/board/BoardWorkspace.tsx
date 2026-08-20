@@ -12,6 +12,7 @@ import {
   duplicateNode,
   exportBoard,
   importBoard,
+  listNodes,
   newId,
   nodeBudget,
   observeBoard,
@@ -21,9 +22,12 @@ import {
 import { Banner, Button } from '@nexus/ui';
 import type { Engine, Intent } from '@nexus/canvas-engine';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useBoardDoc } from '../../data/docProvider.tsx';
+import { useReportBoardCounts, useTouchBoardOpened } from '../../data/workspace/context.tsx';
 import { restoreSnapshot } from '../../data/snapshots.ts';
+import { useBoardSearchIndex } from '../../search/useBoardSearchIndex.ts';
 import { CanvasHost } from '../canvas/CanvasHost';
 import { applyIntent, connectToEmpty, createNoteNode } from '../canvas/bindings/applyIntents.ts';
 import { EdgeLayer, pendingFromIntent, type PendingEdgeUi } from '../../edges/EdgeLayer.tsx';
@@ -58,6 +62,13 @@ export function BoardWorkspace() {
 
   const boardStatus = useBoardStatus();
   const [capture, setCapture] = useState<CaptureResult | null>(null);
+  const searchIndex = useBoardSearchIndex(doc, boardId);
+  const touchOpened = useTouchBoardOpened();
+  const reportCounts = useReportBoardCounts();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const slotOfRef = useRef<(id: string) => HTMLElement | undefined>(() => undefined);
+  const focusedOnceRef = useRef<string | null>(null);
 
   // Capture aims at the middle of what the analyst is looking at; the pointer position is only
   // known inside the engine, so a drop re-aims through `screenToWorld` below.
@@ -122,10 +133,46 @@ export function BoardWorkspace() {
 
   // The status bar belongs to the shell but the numbers belong here (see shell/boardStatus).
   useEffect(() => {
-    boardStatus.publish({ counts });
+    boardStatus.publish({ counts, tags: [...new Set(listNodes(doc).flatMap((n) => n.tags))] });
+    // Denormalized counters (P7 §5.1): the client reports what it just saved; local/server clamp.
+    reportCounts(boardId, counts.nodes, counts.edges);
     // `publish` is stable enough for this: it de-duplicates identical values itself.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [counts.nodes, counts.edges]);
+
+  // The board's search index (P7 §5) and the camera-jump-and-pulse the palette/search use.
+  const focusNode = useCallback(
+    (nodeId: string) => {
+      if (engine === null) return;
+      engine.camera.focus(nodeId);
+      engine.selection.set([nodeId]);
+      const el = slotOfRef.current(nodeId);
+      if (el === undefined) return;
+      el.classList.add('nx-search-pulse');
+      window.setTimeout(() => el.classList.remove('nx-search-pulse'), 1200);
+    },
+    [engine],
+  );
+  useEffect(() => {
+    boardStatus.publish({ boardId, searchIndex, focusNode });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boardId, searchIndex, focusNode]);
+
+  // Records "opened" once per mount (P7 §6: board grid's "last opened" sort).
+  useEffect(() => {
+    void touchOpened(boardId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boardId]);
+
+  // A search result or palette "@" pick can arrive as router state: jump to it once, on arrival.
+  useEffect(() => {
+    const state = location.state as { focusNodeId?: string } | null;
+    const target = state?.focusNodeId;
+    if (target === undefined || target === focusedOnceRef.current || engine === null) return;
+    focusedOnceRef.current = target;
+    focusNode(target);
+    void navigate(location.pathname, { replace: true, state: null });
+  }, [location, engine, focusNode, navigate]);
 
   // Selection lives in the engine (it is per-user state, never in the CRDT); the panel mirrors it.
   useEffect(() => {
@@ -276,36 +323,39 @@ export function BoardWorkspace() {
           </div>
         ) : null}
         <CanvasHost onIntent={onIntent} onEngine={onEngine} nodeCount={counts.nodes}>
-          {({ slotOf, screenOf }) => (
-            <>
-              <NodeHosts
-                engine={engine}
-                doc={doc}
-                store={store}
-                slotOf={slotOf}
-                selectedIds={selectedIds}
-                onOpenInspector={(id) => setSelectedIds([id])}
-                onDuplicate={(id) => {
-                  duplicateNode(doc, id, { now: new Date().toISOString() });
-                }}
-                onDelete={(id) => {
-                  deleteNode(doc, id, { now: new Date().toISOString() });
-                }}
-              />
-              <EdgeLayer
-                doc={doc}
-                context={context}
-                pending={pendingMenu}
-                screenOf={screenOf}
-                onClose={() => setPendingMenu(null)}
-                onConnectToEmpty={finishDrop}
-                onEditLabel={(id) => setSelectedIds([id])}
-                onResult={(result) => {
-                  if (result.message !== null) setNotice(result.message);
-                }}
-              />
-            </>
-          )}
+          {({ slotOf, screenOf }) => {
+            slotOfRef.current = slotOf;
+            return (
+              <>
+                <NodeHosts
+                  engine={engine}
+                  doc={doc}
+                  store={store}
+                  slotOf={slotOf}
+                  selectedIds={selectedIds}
+                  onOpenInspector={(id) => setSelectedIds([id])}
+                  onDuplicate={(id) => {
+                    duplicateNode(doc, id, { now: new Date().toISOString() });
+                  }}
+                  onDelete={(id) => {
+                    deleteNode(doc, id, { now: new Date().toISOString() });
+                  }}
+                />
+                <EdgeLayer
+                  doc={doc}
+                  context={context}
+                  pending={pendingMenu}
+                  screenOf={screenOf}
+                  onClose={() => setPendingMenu(null)}
+                  onConnectToEmpty={finishDrop}
+                  onEditLabel={(id) => setSelectedIds([id])}
+                  onResult={(result) => {
+                    if (result.message !== null) setNotice(result.message);
+                  }}
+                />
+              </>
+            );
+          }}
         </CanvasHost>
 
         <BoardInspector

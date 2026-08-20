@@ -37,7 +37,16 @@ export default defineConfig({
           // its own acceptance suite in apps/web (src/app/localMode.test.tsx), which asserts the
           // app boots with fetch/XHR/WebSocket sabotaged — something a stack-backed browser test
           // cannot assert.
-          env: { AUTH_SIGNUP_LIMIT: '500', VITE_APP_MODE: 'server', APP_MODE: 'server' },
+          env: {
+            AUTH_SIGNUP_LIMIT: '500',
+            // Whole suite shares one IP, so the unauthenticated requests share one budget bucket.
+            // Named NEXUS_* on purpose: turbo runs `dev` in strict env mode and only forwards the
+            // patterns listed in turbo.json globalPassThroughEnv, so an API_RATE_LIMIT here would
+            // never reach the API process.
+            NEXUS_API_RATE_LIMIT: '100000',
+            VITE_APP_MODE: 'server',
+            APP_MODE: 'server',
+          },
           url: baseURL,
           reuseExistingServer: true,
           timeout: 120_000,

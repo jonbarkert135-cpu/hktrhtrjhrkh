@@ -11,7 +11,7 @@ import type { FastifyBaseLogger, FastifyInstance } from 'fastify';
 import { loadServerEnvFromProcess } from './env.ts';
 import type { ServerEnv } from './env.ts';
 import { createAuth, auditAuthEvent } from './auth/index.ts';
-import { USER_API_RULE } from './auth/rate-limit.ts';
+import { resolveApiRule } from './auth/rate-limit.ts';
 import { metricsPlugin, startMetricsServer } from './plugins/metrics.ts';
 import { requestContextPlugin, REQ_ID_HEADER } from './plugins/request-context.ts';
 import { createContextFactory, toHeaders } from './trpc/context.ts';
@@ -43,9 +43,10 @@ export async function buildServer(env: ServerEnv): Promise<FastifyInstance> {
   await app.register(metricsPlugin);
   await app.register(cookie);
   await app.register(cors, { origin: env.AUTH_TRUSTED_ORIGINS, credentials: true });
+  const apiRule = resolveApiRule(env.NEXUS_ENV, process.env['NEXUS_API_RATE_LIMIT']);
   await app.register(rateLimit, {
-    max: USER_API_RULE.limit,
-    timeWindow: USER_API_RULE.windowMs,
+    max: apiRule.limit,
+    timeWindow: apiRule.windowMs,
     // Per user when signed in, per IP otherwise. `Retry-After` is sent by the plugin.
     keyGenerator: (req) => req.cookies['raven.session_token'] ?? req.ip,
   });

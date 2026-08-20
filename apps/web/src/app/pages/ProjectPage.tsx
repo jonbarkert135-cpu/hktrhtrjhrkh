@@ -1,20 +1,27 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Banner, Button, Skeleton } from '@nexus/ui';
-import { useBoards, useCreateBoard, useProjects } from '../../data/workspace/context';
+import {
+  useBoards,
+  useCreateBoard,
+  useProjects,
+  useWorkspaceRole,
+} from '../../data/workspace/context';
 import { workspaceErrorMessage } from '../../data/workspace/errors';
-import { CreateDialog } from '../shell/CreateDialog';
+import { BoardGrid, canMutate, NewBoardDialog } from '../../projects/BoardGrid';
 
 /** Boards of one project, plus the only way to make a new one. */
 export default function ProjectPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const role = useWorkspaceRole();
+  const mutable = canMutate(role);
 
   const id = projectId ?? '';
   const projects = useProjects();
   const project = projects.data?.find((candidate) => candidate.id === id);
-  const boards = useBoards(id);
+  const boards = useBoards(id, { includeArchived: true });
   const create = useCreateBoard(id, async (board) => {
     setOpen(false);
     await navigate(`/b/${board.id}`);
@@ -58,7 +65,15 @@ export default function ProjectPage() {
               : `${String(items.length)} ${items.length === 1 ? 'board' : 'boards'}`}
           </p>
         </div>
-        {items.length > 0 ? <Button onClick={() => setOpen(true)}>New board</Button> : null}
+        {items.length > 0 ? (
+          <Button
+            onClick={() => setOpen(true)}
+            disabled={!mutable}
+            title={mutable ? undefined : 'Viewers cannot create boards'}
+          >
+            New board
+          </Button>
+        ) : null}
       </header>
 
       {items.length === 0 ? (
@@ -69,32 +84,24 @@ export default function ProjectPage() {
               A board is one canvas: notes, links and files you connect while you work. Everything
               stays on this device until you choose otherwise.
             </p>
-            <Button onClick={() => setOpen(true)}>Create your first board</Button>
+            <Button
+              onClick={() => setOpen(true)}
+              disabled={!mutable}
+              title={mutable ? undefined : 'Viewers cannot create boards'}
+            >
+              Create your first board
+            </Button>
           </div>
         </div>
       ) : (
-        <ul className="nx-card-grid">
-          {items.map((board) => (
-            <li key={board.id}>
-              <Link className="nx-board-card" to={`/b/${board.id}`}>
-                <span className="nx-board-card-title">{board.title}</span>
-                {/* Decorative: the link's accessible name must stay the board title. */}
-                <span className="nx-board-card-meta" aria-hidden="true">
-                  Open canvas
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <BoardGrid boards={items} role={role} />
       )}
-      <CreateDialog
+      <NewBoardDialog
         open={open}
         onOpenChange={setOpen}
-        title="New board"
-        description="Boards are where the canvas lives. You can rename it later."
         submitting={create.isPending}
         {...(create.error ? { error: workspaceErrorMessage(create.error) } : {})}
-        onSubmit={(title) => create.mutate({ title })}
+        onSubmit={(input) => create.mutate(input)}
       />
     </section>
   );

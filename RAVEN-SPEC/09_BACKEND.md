@@ -237,6 +237,30 @@ boards.presence: query({ boardId: Id }) => z.array(z.object({ userId: Id, name: 
 
 `boards.import` in `merge` mode produces a **Proposal**, never a direct write (`N4`).
 
+### 3.2a Implementation status (P7, `phase/p07-projects-search`)
+
+The shipped `project`/`board` routers (`apps/api/src/trpc/routers/{project,board}.ts`) are narrower
+than the §3.2/§3.3 sketch above — code is fact per `00_MASTER.md` §2, so this note is the correction:
+
+- `project`: `list({ includeArchived })`, `get`, `create`, `rename`, `setAppearance({ color, icon })`,
+  `archive`, `restore`, `delete({ confirmName })`. All `orgProcedure('editor')` except `list`/`get`
+  (`'viewer'`), all audited (`apps/api/src/audit.ts`). **Not shipped**: `projects.members.*` — no
+  project-scoped membership model exists yet (only the org-level `Membership` in §3.1); reuses the
+  org role for authorization. Belongs with P9 (backend/auth), which can add the mailer an invite
+  flow needs.
+- `board`: `list({ projectId, includeArchived })`, `create({ projectId, title, templateId? })`,
+  `rename`, `move({ projectId })`, `archive`, `restore`, `delete` (soft), `duplicate` (metadata row
+  only — the API has no board-content store; local mode's `duplicateBoard` does a real Y.Doc + file
+  deep copy today, `apps/web/src/data/workspace/local.ts`), `saveAsTemplate`, `touchOpened`
+  (unaudited, `'viewer'`, updates `lastOpenedAt`), `reportCounts({ nodeCount, edgeCount })`
+  (unaudited, clamped server-side to `≥ 0` — §5.1's "sanity clamp until the projection lands").
+  **Not shipped**: `boards.get`, `boards.snapshots.*`, `boards.export`/`import`,
+  `boards.presence` — out of P7's scope (snapshots/export are P3/P15 territory; presence is P8).
+- `search`: **not shipped**. §6 (Postgres FTS/`pg_trgm`) needs the `nodes`/`edges` projection, which
+  P8's sync service owns (roadmap P7 §2's own scoping note). `packages/domain/src/search/` ships
+  the **local-only** index (`localIndex.ts`, `tokenize.ts`, `score.ts`, `boardIndex.ts`) instead,
+  wired into the web app via `apps/web/src/search/useBoardSearchIndex.ts`.
+
 ### 3.4 `nodes` — bulk operations on the projection
 
 The canvas never writes nodes through tRPC (writes go through the Y.Doc, `02_ARCHITECTURE.md` §4.2).
@@ -893,6 +917,31 @@ Every failure still yields a usable node: URL, hostname, and a domain-letter gly
 never blank (`03_UX.md` §12).
 
 ---
+
+## 6a. Search (P7)
+
+The roadmap (`20_ROADMAP.md` P7 §6/§7) specs a server search path — Postgres FTS
+(`websearch_to_tsquery`) plus `pg_trgm` similarity over a `nodes`/`edges` projection, permission-
+scoped by membership, merged with local results. That projection does not exist yet (P8's sync
+service builds and owns it), so P7 (`phase/p07-projects-search`) ships only the **local-only** half:
+
+- `packages/domain/src/search/localIndex.ts`: an incremental, in-memory inverted index over one
+  open board's `searchText()` output (per-node type, from P4). Supports prefix and bounded-Levenshtein
+  fuzzy matching (`score.ts`, distance ≤ 1 for terms ≥ 4 chars), ranked by field weight and match
+  kind (`DEFAULT_FIELD_WEIGHTS`). AND semantics across query terms.
+- `packages/domain/src/search/boardIndex.ts`: adapts a board's `Y.Doc` + node registry into indexed
+  documents for the above.
+- `apps/web/src/search/useBoardSearchIndex.ts`: builds and incrementally maintains the index for the
+  open board, chunked via `requestIdleCallback` (falls back to `setTimeout`) so a large board's
+  initial build never blocks the frame path for more than one chunk (`CHUNK_SIZE = 250` nodes) — N1.
+- The command palette's `@` mode (`apps/web/src/app/commands/palette.tsx`) queries this index and
+  jumps the camera to the result with a 1.2 s highlight pulse
+  (`BoardWorkspace.tsx`'s `focusNode`, `.nx-search-pulse` in `apps/web/src/styles/app.css`).
+
+**Not shipped, deferred to P8**: cross-board search (the local index only covers the currently open
+board — there is no cross-board index without the server projection), the Postgres
+`search_tsv`/`gin_trgm_ops` columns and indexes, `websearch_to_tsquery` query handling, `ts_headline`
+snippets, and permission-scoped filtering by project/board/node type/tag/date/provenance.
 
 ## 7. File pipeline
 

@@ -16,8 +16,12 @@ import { IDBFactory, IDBKeyRange } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
 
+import { MemoryRouter } from 'react-router-dom';
+
 import { BoardDocProvider } from '../../data/docProvider';
 import { snapshotOf, type SnapshotRecord, type SnapshotStore } from '../../data/snapshots';
+import { WorkspaceProvider } from '../../data/workspace/context';
+import { fakeWorkspaceRepository } from '../../data/workspace/testFakes';
 import { BoardWorkspace } from './BoardWorkspace';
 
 const NOW = '2026-08-17T12:00:00.000Z';
@@ -47,9 +51,13 @@ function memoryStore(records: SnapshotRecord[] = []): SnapshotStore {
 
 function view(store: SnapshotStore = memoryStore()) {
   return render(
-    <BoardDocProvider boardId="b_work" snapshotStoreImpl={store}>
-      <BoardWorkspace />
-    </BoardDocProvider>,
+    <MemoryRouter>
+      <WorkspaceProvider repository={fakeWorkspaceRepository()}>
+        <BoardDocProvider boardId="b_work" snapshotStoreImpl={store}>
+          <BoardWorkspace />
+        </BoardDocProvider>
+      </WorkspaceProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -131,6 +139,21 @@ describe('<BoardWorkspace>', () => {
     const restore = await screen.findByRole('button', { name: 'Restore this version' });
     fireEvent.click(restore);
     await waitFor(() => expect(screen.getByText(/Version restored/)).toBeInTheDocument());
+  });
+
+  it('tracks the pointer over the board so a paste/drop can re-aim at it', async () => {
+    const { container } = view();
+    await waitFor(() => expect(screen.getByTestId('sync-status')).toBeInTheDocument());
+
+    const main = container.querySelector('.nx-board-main');
+    expect(main).not.toBeNull();
+    fireEvent.pointerMove(main as Element, { clientX: 123, clientY: 45 });
+    // No engine in this render, so `aim()` falls back to the origin — the assertion here is just
+    // that tracking the pointer over the board doesn't throw, and note creation still works after.
+    fireEvent.click(screen.getByTestId('add-note'));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Undo: create 1 node/ })).toBeEnabled(),
+    );
   });
 
   it('applies a snapshot update onto the live document', () => {
