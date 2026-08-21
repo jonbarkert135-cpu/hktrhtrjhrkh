@@ -11,6 +11,7 @@ COPY packages/canvas-engine/package.json packages/canvas-engine/
 COPY packages/config/package.json packages/config/
 COPY packages/db/package.json packages/db/
 COPY packages/domain/package.json packages/domain/
+COPY packages/integrations/package.json packages/integrations/
 COPY packages/ui/package.json packages/ui/
 COPY bench/package.json bench/
 COPY e2e/package.json e2e/

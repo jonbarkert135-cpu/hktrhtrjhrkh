@@ -199,7 +199,9 @@ export function isReservedIp(value: string): boolean {
 }
 
 const domain: Normalizer = (raw) => {
-  const trimmed = raw.trim().replace(/\.+$/, '');
+  // Trailing dots are stripped with a loop: a `/\.+$/` regex backtracks on hostile input.
+  let trimmed = raw.trim();
+  while (trimmed.endsWith('.')) trimmed = trimmed.slice(0, -1);
   if (trimmed === '' || CONTROL_CHARS.test(trimmed)) return fail('not a valid domain name');
   if (trimmed.includes('/') || trimmed.includes(' ')) return fail('not a valid domain name');
   const ascii = toAscii(trimmed.toLowerCase());
@@ -372,6 +374,8 @@ const phone: Normalizer = (raw, ctx) => {
   return fail('not a parseable phone number');
 };
 
+const REPO_PATH_KEYWORDS = new Set(['tree', 'blob', 'commit', 'releases', 'issues', 'pull']);
+
 const repo: Normalizer = (raw) => {
   let value = raw.trim();
   if (value === '') return fail('not a repository reference');
@@ -381,11 +385,12 @@ const repo: Normalizer = (raw) => {
   } catch {
     /* not a URL: treat as host/owner/name already */
   }
-  value = value.replace(/^\/+/, '');
-  value = value.replace(/\/(tree|blob|commit|releases|issues|pull)(\/.*)?$/i, '');
-  value = value.replace(/\.git$/i, '');
-  value = value.replace(/\/+$/, '');
-  const parts = value.split('/').filter((part) => part !== '');
+  // Segment walking instead of path regexes: the `(\/.*)?$` form backtracks on hostile input.
+  let parts = value.split('/').filter((part) => part !== '');
+  const cut = parts.findIndex((part, i) => i > 0 && REPO_PATH_KEYWORDS.has(part.toLowerCase()));
+  if (cut !== -1) parts = parts.slice(0, cut);
+  const last = parts[parts.length - 1];
+  if (last !== undefined) parts[parts.length - 1] = last.replace(/\.git$/i, '');
   if (parts.length !== 3) return fail('not in host/owner/name form');
   const [host = '', owner = '', name = ''] = parts;
   if (!/^[a-z0-9.-]+$/i.test(host) || owner === '' || name === '') {
