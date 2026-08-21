@@ -13,7 +13,6 @@ import {
   type AcceptConsentInput,
   type ListRunsOptions,
   type RunsRepository,
-  type StartRunInput,
   type WorkspaceRun,
 } from './types.ts';
 
