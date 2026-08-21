@@ -51,7 +51,7 @@ const log = createLogger({
 const REAPER_INTERVAL_MS = 30_000;
 
 /** S3 sink over presigned PUTs — the same signer the API uses, no AWS SDK (see files/s3.ts). */
-function s3Sink(env: ReturnType<typeof loadServerEnvFromProcess>): ArtifactSink {
+export function s3Sink(env: ReturnType<typeof loadServerEnvFromProcess>): ArtifactSink {
   return {
     async put(key, body, contentType) {
       const url = `${env.S3_ENDPOINT.replace(/\/$/, '')}/${env.S3_BUCKET}/${key}`;
@@ -70,7 +70,7 @@ function s3Sink(env: ReturnType<typeof loadServerEnvFromProcess>): ArtifactSink 
   };
 }
 
-const prismaRunLogStore: RunLogStore = {
+export const prismaRunLogStore: RunLogStore = {
   async append(entries) {
     if (entries.length === 0) return;
     await prisma.runLogEntry.createMany({
@@ -98,7 +98,7 @@ const prismaRunLogStore: RunLogStore = {
   },
 };
 
-const prismaReaperStore: ReaperStore = {
+export const prismaReaperStore: ReaperStore = {
   async listActiveRuns() {
     const rows = await prisma.integrationRun.findMany({
       where: { status: { in: ['starting', 'running'] } },

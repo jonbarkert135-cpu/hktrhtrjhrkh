@@ -7,7 +7,8 @@ export const prismaMock = {
   board: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
   file: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
   membership: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn() },
-  organization: { create: vi.fn() },
+  organization: { create: vi.fn(), findUnique: vi.fn() },
+  user: { findUnique: vi.fn() },
   comment: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
   // P9 integration framework.
   integrationRun: {
