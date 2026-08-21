@@ -10,6 +10,8 @@ import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tan
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 
 import { trpc } from '../../lib/trpc.tsx';
+import { capabilities } from '../../mode/appMode.ts';
+import { createServerRuns } from './runs.ts';
 import { createServerWorkspaceRepository } from './server.ts';
 import type {
   ListBoardsOptions,
@@ -52,8 +54,39 @@ export function useWorkspaceRole() {
 export function TrpcWorkspaceBridge({ children }: { children: ReactNode }) {
   const utils = trpc.useUtils();
   const repository = useMemo(
-    () =>
-      createServerWorkspaceRepository({
+    () => ({
+      // P9: the run surface exists only where the capability is on (ADR-002); local mode installs
+      // the throwing implementation instead, so a stray call is a test failure, not a no-op.
+      ...(capabilities.integrations
+        ? {
+            runs: createServerRuns({
+              acceptConsent: (input) =>
+                utils.client.consents.accept.mutate(
+                  input as Parameters<typeof utils.client.consents.accept.mutate>[0],
+                ),
+              getProposal: (input) => utils.client.proposals.get.query(input),
+              // The router speaks `Date`; the repository speaks ISO strings, as everywhere else.
+              listRuns: async (input) => {
+                const page = await utils.client.runs.list.query(input);
+                return {
+                  runs: page.runs.map((row) => ({
+                    ...row,
+                    createdAt: row.createdAt.toISOString(),
+                  })),
+                  ...(page.nextCursor === undefined ? {} : { nextCursor: page.nextCursor }),
+                };
+              },
+              startRun: (input) => utils.client.runs.start.mutate(input),
+              cancelRun: (input) => utils.client.runs.cancel.mutate(input),
+              getRunLog: async (input) =>
+                (await utils.client.runs.log.query(input)).map((line) => ({
+                  ...line,
+                  at: line.at.toISOString(),
+                })),
+            }),
+          }
+        : {}),
+      ...createServerWorkspaceRepository({
         listProjects: (input) => utils.client.project.list.query(input),
         createProject: (input) => utils.client.project.create.mutate(input),
         renameProject: (input) => utils.client.project.rename.mutate(input),
@@ -73,6 +106,7 @@ export function TrpcWorkspaceBridge({ children }: { children: ReactNode }) {
         touchBoardOpened: (input) => utils.client.board.touchOpened.mutate(input),
         reportBoardCounts: (input) => utils.client.board.reportCounts.mutate(input),
       }),
+    }),
     [utils],
   );
   return <WorkspaceProvider repository={repository}>{children}</WorkspaceProvider>;

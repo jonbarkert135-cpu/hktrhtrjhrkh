@@ -34,6 +34,7 @@ import {
   syncUpdateBytesTotal,
 } from './metrics.ts';
 import { createPrismaProjectionWriter, createPrismaSnapshotStore } from './persistence.ts';
+import { applyProposalToBoard, type ApplyProposalRequest } from './proposalApply.ts';
 import { projectBoard } from './projection.ts';
 
 const env = loadServerEnvFromProcess();
@@ -120,6 +121,37 @@ const server = new Server<Ctx>({
       },
     }),
   ],
+
+  /**
+   * The one plain-HTTP route this service exposes: headless proposal apply (§10). It is guarded by
+   * the same shared secret the API signs board tokens with, and it reuses the client's Applier so
+   * there is exactly one write path into a board (N4).
+   */
+  async onRequest({ request, response }) {
+    if (request.method !== 'POST' || !(request.url ?? '').startsWith('/internal/proposals/apply')) {
+      return;
+    }
+    if (request.headers.authorization !== `Bearer ${env.SYNC_SHARED_SECRET}`) {
+      response.writeHead(401).end('unauthorized');
+      throw new Error('handled');
+    }
+    const chunks: Buffer[] = [];
+    for await (const chunk of request) chunks.push(chunk as Buffer);
+    try {
+      const body = JSON.parse(Buffer.concat(chunks).toString('utf8')) as ApplyProposalRequest;
+      const outcome = await applyProposalToBoard(snapshotStore, body);
+      response
+        .writeHead(200, { 'content-type': 'application/json' })
+        .end(JSON.stringify(outcome.result));
+    } catch (error) {
+      logger.warn({ event: 'sync.proposal.apply_failed', err: error }, 'proposal apply failed');
+      response
+        .writeHead(422, { 'content-type': 'application/json' })
+        .end(JSON.stringify({ error: error instanceof Error ? error.message : 'apply failed' }));
+    }
+    // Hocuspocus treats a thrown error as "the response was handled here".
+    throw new Error('handled');
+  },
 
   onConnect() {
     syncConnections.inc({ board_scope: 'default' });

@@ -236,6 +236,29 @@ Everything else from the original P8 prompt is shipped in PR #24 — read `apps/
 
 # P9 — Integration framework
 
+**Status: shipped on `phase/p09-integration-framework` (backend + web UI).** Backend covers `packages/integrations`, `apps/runner`, `apps/worker`, the five new
+tables (migration `0005_integration_framework`), the tRPC routers, REST v1 + OpenAPI, scoped API
+tokens, the `integrations` capability and the two new eslint rules. Deliberately deferred, with the
+reason:
+
+- **§6 UX** shipped in `apps/web/src/integrations/` (picker, consent dialog, run panel, proposal
+  review, run history, apply toast, and the `IntegrationsSurface` container that wires the
+  client-side Applier into `BoardWorkspace`). Entry points: the node card's "Run integration…"
+  action and the P7 command palette. `apps/web/src/data/workspace/runs.ts` is the capability-gated
+  seam that throws in local mode, so with `integrations` off the whole surface is absent (N2),
+  asserted in `apps/web/src/app/localMode.test.tsx`. Deferred inside §6: the cost/scope preview
+  (step 2) and the generated input form (step 1) — the one shipped manifest takes its single input
+  from the selection, so a form generator would have no field to render and no cost to preview.
+- **`integration_policies`** (§4.4) and therefore the `awaiting_approval` state: the enum, schema and
+  state model exist, but no manifest can request an approver until the org policy surface lands.
+- **e2e**: `e2e/integrations/{expand-url-run,consent-required,runner-down}.spec.ts` are written and
+  skip _by name_ unless `INTEGRATIONS_ENABLED=true`, since they need a live Postgres + Redis +
+  runner stack. **k6** (`load/integration-queue.js`) needs the same and is deferred; the runner's
+  own suites and the web component tests cover the behaviour at unit level.
+- **Hostile-image sandbox suite** is written (`apps/runner/test/sandbox.hostile.test.ts`) and skips
+  by name where Docker or `raven/test-hostile` is absent — CI's docker job runs it for real.
+- Deviations from `10_INTEGRATIONS.md` are recorded in that document's own §15 status note.
+
 ## 1 Objective
 
 Ship the generic, tool-agnostic integration pipeline that every future tool plugs into: the

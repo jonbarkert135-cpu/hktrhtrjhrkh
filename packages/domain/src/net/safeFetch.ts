@@ -41,6 +41,8 @@ export interface SafeFetchOptions {
   readonly redirectLimit?: number | undefined;
   readonly contentTypes?: readonly string[] | undefined;
   readonly signal?: AbortSignal | undefined;
+  /** Extra request headers; opt-in, for integrations that must authenticate (10_INTEGRATIONS §4.1). */
+  readonly headers?: Readonly<Record<string, string>> | undefined;
 }
 
 export interface SafeFetchResult {
@@ -82,7 +84,11 @@ export async function safeFetch(
           url,
           pinned,
           // No cookies, no auth, no referer — the fetch carries nothing of ours (§9).
-          headers: { accept: 'text/html,application/xhtml+xml', 'user-agent': 'RavenUnfurl/1.0' },
+          headers: {
+            accept: 'text/html,application/xhtml+xml',
+            'user-agent': 'RavenUnfurl/1.0',
+            ...(options.headers ?? {}),
+          },
           signal: controller.signal,
         });
       } catch (error) {

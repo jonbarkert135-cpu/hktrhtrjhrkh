@@ -29,6 +29,8 @@ packages/canvas-engine/src/index.ts
 packages/transforms/src/index.ts
 packages/transforms/src/catalog/index.ts
 packages/transforms/src/sdk/index.ts
+packages/integrations/src/index.ts
+packages/integrations/src/testkit/index.ts
 
 # Browser bootstrap: finds #root and calls createRoot, so it can only run against a real document
 # root. Everything it composes (AppProviders, AppRoutes) is covered by unit tests; the file itself

@@ -18,6 +18,7 @@ import { createContextFactory, toHeaders } from './trpc/context.ts';
 import type { Context } from './trpc/context.ts';
 import { appRouter } from './trpc/router.ts';
 import { registerTestEndpoints } from './test-endpoints.ts';
+import { restV1Plugin } from './rest/v1.ts';
 
 export type { AppRouter } from './trpc/router.ts';
 
@@ -130,6 +131,9 @@ export async function buildServer(env: ServerEnv): Promise<FastifyInstance> {
     if (results.every(Boolean)) return { status: 'ready', checks };
     return reply.status(503).send({ status: 'not-ready', checks });
   });
+
+  // REST v1 is token-authenticated and mirrors the tRPC routers (10_INTEGRATIONS.md §10).
+  await app.register(restV1Plugin);
 
   registerTestEndpoints(app, env);
 

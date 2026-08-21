@@ -10,6 +10,7 @@ COPY apps/web/package.json apps/web/
 COPY packages/config/package.json packages/config/
 COPY packages/db/package.json packages/db/
 COPY packages/domain/package.json packages/domain/
+COPY packages/integrations/package.json packages/integrations/
 COPY packages/ui/package.json packages/ui/
 COPY bench/package.json bench/
 COPY e2e/package.json e2e/
@@ -63,13 +64,15 @@ COPY --from=build --chown=65532:65532 /repo/apps/api ./apps/api
 COPY --from=build --chown=65532:65532 /repo/packages/config ./packages/config
 COPY --from=build --chown=65532:65532 /repo/packages/db ./packages/db
 COPY --from=build --chown=65532:65532 /repo/packages/domain ./packages/domain
+COPY --from=build --chown=65532:65532 /repo/packages/integrations ./packages/integrations
 RUN rm -rf node_modules apps/api/node_modules packages/config/node_modules \
-           packages/db/node_modules packages/domain/node_modules
+           packages/db/node_modules packages/domain/node_modules packages/integrations/node_modules
 COPY --from=proddeps --chown=65532:65532 /repo/node_modules ./node_modules
 COPY --from=proddeps --chown=65532:65532 /repo/apps/api/node_modules ./apps/api/node_modules
 COPY --from=proddeps --chown=65532:65532 /repo/packages/config/node_modules ./packages/config/node_modules
 COPY --from=proddeps --chown=65532:65532 /repo/packages/db/node_modules ./packages/db/node_modules
 COPY --from=proddeps --chown=65532:65532 /repo/packages/domain/node_modules ./packages/domain/node_modules
+COPY --from=proddeps --chown=65532:65532 /repo/packages/integrations/node_modules ./packages/integrations/node_modules
 USER 65532:65532
 EXPOSE 3001 9464
 # Internal packages are source-only (no build step), so the runtime strips types natively

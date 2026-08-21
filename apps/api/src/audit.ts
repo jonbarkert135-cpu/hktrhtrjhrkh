@@ -31,7 +31,15 @@ export type AuditAction =
   | 'board.saved_as_template'
   | 'file.uploaded'
   | 'file.rejected'
-  | 'file.deleted';
+  | 'file.deleted'
+  | 'integration.consent.accepted'
+  | 'integration.consent.revoked'
+  | 'integration.run.requested'
+  | 'integration.run.cancelled'
+  | 'integration.proposal.applied'
+  | 'integration.proposal.discarded'
+  | 'apiToken.created'
+  | 'apiToken.revoked';
 
 export interface AuditInput extends Omit<AuditEntry, 'action' | 'orgId'> {
   action: AuditAction;

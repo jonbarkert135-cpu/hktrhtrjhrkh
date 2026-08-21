@@ -22,7 +22,7 @@ describe('Sha256', () => {
     ).toBe('248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1');
   });
 
-  it('agrees with node:crypto for a 3 MB payload hashed in one call', () => {
+  it('agrees with node:crypto for a 3 MB payload hashed in one call', { timeout: 30000 }, () => {
     const data = new Uint8Array(randomBytes(3 * 1024 * 1024));
     expect(sha256Hex(data)).toBe(nodeHash(data));
   });

@@ -1,0 +1,409 @@
+openapi: 3.1.0
+info:
+  title: Raven REST v1 — integrations
+  version: '1.0.0'
+  description: |
+    The token-authenticated surface for plugins and webhooks (10_INTEGRATIONS.md §10).
+
+    Every endpoint requires a scoped API token (`Authorization: Bearer nxs_…`, 09_BACKEND.md §4.1).
+    A token's effective permissions are the intersection of its declared scopes and its creating
+    user's current role, evaluated per request — revoking or demoting the user takes effect on the
+    next call.
+
+    `POST /v1/runs` additionally requires a `consentToken` obtained from `POST /v1/consents`, so a
+    headless client cannot bypass the legal gate (§12).
+
+    Request bodies are capped at 1 MB (15_SECURITY.md §4.1).
+servers:
+  - url: https://api.raven.local
+    description: Deployment API origin
+
+security:
+  - apiToken: []
+
+components:
+  securitySchemes:
+    apiToken:
+      type: http
+      scheme: bearer
+      bearerFormat: nxs_<base62>
+      description: Scoped API token. Shown once at creation; argon2id-hashed at rest.
+
+  schemas:
+    Error:
+      type: object
+      required: [error, message]
+      properties:
+        error: { type: string, examples: ['forbidden'] }
+        message:
+          type: string
+          description: Canonical user-facing copy from the error taxonomy (§11.2). Never a stack trace.
+
+    ArtifactRef:
+      type: object
+      required: [bucket, key, bytes, sha256, contentType, truncated]
+      properties:
+        bucket: { type: string }
+        key: { type: string, examples: ['runs/<orgId>/<runId>/result.json'] }
+        bytes: { type: integer }
+        sha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+        contentType: { type: string }
+        truncated:
+          type: boolean
+          description: True when the output size cap was hit (§6.8); results may be incomplete.
+
+    Integration:
+      type: object
+      required: [id, name, version, executionKind, consent]
+      properties:
+        id: { type: string, examples: ['expand-url'] }
+        name: { type: string }
+        version: { type: string, description: Adapter version (ours), not the tool's. }
+        toolVersion: { type: string }
+        description: { type: string }
+        maturity: { type: string, enum: [experimental, beta, stable, deprecated] }
+        executionKind: { type: string, enum: [container, http, builtin] }
+        capabilities: { type: array, items: { type: string } }
+        inputs: { type: array, items: { type: object, additionalProperties: true } }
+        risk: { type: object, additionalProperties: true }
+        consent: { type: object, additionalProperties: true }
+        imageDigest:
+          type: [string, 'null']
+          description: Redacted to null for non-admins.
+
+    RunStatus:
+      type: string
+      enum:
+        [
+          queued,
+          awaiting_approval,
+          starting,
+          running,
+          parsing,
+          succeeded,
+          partial,
+          failed,
+          cancelled,
+          timed_out,
+        ]
+
+    Run:
+      type: object
+      required: [id, integrationId, boardId, status]
+      properties:
+        id: { type: string }
+        integrationId: { type: string }
+        boardId: { type: string }
+        status: { $ref: '#/components/schemas/RunStatus' }
+        stats: { type: object, additionalProperties: true }
+        artifacts: { type: array, items: { $ref: '#/components/schemas/ArtifactRef' } }
+        errorCode: { type: [string, 'null'] }
+        errorDetail: { type: [object, 'null'], additionalProperties: true }
+        startedAt: { type: [string, 'null'], format: date-time }
+        finishedAt: { type: [string, 'null'], format: date-time }
+        durationMs: { type: [integer, 'null'] }
+        proposalId: { type: [string, 'null'] }
+        parentRunId: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+
+    RunLogEntry:
+      type: object
+      required: [seq, at, level, phase, message]
+      properties:
+        seq: { type: integer }
+        at: { type: string, format: date-time }
+        level: { type: string, enum: [debug, info, warn, error] }
+        phase:
+          type: string
+          enum: [validate, consent, queue, pull, start, exec, egress, collect, parse, map, propose]
+        message: { type: string }
+        data: { type: [object, 'null'], additionalProperties: true }
+
+    ResolvedTarget:
+      type: object
+      required: [kind, value, scope]
+      properties:
+        kind: { type: string }
+        value: { type: string, description: Normalized value (§8.1). }
+        scope: { type: string, enum: [public-index, owned-asset, third-party-host] }
+
+    Proposal:
+      type: object
+      required: [id, runId, integrationId, boardId, summary, items, expiresAt]
+      properties:
+        id: { type: string }
+        runId: { type: string }
+        integrationId: { type: string }
+        boardId: { type: string }
+        createdAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time, description: now + 7 days (§6.9). }
+        summary:
+          type: object
+          properties:
+            newNodes: { type: integer }
+            newEdges: { type: integer }
+            enriched: { type: integer }
+            conflicts: { type: integer }
+            skippedDuplicates: { type: integer }
+        items: { type: array, items: { type: object, additionalProperties: true } }
+        issues: { type: array, items: { type: object, additionalProperties: true } }
+
+    ApplyResult:
+      type: object
+      properties:
+        createdNodeIds: { type: array, items: { type: string } }
+        createdEdgeIds: { type: array, items: { type: string } }
+        patchedNodeIds: { type: array, items: { type: string } }
+        undoStackEntryId: { type: string }
+        tempIdMap: { type: object, additionalProperties: { type: string } }
+        skipped:
+          type: array
+          items:
+            type: object
+            properties:
+              itemId: { type: string }
+              reason: { type: string, examples: ['target_missing'] }
+
+  responses:
+    Unauthorized:
+      description: Missing, revoked, expired or malformed token.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: |
+        The token lacks the required scope, the caller lost access to the resource, or the legal
+        gate refused the run (`CONSENT_REQUIRED`, `CONSENT_EXPIRED`, `TARGET_NOT_ALLOWED`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: No such resource for this caller. Never distinguishes "missing" from "not yours".
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+paths:
+  /v1/integrations:
+    get:
+      summary: List installed manifests
+      description: Digests are redacted for non-admins.
+      security: [{ apiToken: [runs:read] }]
+      responses:
+        '200':
+          description: The installed integrations plus, for admins, the manifests that failed validation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  integrations: { type: array, items: { $ref: '#/components/schemas/Integration' } }
+                  rejected: { type: array, items: { type: object, additionalProperties: true } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/consents:
+    post:
+      summary: Record an authorization and obtain a consent token
+      security: [{ apiToken: [runs:start] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [projectId, integrationId, scope, targets, scopeText]
+              properties:
+                projectId: { type: string }
+                integrationId: { type: string }
+                scope: { type: string, enum: [public-index, owned-asset, third-party-host] }
+                targets: { type: array, items: { $ref: '#/components/schemas/ResolvedTarget' } }
+                scopeText:
+                  type: string
+                  description: The exact wording shown to the person. Must match the manifest verbatim.
+      responses:
+        '200':
+          description: The consent token to pass to POST /v1/runs.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  consentToken: { type: string }
+                  expiresAt: { type: string, format: date-time }
+        '400':
+          description: The wording did not match the manifest.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/runs:
+    get:
+      summary: Run history, cursor-paginated
+      security: [{ apiToken: [runs:read] }]
+      parameters:
+        - { in: query, name: boardId, schema: { type: string } }
+        - { in: query, name: projectId, schema: { type: string } }
+        - { in: query, name: integrationId, schema: { type: string } }
+        - { in: query, name: status, schema: { $ref: '#/components/schemas/RunStatus' } }
+        - { in: query, name: cursor, schema: { type: string } }
+        - {
+            in: query,
+            name: limit,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 25 },
+          }
+      responses:
+        '200':
+          description: One page of runs, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  runs: { type: array, items: { $ref: '#/components/schemas/Run' } }
+                  nextCursor: { type: [string, 'null'] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      summary: Start a run
+      description: |
+        Requires a `consentToken` from `POST /v1/consents`. Returns the existing run id with a
+        notice when an identical input ran inside the dedupe window, unless `force` is set.
+      security: [{ apiToken: [runs:start] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [integrationId, projectId, boardId, input, targets, consentToken]
+              properties:
+                integrationId: { type: string }
+                projectId: { type: string }
+                boardId: { type: string }
+                anchorNodeId: { type: string }
+                input: { type: object, additionalProperties: true }
+                targets: { type: array, items: { $ref: '#/components/schemas/ResolvedTarget' } }
+                consentToken: { type: string }
+                force: { type: boolean, default: false }
+                parentRunId: { type: string, description: Set when this is a re-run. }
+      responses:
+        '202':
+          description: The run was queued (or an identical recent run was reused).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  runId: { type: string }
+                  reused: { type: boolean }
+                  notice: { type: [string, 'null'] }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429':
+          description: A quota, the concurrency semaphore or the same-input interval refused the run.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /v1/runs/{id}:
+    get:
+      summary: One run record
+      security: [{ apiToken: [runs:read] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      responses:
+        '200':
+          description: The run.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Run' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/runs/{id}/log:
+    get:
+      summary: The structured run log
+      security: [{ apiToken: [runs:read] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      responses:
+        '200':
+          description: Log entries in sequence order.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/RunLogEntry' } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/runs/{id}/artifacts/{name}:
+    get:
+      summary: Redirect to a 5-minute presigned artifact URL
+      security: [{ apiToken: [runs:read] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+        - { in: path, name: name, required: true, schema: { type: string } }
+      responses:
+        '302':
+          description: Location header carries the presigned GET (Content-Disposition attachment).
+          headers:
+            location: { schema: { type: string } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/runs/{id}/cancel:
+    post:
+      summary: Cancel a run
+      description: Always effective — the cancel flag is stored in Redis, not held in a socket (§6.7).
+      security: [{ apiToken: [runs:start] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      responses:
+        '200':
+          description: The run status after the cancel request.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { $ref: '#/components/schemas/RunStatus' }
+                  cancelled: { type: boolean }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/proposals/{id}:
+    get:
+      summary: The proposal payload
+      security: [{ apiToken: [proposals:read] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      responses:
+        '200':
+          description: The proposal.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Proposal' }
+        '400':
+          description: PROPOSAL_EXPIRED — proposals are kept for 7 days.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/proposals/{id}/apply:
+    post:
+      summary: Apply a proposal server-side
+      description: |
+        tRPC mirror: `proposals.applySelected` (`apply` is a reserved router key in tRPC v11).
+        Runs the same Applier the browser runs, inside `apps/sync`, against the room's Y.Doc — one
+        write path, one undo step. Idempotent per (proposalId, itemId).
+      security: [{ apiToken: [proposals:apply] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                selectedItemIds: { type: array, items: { type: string } }
+                conflictResolutions:
+                  type: object
+                  additionalProperties: { type: string, enum: [keep, replace, keep_both] }
+      responses:
+        '200':
+          description: What was created, patched and skipped.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApplyResult' }
+        '404': { $ref: '#/components/responses/NotFound' }

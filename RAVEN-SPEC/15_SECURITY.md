@@ -1485,3 +1485,35 @@ A phase cannot pass the gate (`00_MASTER.md` §8 item 5) without its row above.
 8. **Share links are bearer credentials.** Anyone with the URL has the granted access until expiry.
    Mitigation: fragment-carried secret, default 30-day expiry, optional password, view counters,
    instant revocation, and per-access audit.
+
+---
+
+## Implementation status — sandbox and tokens as shipped (P9)
+
+- **Container baseline** (§9, cross-referenced from `10_INTEGRATIONS.md` §6.3) is produced by
+  `apps/runner/src/sandbox/flags.ts` and asserted flag-by-flag in
+  `apps/runner/test/sandbox.flags.test.ts`: `--runtime=runsc` (gVisor; `runc` only in dev),
+  non-root `65534:65534`, `--read-only`, `noexec/nosuid/nodev` tmpfs for `/work` and `/tmp`,
+  `--cap-drop ALL`, `no-new-privileges`, seccomp + AppArmor profiles, pid/memory/cpu caps,
+  `--memory-swap == --memory`, `nofile` and `fsize` ulimits, an isolated network whose only route is
+  the egress proxy, and a 5 s stop timeout. No shell is ever invoked: argv is rendered per element.
+- **Hostile-image suite** (`apps/runner/test/sandbox.hostile.test.ts`) covers the seven assertions of
+  `10_INTEGRATIONS.md` §13 point 4 against `raven/test-hostile`
+  (`infra/docker/test-hostile.Dockerfile`). It requires a container runtime, so it skips _by name_
+  where Docker or the image is absent — CI's docker job is where it actually runs.
+- **Egress proxy** (§6, N7) resolves every host itself, refuses an answer set containing any
+  private, loopback, link-local, unique-local or multicast address, and dials the pinned IP with the
+  original host preserved. The DNS-rebinding corpus lives in
+  `apps/runner/test/egress-proxy.rebinding.test.ts`. TLS is **not** intercepted: `CONNECT` is
+  tunnelled to the pinned address, so response bodies are not inspectable. That is a deliberate,
+  accepted residual risk (`10_INTEGRATIONS.md` Open risk 4), not an oversight.
+- **Secrets** (§6.4) are injected through the container-create env map or a 0400 tmpfs file, never
+  through argv; the log serializer redacts secret-backed env keys, and every artifact and stdout
+  chunk is scrubbed of exact secret values (length ≥ 8) before it is persisted. As stated in §6.4,
+  scrubbing is defence in depth, not a guarantee.
+- **API tokens** (§3.4) are argon2id-hashed (m=19 MiB, t=2, p=1, `@noble/hashes`), shown once,
+  revocable, scoped, and intersected with the owner's live role on every request
+  (`apps/api/test/apiToken.test.ts`).
+- **Audit** (§7): `integration.run.requested`, `integration.run.cancelled`,
+  `integration.consent.accepted`, `integration.consent.revoked`, `integration.proposal.applied`,
+  `integration.proposal.discarded`, `apiToken.created`, `apiToken.revoked`.

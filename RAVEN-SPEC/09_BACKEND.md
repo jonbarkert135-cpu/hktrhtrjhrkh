@@ -636,6 +636,28 @@ Every `admin.*` call writes an audit row: `{actor, action, target, before, after
 | GET    | `/api/v1/integrations`                      | `runs:read`     |                                                               |
 | POST   | `/api/v1/webhooks/test`                     | `admin:read`    |                                                               |
 
+### 4.3 Implementation status (P9, `apps/api/src/auth/apiToken.ts`, `apps/api/src/rest/v1.ts`)
+
+As built, with the deviations named:
+
+- Tokens are `nxs_` + base62 of 32 random bytes, argon2id-hashed at rest in the standard PHC string
+  (`$argon2id$v=19$m=19456,t=2,p=1$…`), shown once at creation and never retrievable. The row keeps a
+  12-character display prefix so a user can tell two tokens apart.
+- Scope intersection is evaluated **per request** against the caller's current org role
+  (`ROLE_SCOPES`), so revoking a token or demoting its owner takes effect on the next call without
+  touching the token. `runs:read` and `runs:start` are introduced here; `capture:write` is declared
+  for P6's browser extension so that endpoint needs no migration.
+- The v1 base path as built is `/v1/...` (not `/api/v1/...`): the API is mounted on its own origin,
+  and the extra segment would only appear in the ingress. Endpoints shipped in P9 are exactly
+  `10_INTEGRATIONS.md` §10's list, specified in `apps/api/openapi/integrations.yaml`. The rest of
+  §4.2's table is unbuilt.
+- Errors are the tRPC error shape (`code` + `req_id`), not RFC 9457 `application/problem+json`; the
+  REST surface mirrors the tRPC routers rather than reimplementing them, and one error shape for one
+  set of procedures is worth more than two spellings of the same failure. Revisit when a non-tRPC
+  client needs it.
+- `Idempotency-Key` is not honoured yet on `POST /v1/runs`; the same guarantee is provided by the
+  `input_hash` dedupe window (`10_INTEGRATIONS.md` §7.5), which returns the existing run id.
+
 `Idempotency-Key`: stored for 24 h with the request-body hash; a replay with the same key and body
 returns the original response and `Idempotency-Replayed: true`; the same key with a different body
 returns `409` `IDEMPOTENCY_KEY_REUSED`.

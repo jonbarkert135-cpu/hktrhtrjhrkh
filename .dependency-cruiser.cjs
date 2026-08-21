@@ -22,6 +22,15 @@ module.exports = {
       to: { path: '^(apps/|packages/(?!domain|config))' },
     },
     {
+      name: 'integrations-no-app',
+      comment:
+        'packages/integrations depends only on packages/domain and packages/config ' +
+        '(10_INTEGRATIONS.md §1.1). A dependency on an app would make "add a tool" a service change.',
+      severity: 'error',
+      from: { path: '^packages/integrations' },
+      to: { path: '^(apps/|packages/(?!integrations|domain|config))' },
+    },
+    {
       name: 'packages-never-import-apps',
       severity: 'error',
       from: { path: '^packages/' },

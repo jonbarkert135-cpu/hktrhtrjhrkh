@@ -1,0 +1,13 @@
+/** Public surface of the integration framework. Pure re-export barrel (10_INTEGRATIONS.md §4.3). */
+
+export * from './registry.ts';
+export * from './errors.ts';
+export * from './manifest.ts';
+export * from './pipeline.ts';
+export * from './apply.ts';
+export * from './extract/confidence.ts';
+export * from './extract/normalizers.ts';
+export * from './extract/patterns.ts';
+export * from './resolve/identity.ts';
+export * from './resolve/merge.ts';
+export * from './consent.ts';
