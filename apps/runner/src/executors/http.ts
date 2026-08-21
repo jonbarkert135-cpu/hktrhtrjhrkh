@@ -110,26 +110,11 @@ export function createHttpExecutor(deps: HttpExecutorDeps): ExecutionLayer {
           const response = await safeFetch(url.toString(), {
             resolve: deps.resolve,
             transport: deps.transport,
+            headers,
             signal: controller.signal,
             maxBytes: Math.min(budget, request.limits.maxOutputBytes),
             contentTypes: ['application/json', 'text/plain', 'text/html', 'application/x-ndjson'],
           });
-
-          if (response.status === 401 || response.status === 403) {
-            return finish('failed', {
-              error: payloadFor('UPSTREAM_AUTH_FAILED', { runId: request.runId }),
-            });
-          }
-          if (response.status === 429) {
-            return finish('failed', {
-              error: payloadFor('UPSTREAM_RATE_LIMITED', { runId: request.runId }),
-            });
-          }
-          if (response.status >= 500) {
-            return finish('failed', {
-              error: payloadFor('UPSTREAM_UNAVAILABLE', { runId: request.runId }),
-            });
-          }
 
           const output = request.manifest.outputs.find((o) => o.name === spec.collectAs);
           const collected = await collectArtifact(
@@ -160,6 +145,10 @@ export function createHttpExecutor(deps: HttpExecutorDeps): ExecutionLayer {
           return finish('cancelled', { error: payloadFor('CANCELLED', { runId: request.runId }) });
         if (controller.signal.aborted)
           return finish('timed_out', { error: payloadFor('TIMEOUT', { runId: request.runId }) });
+        // safeFetch rejects on any 4xx/5xx, so the upstream status only reaches us as an error.
+        const upstream = upstreamCodeOf(error);
+        if (upstream !== undefined)
+          return finish('failed', { error: payloadFor(upstream, { runId: request.runId }) });
         return finish('failed', { error: toErrorPayload(error, request.runId) });
       } finally {
         clearTimeout(timeout);
@@ -172,4 +161,16 @@ export function createHttpExecutor(deps: HttpExecutorDeps): ExecutionLayer {
       return Promise.resolve();
     },
   };
+}
+
+/** `safeFetch` reports an upstream status as `UrlRejected('http_error', 'HTTP 429.')`. */
+function upstreamCodeOf(
+  error: unknown,
+): 'UPSTREAM_AUTH_FAILED' | 'UPSTREAM_RATE_LIMITED' | 'UPSTREAM_UNAVAILABLE' | undefined {
+  const match = error instanceof Error ? /HTTP (\d{3})\./.exec(error.message) : null;
+  const status = match === null ? 0 : Number(match[1]);
+  if (status === 401 || status === 403) return 'UPSTREAM_AUTH_FAILED';
+  if (status === 429) return 'UPSTREAM_RATE_LIMITED';
+  if (status >= 500) return 'UPSTREAM_UNAVAILABLE';
+  return undefined;
 }
