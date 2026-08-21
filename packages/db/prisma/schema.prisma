@@ -471,7 +471,7 @@ model ImportProposal {
   payload       Json
   summary       Json      @default("{}")
   /// itemId → created entity id; makes apply idempotent per (proposalId, itemId) (§3.8 point 4).
-  appliedItems  Json      @default("{}")
+  appliedItems  Json      @default("{}") @map("applied_items")
   appliedAt     DateTime? @map("applied_at")
   appliedBy     String?   @map("applied_by")
   discardedAt   DateTime? @map("discarded_at")
