@@ -12,10 +12,11 @@
     "lint": "eslint src"
   },
   "dependencies": {
+    "@hocuspocus/provider": "^4.6.0",
     "@nexus/canvas-engine": "workspace:*",
     "@nexus/config": "workspace:*",
-    "@hocuspocus/provider": "^4.6.0",
     "@nexus/domain": "workspace:*",
+    "@nexus/integrations": "workspace:*",
     "@nexus/ui": "workspace:*",
     "@tanstack/react-query": "^5.62.7",
     "@tiptap/extension-link": "2.27.2",

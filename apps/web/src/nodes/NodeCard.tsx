@@ -18,6 +18,11 @@ export interface NodeCardActions {
   onDuplicate?: ((id: string) => void) | undefined;
   onDelete?: ((id: string) => void) | undefined;
   onRetry?: ((id: string) => void) | undefined;
+  /**
+   * Runs a tool against this node (10_INTEGRATIONS.md §7.1, first entry point). Supplied only when
+   * the `integrations` capability is on — in local mode the affordance does not exist at all (N2).
+   */
+  onRunIntegration?: ((id: string) => void) | undefined;
 }
 
 export interface NodeCardProps extends NodeCardActions {
@@ -53,6 +58,7 @@ function NodeCardImpl({
   onDuplicate,
   onDelete,
   onRetry,
+  onRunIntegration,
 }: NodeCardProps) {
   const def = builtinNodeTypes().get(node.type);
   const Body = bodyFor(def.componentId);
@@ -145,6 +151,15 @@ function NodeCardImpl({
         {onDuplicate === undefined || !def.capabilities.duplicatable ? null : (
           <button type="button" onClick={() => onDuplicate(node.id)} aria-label="Duplicate node">
             Duplicate
+          </button>
+        )}
+        {onRunIntegration === undefined ? null : (
+          <button
+            type="button"
+            onClick={() => onRunIntegration(node.id)}
+            aria-label="Run integration…"
+          >
+            Run integration…
           </button>
         )}
         {onDelete === undefined ? null : (

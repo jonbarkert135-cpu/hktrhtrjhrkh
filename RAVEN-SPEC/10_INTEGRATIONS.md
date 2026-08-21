@@ -1903,7 +1903,7 @@ undo` returns the document to a deep-equal prior state (N3, N9).
 
 ---
 
-## 15. Implementation status (P9, backend half — `phase/p09-integration-framework`)
+## 15. Implementation status (P9 — `phase/p09-integration-framework`)
 
 Shipped, and where it lives:
 
@@ -1913,7 +1913,7 @@ Shipped, and where it lives:
 | §4 manifest        | `packages/integrations/src/manifest.ts`; loader/registry in `src/index.ts`                                                      |
 | §5 tables          | `packages/db/prisma/schema.prisma` + migration `0005_integration_framework`                                                     |
 | §6 runner          | `apps/runner/` (job protocol, container/http/builtin executors, sandbox flags, egress proxy, artifacts, runlog, cancel, reaper) |
-| §7 lifecycle       | `apps/api/src/trpc/routers/runs.ts` (states, re-run rules, diff-with-previous); the UI half is the P9 web PR                    |
+| §7 lifecycle       | `apps/api/src/trpc/routers/runs.ts` (states, re-run rules, diff-with-previous); UI in `apps/web/src/integrations/`              |
 | §8 extract/resolve | `packages/integrations/src/extract/*`, `src/resolve/*`                                                                          |
 | §10 REST v1        | `apps/api/src/rest/v1.ts`, `apps/api/openapi/integrations.yaml`                                                                 |
 | §11 errors         | `packages/integrations/src/errors.ts` (codes, canonical copy, retry policy)                                                     |
@@ -1921,6 +1921,11 @@ Shipped, and where it lives:
 | §13 tests          | see the phase spec §11; the hostile-image suite is written and skips by name without Docker                                     |
 
 ### Deviations (each deliberate, none silent)
+
+0. **§7.2 steps 1–2 (generated input form, cost/scope preview)** are not built. The only shipped
+   manifest takes its single input from the selected node, so the form would render no field and
+   the preview no cost; the picker goes straight to consent. The first manifest with a typed input
+   (P10) brings the generator with it.
 
 1. **Public-suffix list.** §8.1 asks for the bundled `psl`. `extract/normalizers.ts` ships a small
    multi-label suffix set plus the label-count rule instead, because the framework must not pull a

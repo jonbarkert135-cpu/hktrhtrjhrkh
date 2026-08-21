@@ -64,6 +64,16 @@ describe('local mode, no backend of any kind', () => {
     expect(screen.queryByRole('menuitem', { name: 'Sign out' })).not.toBeInTheDocument();
   });
 
+  it('has no integration surface at all: tools are server-side, so they are absent (P9, N2)', async () => {
+    render(app());
+    await screen.findByTestId('canvas-surface', {}, { timeout: 10_000 });
+    expect(screen.queryByTestId('integrations-surface')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Run integration…' })).not.toBeInTheDocument();
+    // The local repository's run methods exist only to fail loudly if anything calls them.
+    const { localRuns } = await import('../data/workspace/runs.ts');
+    expect(() => localRuns().listRuns()).toThrow(/Raven server/);
+  });
+
   it('creates a project on the device and lists it in the rail', async () => {
     render(app());
     await screen.findByTestId('canvas-surface', {}, { timeout: 10_000 });

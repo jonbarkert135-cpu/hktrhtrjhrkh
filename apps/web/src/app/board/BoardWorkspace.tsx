@@ -22,7 +22,7 @@ import {
 import { Banner, Button } from '@nexus/ui';
 import type { Engine, Intent } from '@nexus/canvas-engine';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { useBoardDoc } from '../../data/docProvider.tsx';
 import { useReportBoardCounts, useTouchBoardOpened } from '../../data/workspace/context.tsx';
@@ -43,6 +43,9 @@ import { PasteToast } from '../../capture/PasteToast.tsx';
 import { captureTransfer, usePaste, type CaptureResult } from '../../capture/usePaste.ts';
 import { useDropZone } from '../../capture/useDropZone.ts';
 import { VersionHistory } from './VersionHistory.tsx';
+import { IntegrationsSurface } from '../../integrations/IntegrationsSurface.tsx';
+import { useRegisterCommands } from '../commands/useRegisterCommands.ts';
+import { capabilities } from '../../mode/appMode';
 
 const APP_VERSION = '0.3.0';
 
@@ -59,6 +62,8 @@ export function BoardWorkspace() {
   const [counts, setCounts] = useState({ nodes: 0, edges: 0 });
   const [selectedIds, setSelectedIds] = useState<readonly string[]>([]);
   const [inspectorWidth, setInspectorWidth] = useState(360);
+  // Absent, not disabled, when the capability is off (ADR-002, N2): nothing below renders.
+  const [integrationsOpen, setIntegrationsOpen] = useState(false);
 
   const boardStatus = useBoardStatus();
   const [capture, setCapture] = useState<CaptureResult | null>(null);
@@ -66,6 +71,9 @@ export function BoardWorkspace() {
   const touchOpened = useTouchBoardOpened();
   const reportCounts = useReportBoardCounts();
   const location = useLocation();
+  // `/p/:projectId/b/:boardId` carries it; the bare `/b/:boardId` route does not, and the server
+  // then refuses the run rather than guessing a project (§7.1 preconditions).
+  const { projectId = '' } = useParams();
   const navigate = useNavigate();
   const slotOfRef = useRef<(id: string) => HTMLElement | undefined>(() => undefined);
   const focusedOnceRef = useRef<string | null>(null);
@@ -192,6 +200,22 @@ export function BoardWorkspace() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [history]);
+
+  // Second entry point (§7.1): the P7 command palette. Registered only where the surface exists.
+  useRegisterCommands(
+    capabilities.integrations
+      ? [
+          {
+            id: 'integrations.run',
+            title: 'Run integration…',
+            group: 'board' as const,
+            keywords: ['tool', 'run', 'enrich'],
+            when: (ctx: { view: string }) => ctx.view === 'board',
+            run: () => setIntegrationsOpen(true),
+          },
+        ]
+      : [],
+  );
 
   const addNote = useCallback(() => {
     if (nodeBudget(doc).blocked) {
@@ -340,6 +364,14 @@ export function BoardWorkspace() {
                   onDelete={(id) => {
                     deleteNode(doc, id, { now: new Date().toISOString() });
                   }}
+                  onRunIntegration={
+                    capabilities.integrations
+                      ? (id) => {
+                          setSelectedIds([id]);
+                          setIntegrationsOpen(true);
+                        }
+                      : undefined
+                  }
                 />
                 <EdgeLayer
                   doc={doc}
@@ -393,6 +425,21 @@ export function BoardWorkspace() {
         onRestore={restore}
         previewingId={previewing}
       />
+      {capabilities.integrations ? (
+        <IntegrationsSurface
+          open={integrationsOpen}
+          onClose={() => setIntegrationsOpen(false)}
+          doc={doc}
+          boardId={boardId}
+          projectId={projectId}
+          selection={selectedIds.map((id) => {
+            const found = listNodes(doc).find((node) => node.id === id);
+            return { id, kind: found?.type ?? 'note', label: found?.title ?? '' };
+          })}
+          onUndo={() => history.undo()}
+        />
+      ) : null}
+
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} onConfirm={confirmImport} />
     </section>
   );
