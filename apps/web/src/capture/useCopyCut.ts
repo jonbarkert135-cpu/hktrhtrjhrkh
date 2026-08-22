@@ -6,7 +6,7 @@
  * aimed at a text field are left to the field, exactly like `usePaste` does.
  */
 
-import { copySubgraph, cutSubgraph, serializeClip } from '@nexus/domain';
+import { copySubgraph, cutSubgraph, serializeClip, type ClipSource } from '@nexus/domain';
 import { useCallback, useEffect } from 'react';
 import type * as Y from 'yjs';
 
@@ -16,6 +16,8 @@ export interface CopyCutTarget {
   selection: () => readonly string[];
   history?: { label(text: string): void; separate(): void } | undefined;
   now?: (() => string) | undefined;
+  /** Stamped onto the clip so a paste into another board keeps the back-reference (§20). */
+  source?: ClipSource | undefined;
 }
 
 export function useCopyCut(target: CopyCutTarget, onResult?: (message: string) => void): void {
@@ -26,7 +28,9 @@ export function useCopyCut(target: CopyCutTarget, onResult?: (message: string) =
       if (ids.length === 0) return;
       const now = (target.now ?? (() => new Date().toISOString()))();
       if (cut) target.history?.label('cut selection');
-      const clip = cut ? cutSubgraph(target.doc, ids, { now }) : copySubgraph(target.doc, [...ids]);
+      const clip = cut
+        ? cutSubgraph(target.doc, ids, { now, source: target.source })
+        : copySubgraph(target.doc, [...ids], target.source);
       if (cut) target.history?.separate();
       if (clip.nodes.length === 0) return;
       event.clipboardData.setData('text/plain', serializeClip(clip));

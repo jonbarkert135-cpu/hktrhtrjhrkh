@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { Button } from '../src/primitives/Button';
@@ -9,7 +10,6 @@ import { SkipToContent, VisuallyHidden } from '../src/primitives/a11y';
 import { Banner } from '../src/primitives/Banner';
 import { Menu, MenuItem } from '../src/primitives/Menu';
 import { Tooltip, TooltipProvider } from '../src/primitives/Tooltip';
-import * as motionPresets from '../src/motion/presets';
 
 describe('Button', () => {
   it('reports and blocks interaction while loading', () => {
@@ -138,10 +138,13 @@ describe('Tooltip and VisuallyHidden', () => {
   });
 });
 
-describe('motion presets', () => {
-  it('expresses every duration as a motion token, never a raw number', () => {
-    for (const value of Object.values(motionPresets)) {
-      expect(JSON.stringify(value)).not.toMatch(/[0-9]+ms/);
-    }
+describe('motion (§24)', () => {
+  it('animates dialogs and overlays with tokens, and not at all under reduced motion', () => {
+    const css = readFileSync('src/primitives/primitives.css', 'utf8');
+    const motion = css.slice(css.indexOf('@keyframes nx-fade-in'));
+    // Only compositor-friendly properties, and every duration/easing comes from a token.
+    expect(motion).not.toMatch(/animation:[^;]*\d+m?s/);
+    expect(motion).toContain(".nx-dialog[data-state='open']");
+    expect(motion).toContain('prefers-reduced-motion');
   });
 });

@@ -45,7 +45,6 @@ src/tokens/index.css       imports the above + reset, body, :focus-visible, redu
 src/tokens/tokens.ts       typed mirror of the values + cssVar()/tokenValue()
 src/primitives/            Button, Input/Field, Banner, Skeleton, Spinner, Dialog, Menu,
                            Tooltip, VisuallyHidden, SkipToContent (+ primitives.css)
-src/motion/presets.ts      durations/easings/variants for `motion`
 tailwind/preset.generated.js  GENERATED — do not edit
 ```
 

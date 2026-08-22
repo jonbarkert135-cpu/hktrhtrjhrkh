@@ -19,5 +19,3 @@ export { Tooltip, TooltipProvider } from './primitives/Tooltip';
 export type { TooltipProps } from './primitives/Tooltip';
 export { VisuallyHidden, SkipToContent } from './primitives/a11y';
 export type { SkipToContentProps } from './primitives/a11y';
-
-export * as motionPresets from './motion/presets';

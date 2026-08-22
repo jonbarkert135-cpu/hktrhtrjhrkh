@@ -384,3 +384,45 @@
   transform: translateY(0);
   box-shadow: var(--focus-ring-shadow);
 }
+
+/* ── Motion (§24) ─────────────────────────────────────────────────────────────
+   Radix flips `data-state` on open/close, so the entrances below need no JS and
+   animate only `opacity`/`transform` (compositor-only, no layout). Durations and
+   easings come from the motion tokens; exits are 0.75x the enter, per 04 §8.1. */
+@keyframes nx-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes nx-overlay-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+@keyframes nx-dialog-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 8px)) scale(0.97);
+  }
+}
+.nx-dialog-overlay[data-state='open'] {
+  animation: nx-fade-in var(--nx-dur-4) var(--nx-ease-out);
+}
+.nx-dialog[data-state='open'] {
+  animation: nx-dialog-in var(--nx-dur-4) var(--nx-ease-out);
+}
+.nx-menu[data-state='open'],
+.nx-tooltip[data-state='delayed-open'],
+.nx-tooltip[data-state='instant-open'] {
+  animation: nx-overlay-in var(--nx-dur-3) var(--nx-ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .nx-dialog-overlay[data-state='open'],
+  .nx-dialog[data-state='open'],
+  .nx-menu[data-state='open'],
+  .nx-tooltip[data-state='delayed-open'],
+  .nx-tooltip[data-state='instant-open'] {
+    animation: none;
+  }
+}
