@@ -8,9 +8,13 @@
  */
 
 import {
+  addEdge,
   builtinNodeTypes,
   listEdges,
   listNodes,
+  makeEdge,
+  newId,
+  suggestLinks,
   setNodeTags,
   updateNode,
   updateNodeData,
@@ -230,6 +234,25 @@ export function Inspector({
   const def = builtinNodeTypes().get(node.type);
   const state = cardStateOf(node);
   const connections = connectionsOf(doc, node.id);
+  const allNodes = listNodes(doc);
+  const titles = new Map(allNodes.map((other) => [other.id, other.title] as const));
+  // Only the suggestions that touch the selected node: the inspector answers "what am I missing
+  // about *this*", the board-wide list would be a different surface.
+  const suggestions = suggestLinks(allNodes, listEdges(doc), { limit: 40 })
+    .filter((pair) => pair.sourceId === node.id || pair.targetId === node.id)
+    .slice(0, 5);
+
+  const acceptSuggestion = (sourceId: string, targetId: string): void => {
+    const stamp = now();
+    addEdge(
+      doc,
+      makeEdge({ id: newId.board(), from: sourceId, to: targetId, type: 'references' }, stamp),
+      {
+        origin: 'local:create',
+        now: stamp,
+      },
+    );
+  };
   const sections: Array<{ id: string; title: string }> = [
     { id: 'identity', title: 'Identity' },
     { id: 'content', title: 'Content' },
@@ -347,6 +370,30 @@ export function Inspector({
                 {connection.label === '' ? '' : ` · ${connection.label}`}
               </li>
             ))}
+          </ul>
+        )}
+        {suggestions.length === 0 ? null : (
+          <ul className="nx-inspector-list" data-testid="link-suggestions">
+            {suggestions.map((pair) => {
+              const otherId = pair.sourceId === node.id ? pair.targetId : pair.sourceId;
+              return (
+                <li key={otherId}>
+                  <button
+                    type="button"
+                    className="nx-link-button"
+                    data-testid={`suggest-connect-${otherId}`}
+                    disabled={node.locked}
+                    onClick={() => {
+                      acceptSuggestion(pair.sourceId, pair.targetId);
+                    }}
+                  >
+                    Connect
+                  </button>{' '}
+                  {titles.get(otherId) ?? otherId}
+                  <span className="nx-card-meta"> · shares {pair.evidence.join(', ')}</span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

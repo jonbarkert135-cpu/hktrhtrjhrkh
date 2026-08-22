@@ -3,7 +3,15 @@
  * lifecycle, so these tests assert the *document* changed — not that a local state hook did.
  */
 
-import { addEdge, createBoardDoc, createNode, getNode, makeEdge, updateNode } from '@nexus/domain';
+import {
+  addEdge,
+  createBoardDoc,
+  createNode,
+  getNode,
+  listEdges,
+  makeEdge,
+  updateNode,
+} from '@nexus/domain';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
@@ -41,6 +49,21 @@ const panel = (props: Partial<React.ComponentProps<typeof Inspector>> = {}) => {
 };
 
 describe('Inspector', () => {
+  it('suggests connecting a node that shares an identifier, and creates the edge on click', async () => {
+    const user = userEvent.setup();
+    const { doc, ids } = panel();
+    const other = ids[1] ?? '';
+    expect(listEdges(doc)).toHaveLength(0);
+    const suggestion = within(screen.getByTestId('link-suggestions'));
+    expect(suggestion.getByText(/shares tag:osint/)).toBeTruthy();
+    await user.click(screen.getByTestId(`suggest-connect-${other}`));
+    await waitFor(() => {
+      expect(listEdges(doc)).toHaveLength(1);
+    });
+    const [edge] = listEdges(doc);
+    expect([edge?.source.nodeId, edge?.target.nodeId].sort()).toEqual([ids[0], other].sort());
+  });
+
   it('shows board-level info and a multi-select hint when nothing is selected', () => {
     const { doc, store } = board();
     render(<Inspector doc={doc} store={store} selectedIds={[]} now={() => T0} />);

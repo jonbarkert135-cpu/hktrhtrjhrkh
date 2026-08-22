@@ -6,5 +6,6 @@ export * from './registry.ts';
 export * from './builtins.ts';
 export * from './defaults.ts';
 export * from './semantics.ts';
+export * from './suggestLinks.ts';
 export * from './validation.ts';
 export * from './routing/index.ts';
