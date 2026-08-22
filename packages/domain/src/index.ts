@@ -5,6 +5,7 @@ export * from './entities/node.ts';
 export * from './entities/edge.ts';
 export * from './entities/group.ts';
 export * from './entities/comment.ts';
+export * from './entities/repository-analysis.ts';
 export * from './doc/schema.ts';
 export * from './doc/transactions.ts';
 export * from './doc/createBoardDoc.ts';

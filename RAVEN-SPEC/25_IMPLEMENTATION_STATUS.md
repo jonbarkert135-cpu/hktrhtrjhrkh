@@ -383,3 +383,19 @@ waypoints, bundling, labels), capture/paste-конвейер, undo/redo, все 
 7. Фоновые задачи — единственная очередь `integration.parse`; роадмап сам признаёт открытыми P9/P10/P17.
 
 Команды: `rg`/`grep`/`ls` по репозиторию, чтение `package.json`, `.dependency-cruiser.cjs`, `AGENTS.md`, `RAVEN-SPEC/*`. Ничего не менял, установок/сборок не запускал.
+
+## Прогресс по P10 (GitHub)
+
+| Слой                                                     | Статус | Где                                                                           |
+| -------------------------------------------------------- | ------ | ----------------------------------------------------------------------------- |
+| URL-детект и канонизация (`11_GITHUB.md` §3)             | ✅     | `packages/domain/src/url/github.ts` [PR #32, 2026-08-22]                      |
+| Манифест инструмента, выбор креденшелов, ошибки (§2,§9)  | ✅     | `packages/integrations/github/{manifest,errors,auth}` [PR #32, 2026-08-22]    |
+| Rate-limit / бюджет запросов (§8)                        | ✅     | `packages/integrations/github/budget.ts` [PR #32, 2026-08-22]                 |
+| Парсеры зависимостей npm/pip/go/cargo (§5.5)             | ✅     | `packages/integrations/github/parsers/*` [PR #33, 2026-08-22]                 |
+| Детерминированный анализ, шаги C–I (§5.3–§5.8, §5.10)    | ✅     | `packages/integrations/github/analysis/*`, схема в `domain/entities` [PR #33] |
+| Парсеры maven/gradle/composer/gem/nuget (§5.5, `low`)    | ⛔     | не реализованы — добавляются через тот же `DependencyParser`                  |
+| Fetch-клиент, шаги A/B/D (§5.1, §5.2, §5.4)              | ⛔     | следующий PR                                                                  |
+| Worker-очередь `github`, джобы (§10)                     | ⛔     | следующий PR                                                                  |
+| UI-нода репозитория и инспектор (§4.2, §4.3)             | ⛔     | следующий PR                                                                  |
+| Integration Proposal из анализа (§6), graph mapping (§7) | ⛔     | следующий PR                                                                  |
+| Режимы B/C (OAuth, GitHub App) (§2.2, §2.3)              | ⛔     | сознательно отложены: v1 работает в анонимном режиме A                        |
