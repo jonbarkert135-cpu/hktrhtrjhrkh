@@ -16,6 +16,7 @@
     "@nexus/canvas-engine": "workspace:*",
     "@nexus/config": "workspace:*",
     "@nexus/domain": "workspace:*",
+    "@nexus/ai": "workspace:*",
     "@nexus/integrations": "workspace:*",
     "@nexus/layout": "workspace:*",
     "@nexus/ui": "workspace:*",

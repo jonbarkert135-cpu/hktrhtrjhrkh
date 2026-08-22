@@ -61,6 +61,7 @@ export const COVERAGE_TARGETS = {
   // validated graph; a test that fakes one would assert the test double, not the algorithm.
   'packages/layout': { lines: 95, branches: 75 },
   'packages/integrations': { lines: 85, branches: 75 },
+  'packages/ai': { lines: 85, branches: 75 },
   'packages/transforms': { lines: 90, branches: 85 },
   'packages/ui': { lines: 70, branches: 60 },
   'apps/api': { lines: 80, branches: 70 },

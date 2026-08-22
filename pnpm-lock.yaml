@@ -220,6 +220,9 @@ importers:
       '@hocuspocus/provider':
         specifier: ^4.6.0
         version: 4.6.0(y-protocols@1.0.7(yjs@13.6.20))(yjs@13.6.20)
+      '@nexus/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@nexus/canvas-engine':
         specifier: workspace:*
         version: link:../../packages/canvas-engine
@@ -454,6 +457,31 @@ importers:
       typescript:
         specifier: 5.7.2
         version: 5.7.2
+
+  packages/ai:
+    dependencies:
+      '@nexus/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@nexus/integrations':
+        specifier: workspace:*
+        version: link:../integrations
+    devDependencies:
+      '@nexus/config':
+        specifier: workspace:*
+        version: link:../config
+      '@vitest/coverage-v8':
+        specifier: ^3.2.4
+        version: 3.2.7(vitest@3.2.7(@types/node@22.20.1)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.32.0)(tsx@4.23.12))
+      eslint:
+        specifier: ^9.17.0
+        version: 9.39.5(jiti@2.7.0)
+      typescript:
+        specifier: 5.7.2
+        version: 5.7.2
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.32.0)(tsx@4.23.12)
 
   packages/canvas-engine:
     dependencies:

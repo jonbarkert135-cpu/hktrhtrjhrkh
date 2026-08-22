@@ -45,6 +45,7 @@ import { useDropZone } from '../../capture/useDropZone.ts';
 import { useCopyCut } from '../../capture/useCopyCut.ts';
 import { groupSelected, ungroupSelected } from './groupCommands.ts';
 import { VersionHistory } from './VersionHistory.tsx';
+import { AIPanel } from '../../ai/AIPanel.tsx';
 import { IntegrationsSurface } from '../../integrations/IntegrationsSurface.tsx';
 import { useRegisterCommands } from '../commands/useRegisterCommands.ts';
 import { AutoArrangePanel } from '../../layout/AutoArrangePanel.tsx';
@@ -69,6 +70,7 @@ export function BoardWorkspace() {
   const [inspectorWidth, setInspectorWidth] = useState(360);
   // Absent, not disabled, when the capability is off (ADR-002, N2): nothing below renders.
   const [integrationsOpen, setIntegrationsOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
 
   // Auto Arrange is ephemeral UI state, never document state (P14a, N2).
   const arrangeOpen = useAutoArrangeStore((state) => state.open);
@@ -281,6 +283,14 @@ export function BoardWorkspace() {
           shortcut: 'Ctrl+G',
           when: (ctx: { view: string }) => ctx.view === 'board',
           run: onGroup,
+        },
+        {
+          id: 'ai.assistant',
+          title: 'AI assistant…',
+          group: 'board' as const,
+          keywords: ['ai', 'summarise', 'duplicates', 'suggest', 'cluster'],
+          when: (ctx: { view: string }) => ctx.view === 'board',
+          run: () => setAiOpen(true),
         },
         {
           id: 'board.ungroup',
@@ -526,6 +536,15 @@ export function BoardWorkspace() {
         onRestore={restore}
         previewingId={previewing}
       />
+      <AIPanel
+        open={aiOpen}
+        onClose={() => setAiOpen(false)}
+        doc={doc}
+        boardId={boardId}
+        selectedIds={selectedIds}
+        onUndo={() => history.undo()}
+      />
+
       {capabilities.integrations ? (
         <IntegrationsSurface
           open={integrationsOpen}
