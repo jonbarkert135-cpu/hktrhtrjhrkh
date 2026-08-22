@@ -1,11 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { createLocalIndex } from '@nexus/domain';
+
 import { WorkspaceProvider } from '../../data/workspace/context';
+import { BoardStatusProvider, useBoardStatus } from '../shell/boardStatus';
 import { fakeWorkspaceRepository } from '../../data/workspace/testFakes';
 import { commandRegistry } from './registry';
 import { CommandPalette } from './palette';
@@ -18,6 +21,30 @@ function renderPalette(path = '/', extra?: ReactNode) {
         <MemoryRouter initialEntries={[path]}>
           {extra}
           <CommandPalette />
+        </MemoryRouter>
+      </WorkspaceProvider>
+    </QueryClientProvider>,
+  );
+}
+
+function PublishBoard({ index }: { index: ReturnType<typeof createLocalIndex> }) {
+  const status = useBoardStatus();
+  useEffect(() => {
+    status.publish({ boardId: 'b1', searchIndex: index });
+  }, [status, index]);
+  return null;
+}
+
+function renderPaletteWithBoard(index: ReturnType<typeof createLocalIndex>) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <WorkspaceProvider repository={fakeWorkspaceRepository()}>
+        <MemoryRouter initialEntries={['/b/b1']}>
+          <BoardStatusProvider>
+            <PublishBoard index={index} />
+            <CommandPalette />
+          </BoardStatusProvider>
         </MemoryRouter>
       </WorkspaceProvider>
     </QueryClientProvider>,
@@ -87,6 +114,22 @@ describe('CommandPalette', () => {
     const region = document.querySelector('[aria-live="polite"]');
     expect(region).not.toBeNull();
     expect(region?.textContent).toMatch(/results?/);
+  });
+
+  it('finds a board node from a bare query, without the @ prefix', async () => {
+    const user = userEvent.setup();
+    const index = createLocalIndex();
+    index.upsert({
+      id: 'n1',
+      boardId: 'b1',
+      title: 'Acme Corp',
+      body: 'contact@acme-corp.io',
+      keywords: ['target'],
+    });
+    renderPaletteWithBoard(index);
+    await user.keyboard('{Control>}k{/Control}');
+    await user.type(screen.getByRole('textbox', { name: 'Command palette' }), 'acme');
+    expect(await screen.findByRole('option', { name: /acme corp/i })).toBeInTheDocument();
   });
 
   it('switches to help mode with "?"', async () => {

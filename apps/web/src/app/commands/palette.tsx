@@ -125,8 +125,22 @@ export function CommandPalette() {
   const rows: Row[] = useMemo(() => {
     if (!open) return [];
 
+    const nodeRows = (limit: number): Row[] => {
+      const index = boardStatus.searchIndex;
+      const boardId = boardStatus.boardId;
+      if (index === null || boardId === null || term.trim() === '') return [];
+      return index.search(term, { boardId, limit }).map(
+        (result): Row => ({
+          key: `n:${result.id}`,
+          label: result.title === '' ? '(untitled)' : result.title,
+          hint: 'node',
+          run: () => boardStatus.focusNode?.(result.id),
+        }),
+      );
+    };
+
     if (mode === 'commands') {
-      return commandRegistry.search(term, context).map(
+      const commandRows = commandRegistry.search(term, context).map(
         (command): Row => ({
           key: command.id,
           label: command.title,
@@ -137,6 +151,9 @@ export function CommandPalette() {
           },
         }),
       );
+      // A bare query searches the board too: typing a domain or a name should find the node
+      // that holds it, without knowing the `@` prefix first (00_GOAL: findable evidence).
+      return query.startsWith('>') ? commandRows : [...commandRows, ...nodeRows(8)];
     }
 
     if (mode === 'help') {
@@ -159,19 +176,7 @@ export function CommandPalette() {
         );
     }
 
-    if (mode === 'nodes') {
-      if (boardStatus.searchIndex === null || boardStatus.boardId === null) return [];
-      const boardId = boardStatus.boardId;
-      const results =
-        term.trim() === '' ? [] : boardStatus.searchIndex.search(term, { boardId, limit: 20 });
-      return results.map(
-        (result): Row => ({
-          key: result.id,
-          label: result.title === '' ? '(untitled)' : result.title,
-          run: () => boardStatus.focusNode?.(result.id),
-        }),
-      );
-    }
+    if (mode === 'nodes') return nodeRows(20);
 
     // mode === 'switch': projects, then (once one is in view) its boards.
     const projectRows: Row[] = (projects.data ?? [])
@@ -191,7 +196,7 @@ export function CommandPalette() {
         run: () => navigate(`/b/${b.id}`),
       }));
     return [...boardRows, ...projectRows];
-  }, [open, mode, term, context, boardStatus, projects.data, boards.data, navigate]);
+  }, [open, mode, term, query, context, boardStatus, projects.data, boards.data, navigate]);
 
   const choose = (row: Row | undefined) => {
     if (row === undefined) return;
@@ -230,7 +235,7 @@ export function CommandPalette() {
           ref={inputRef}
           className="nx-input"
           aria-label="Command palette"
-          placeholder="Type a command, or #tag / @node / /board / ?help"
+          placeholder="Search commands and this board — or #tag / @node / /board / ?help"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={onKeyDown}
