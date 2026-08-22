@@ -7,6 +7,8 @@ Read this file first, then only what it points at. Do **not** read the tree to o
 1. This file.
 2. `docs/DEVELOPER_HANDOFF.md` — repo map, where behaviour lives, commands.
 3. `RAVEN-SPEC/20_ROADMAP.md` — phases, what is done, what is next (the tracker).
+   `RAVEN-SPEC/25_IMPLEMENTATION_STATUS.md` — per-requirement audit of the owner's roadmap doc;
+   read it instead of the roadmap doc itself, and update the touched rows in the same PR.
 4. The one spec for your area: `05_CANVAS_ENGINE`, `06_NODE_SYSTEM`, `07_EDGE_SYSTEM`,
    `08_DATA_MODEL`, `09_BACKEND`, `10_INTEGRATIONS`, `21_TRANSFORM_SYSTEM`, `24_UNIFIED_QUERY`.
    Each ends with an **implementation status** section: shipped, deviations, not-yet.
