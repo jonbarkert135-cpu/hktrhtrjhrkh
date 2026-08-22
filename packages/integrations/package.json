@@ -9,7 +9,8 @@
     "./pipeline": "./src/pipeline.ts",
     "./errors": "./src/errors.ts",
     "./testkit": "./src/testkit/index.ts",
-    "./builtin/expand-url": "./builtin/manifest.ts"
+    "./builtin/expand-url": "./builtin/manifest.ts",
+    "./github/jobs": "./github/jobs.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
