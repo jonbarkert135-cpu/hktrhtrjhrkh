@@ -7,7 +7,7 @@
  * store.
  */
 
-import { Worker, type Job } from 'bullmq';
+import { Queue, Worker, type Job } from 'bullmq';
 import IORedis from 'ioredis';
 import { prisma } from '@nexus/db';
 import { loadServerEnvFromProcess } from '@nexus/config/env-file';
@@ -15,14 +15,19 @@ import { createLogger } from '@nexus/config/log';
 import { newId } from '@nexus/domain';
 import { IDENTITY_KEY_PROP, type ArtifactRef, type ExistingNodeMatch } from '@nexus/integrations';
 
+import { createGithubHandlers } from '@nexus/integrations/github/handlers';
+import { GithubClient } from '@nexus/integrations/github/client';
 import {
   GITHUB_JOB_SPECS,
   GITHUB_QUEUE,
   githubBackoff,
+  githubJobOptions,
   type GithubJobName,
   type GithubJobPayload,
 } from '@nexus/integrations/github/jobs';
 
+import { createGithubHttp } from './net/github-http.ts';
+import { createGithubHandlerStore, syncNodePatcher } from './stores/github.ts';
 import { processGithubJob, type GithubHandlers, type GithubJobStore } from './queues/github.ts';
 import {
   processParseJob,
@@ -277,10 +282,26 @@ export function start(): Promise<() => Promise<void>> {
     { connection, concurrency: Number(process.env.WORKER_CONCURRENCY ?? 4) },
   );
 
-  log.info({ event: 'worker.started' }, 'worker is consuming integration.parse');
+  // The `github` queue (11_GITHUB.md §10). Mode A (anonymous) — no token is selected yet, so the
+  // client runs on the shared unauthenticated budget and analyses come back partial (§5.9).
+  const githubQueue = new Queue(GITHUB_QUEUE, { connection });
+  const githubHandlers = createGithubHandlers({
+    store: createGithubHandlerStore(syncNodePatcher(env)),
+    createClient: (signal) => new GithubClient({ http: createGithubHttp({ signal }) }),
+    enqueueHydrate: async (payload) => {
+      await githubQueue.add('github.hydrate', payload, githubJobOptions('github.hydrate', payload));
+    },
+    newId: () => newId.proposal(),
+    now: () => Date.now(),
+  });
+  const githubWorker = startGithubWorker(connection, githubHandlers);
+
+  log.info({ event: 'worker.started' }, 'worker is consuming integration.parse and github');
 
   return Promise.resolve(async () => {
     await worker.close();
+    await githubWorker.close();
+    await githubQueue.close();
     connection.disconnect();
     publisher.disconnect();
   });
