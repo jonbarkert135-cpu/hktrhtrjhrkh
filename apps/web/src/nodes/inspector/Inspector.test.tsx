@@ -101,6 +101,14 @@ describe('Inspector', () => {
     expect(getNode(doc, ids[0] ?? '')?.tags).toEqual(['osint']);
   });
 
+  it('names the shortcut the engine actually binds when there are no connections', () => {
+    const { doc, store, ids } = board();
+    render(<Inspector doc={doc} store={store} selectedIds={[ids[0] ?? '']} now={() => T0} />);
+    const connections = within(screen.getByTestId('inspector-connections'));
+    // The engine starts a connection on `c` (see fsm.connect.test.ts); the hint used to say `E`.
+    expect(connections.getByText(/Press C/)).toBeInTheDocument();
+  });
+
   it('lists connections with their direction', () => {
     const { doc, store, ids } = board();
     addEdge(

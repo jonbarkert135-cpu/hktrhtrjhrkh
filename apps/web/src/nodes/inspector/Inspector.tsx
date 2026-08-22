@@ -336,7 +336,7 @@ export function Inspector({
         <h3>Connections</h3>
         {connections.length === 0 ? (
           <p className="nx-card-meta">
-            No connections yet. Press E with a node selected to draw one.
+            No connections yet. Press C, aim with ← →, then Enter — or drag from the card's edge.
           </p>
         ) : (
           <ul className="nx-inspector-list">
