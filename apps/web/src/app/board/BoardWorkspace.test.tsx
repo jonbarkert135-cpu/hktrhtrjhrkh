@@ -106,8 +106,11 @@ describe('<BoardWorkspace>', () => {
     await waitFor(() => expect(screen.getByTestId('sync-status')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('add-note'));
     fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+    // The export dialog is a lazy chunk (§23), so it arrives a microtask after the click.
+    await waitFor(() => expect(screen.getByTestId('export-run')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('export-run'));
 
-    expect(createObjectURL).toHaveBeenCalledOnce();
+    await waitFor(() => expect(createObjectURL).toHaveBeenCalledOnce());
     expect(revokeObjectURL).toHaveBeenCalledOnce();
   });
 
