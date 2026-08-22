@@ -1164,11 +1164,33 @@
 
 /* §32 — non-canvas representations. They replace the canvas inside the board surface, so they
    inherit its scroll container and need no layout of their own beyond padding and overflow. */
+/* A view mode replaces the canvas rather than floating over it: same grid cell, opaque, on top.
+   The canvas host is pinned to the same cell, otherwise it auto-flows into the inspector column. */
+.nx-board-main > .nx-canvas-host {
+  grid-area: 1 / 1;
+}
+
 .nx-view {
-  flex: 1 1 auto;
+  grid-area: 1 / 1;
+  z-index: 1;
+  min-width: 0;
   overflow: auto;
   padding: var(--nx-space-4);
   background: var(--surface-1);
+}
+
+.nx-view svg {
+  width: 100%;
+  height: 100%;
+  color: var(--border-subtle);
+}
+
+.nx-view circle {
+  fill: var(--accent-solid);
+}
+
+.nx-view text {
+  fill: var(--text-body);
 }
 
 .nx-view-list {

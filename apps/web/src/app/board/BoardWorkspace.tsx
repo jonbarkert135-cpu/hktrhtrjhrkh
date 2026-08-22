@@ -527,7 +527,12 @@ export function BoardWorkspace() {
             />
           </Suspense>
         )}
-        <CanvasHost onIntent={onIntent} onEngine={onEngine} nodeCount={counts.nodes}>
+        <CanvasHost
+          onIntent={onIntent}
+          onEngine={onEngine}
+          nodeCount={counts.nodes}
+          inert={viewMode !== 'canvas'}
+        >
           {({ slotOf, screenOf }) => {
             slotOfRef.current = slotOf;
             return (

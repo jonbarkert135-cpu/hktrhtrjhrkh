@@ -114,6 +114,15 @@ describe('<BoardWorkspace>', () => {
     expect(revokeObjectURL).toHaveBeenCalledOnce();
   });
 
+  it('hides the canvas from focus while a view mode covers it', async () => {
+    view();
+    await waitFor(() => expect(screen.getByTestId('sync-status')).toBeInTheDocument());
+    expect(screen.getByTestId('canvas-host')).not.toHaveAttribute('inert');
+
+    fireEvent.change(screen.getByTestId('view-mode'), { target: { value: 'table' } });
+    await waitFor(() => expect(screen.getByTestId('canvas-host')).toHaveAttribute('inert'));
+  });
+
   it('imports an archive only after an explicit confirmation', async () => {
     view();
     await waitFor(() => expect(screen.getByTestId('sync-status')).toBeInTheDocument());

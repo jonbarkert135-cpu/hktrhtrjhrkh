@@ -162,6 +162,8 @@ function GraphView({ nodes, edges, onSelect }: Omit<ViewPanelProps, 'mode'>) {
   const minY = Math.min(0, ...boxes.map((box) => box.y));
   const maxX = Math.max(GRAPH_BOX.width, ...boxes.map((box) => box.x));
   const maxY = Math.max(GRAPH_BOX.height, ...boxes.map((box) => box.y));
+  // The viewBox scales to fit the layout, so label text has to scale with it to stay readable.
+  const scale = (maxX - minX + 200) / GRAPH_BOX.width;
   const at = (id: string) => boxes.find((box) => box.id === id) ?? { x: 0, y: 0 };
 
   return (
@@ -184,8 +186,12 @@ function GraphView({ nodes, edges, onSelect }: Omit<ViewPanelProps, 'mode'>) {
         ))}
         {boxes.map((box) => (
           <g key={box.id} onClick={() => onSelect?.(box.id)}>
-            <circle cx={box.x + 80} cy={box.y + 40} r={12 + Math.min(box.degree, 8) * 2} />
-            <text x={box.x + 80} y={box.y + 72} textAnchor="middle" fontSize={13}>
+            <circle
+              cx={box.x + 80}
+              cy={box.y + 40}
+              r={(12 + Math.min(box.degree, 8) * 2) * scale}
+            />
+            <text x={box.x + 80} y={box.y + 72} textAnchor="middle" fontSize={13 * scale}>
               {box.title}
             </text>
           </g>

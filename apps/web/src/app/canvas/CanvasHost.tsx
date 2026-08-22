@@ -31,6 +31,8 @@ export interface CanvasHostProps {
    * stays on top of the first note the user creates.
    */
   nodeCount?: number | undefined;
+  /** True while a non-canvas view mode covers the canvas: hide it from focus and assistive tech. */
+  inert?: boolean | undefined;
 }
 
 export function CanvasHost({
@@ -39,6 +41,7 @@ export function CanvasHost({
   onEngine,
   children,
   nodeCount: nodeCountProp,
+  inert = false,
 }: CanvasHostProps) {
   const {
     canvasRef,
@@ -76,7 +79,7 @@ export function CanvasHost({
   );
 
   return (
-    <div ref={rootRef} className="nx-canvas-host" data-testid="canvas-host">
+    <div ref={rootRef} className="nx-canvas-host" data-testid="canvas-host" inert={inert}>
       <div
         role="application"
         aria-roledescription="Research canvas"
