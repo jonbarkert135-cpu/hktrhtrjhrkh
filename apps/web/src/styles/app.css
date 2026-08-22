@@ -375,6 +375,21 @@
     pointer-events: none;
   }
 
+  /* Own repaint budget, own surface (03_UX §6: 200×140, bottom-right). */
+  .nx-minimap {
+    position: absolute;
+    right: var(--nx-space-4);
+    /* Above the two bottom-right clusters (zoom, bundling) instead of on top of them. */
+    bottom: calc(var(--nx-space-4) + 6rem);
+    inline-size: 200px;
+    block-size: 140px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--nx-radius-3);
+    background: var(--surface-2);
+    touch-action: none;
+    cursor: pointer;
+  }
+
   .nx-zoom-cluster {
     position: absolute;
     right: var(--nx-space-4);

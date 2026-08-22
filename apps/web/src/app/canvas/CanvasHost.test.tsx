@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CanvasHost } from './CanvasHost';
+import type { Engine } from '@nexus/canvas-engine';
 
 /**
  * jsdom has no 2D context, no rAF loop and no ResizeObserver: all three are faked so the mount,
@@ -96,6 +97,24 @@ describe('CanvasHost', () => {
     render(<CanvasHost />);
     frameCb?.(performance.now());
     expect(window.__ravenBench?.frameTimes().length).toBeGreaterThan(0);
+  });
+
+  it('mounts the minimap and moves the camera when it is clicked', () => {
+    let engine: Engine | null = null;
+    render(<CanvasHost onEngine={(e) => (engine = e ?? engine)} />);
+
+    const minimap = screen.getByTestId('canvas-minimap');
+    // jsdom has neither PointerEvent nor pointer capture.
+    minimap.setPointerCapture = vi.fn();
+    minimap.hasPointerCapture = vi.fn(() => false);
+    const down = new MouseEvent('pointerdown', { bubbles: true, clientX: 170, clientY: 110 });
+    Object.defineProperty(down, 'pointerId', { value: 1 });
+
+    const before = engine!.camera.state.x;
+    minimap.dispatchEvent(down);
+
+    expect(engine!.camera.state.x).not.toBe(before);
+    expect(Number.isFinite(engine!.camera.state.x)).toBe(true);
   });
 
   it('tears the engine down on unmount', () => {

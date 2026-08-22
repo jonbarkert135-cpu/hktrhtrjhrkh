@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useCanvasEngine } from './useCanvasEngine';
+import { MINIMAP_HEIGHT, MINIMAP_WIDTH, useMinimap } from './useMinimap';
 import type { Engine, Intent, SceneSnapshot } from '@nexus/canvas-engine';
 
 const ZOOM_STOPS = [0.25, 0.5, 1, 2] as const;
@@ -57,6 +58,9 @@ export function CanvasHost({
     ...(onIntent === undefined ? {} : { onIntent }),
   });
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const minimapRef = useRef<HTMLCanvasElement | null>(null);
+  // Called after useCanvasEngine so the engine already exists when this effect runs.
+  useMinimap(engineRef, minimapRef);
   // Bundling is off at 0, which is where it starts: a fan of parallel relationships is information,
   // and collapsing it is a choice the analyst makes (07 §7.6, P5 part 4 §4).
   const [bundleDensity, setDensity] = useState(0);
@@ -96,6 +100,14 @@ export function CanvasHost({
         {/* Node hosts are mounted here by the engine's overlay; React never touches its children. */}
         <div ref={overlayRef} data-testid="canvas-overlay" className="nx-canvas-overlay" />
         {children?.({ slotOf, screenOf })}
+        <canvas
+          ref={minimapRef}
+          data-testid="canvas-minimap"
+          className="nx-minimap"
+          width={MINIMAP_WIDTH}
+          height={MINIMAP_HEIGHT}
+          aria-label="Board minimap. Click or drag to move the view."
+        />
         {nodeCount === 0 ? (
           <p className="nx-canvas-empty" data-testid="canvas-empty">
             Paste a link, drop a file, or press N for a note
