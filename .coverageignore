@@ -31,6 +31,11 @@ packages/transforms/src/index.ts
 packages/transforms/src/catalog/index.ts
 packages/transforms/src/sdk/index.ts
 packages/integrations/src/index.ts
+
+# Parser registry: re-exports plus two one-line dispatch helpers, fully exercised by
+# test/github.parsers.test.ts, but vitest's global `**/index.ts` coverage exclude means v8 emits
+# no entry for it at all.
+packages/integrations/github/parsers/index.ts
 packages/integrations/src/testkit/index.ts
 
 # Browser bootstrap: finds #root and calls createRoot, so it can only run against a real document
