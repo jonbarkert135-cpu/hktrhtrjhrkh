@@ -16,6 +16,7 @@ import {
   planCapture,
   type CaptureOrigin,
   type CapturePlan,
+  type ClipSource,
   type TransferSnapshot,
 } from '@nexus/domain';
 import { useCallback, useEffect } from 'react';
@@ -28,6 +29,8 @@ export interface CaptureTarget {
   /** World point to aim at: the pointer over the canvas, else the viewport centre. */
   aim: () => { x: number; y: number };
   now?: (() => string) | undefined;
+  /** The board being pasted into; a clip from elsewhere keeps a reference to its origin (§20). */
+  into?: ClipSource | undefined;
 }
 
 export interface CaptureResult {
@@ -75,7 +78,11 @@ export function captureTransfer(
   if (clip !== null && clip.nodes.length > 0) {
     const now = (target.now ?? (() => new Date().toISOString()))();
     target.history?.label('paste selection');
-    const { nodeIds } = pasteSubgraph(target.doc, clip, { at: target.aim(), now });
+    const { nodeIds } = pasteSubgraph(target.doc, clip, {
+      at: target.aim(),
+      now,
+      into: target.into,
+    });
     target.history?.separate();
     const count = nodeIds.length;
     return {

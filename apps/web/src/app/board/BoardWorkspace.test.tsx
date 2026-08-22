@@ -116,7 +116,8 @@ describe('<BoardWorkspace>', () => {
     await waitFor(() => expect(screen.getByTestId('sync-status')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Import' }));
-    fireEvent.change(screen.getByTestId('import-file'), {
+    // The dialog is a lazy chunk (§23), so it arrives a microtask after the click.
+    fireEvent.change(await screen.findByTestId('import-file'), {
       target: { files: [fileWith(archiveJson())] },
     });
     await waitFor(() => expect(screen.getByTestId('import-summary')).toBeInTheDocument());

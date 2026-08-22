@@ -4,6 +4,7 @@ import {
   copySubgraph,
   cutSubgraph,
   parseClip,
+  REFERENCED_FROM,
   pasteSubgraph,
   serializeClip,
 } from '../src/clipboard/subgraph.ts';
@@ -90,5 +91,56 @@ describe('subgraph clipboard', () => {
   it('keeps the original timestamps in the clip itself', () => {
     const { doc, nodeIds } = fixtureBoard(2, 1);
     expect(copySubgraph(doc, nodeIds).nodes[0]?.createdAt).toBe(T0);
+  });
+
+  describe('cross-project references (§20)', () => {
+    const source = { boardId: 'b_a', projectId: 'p_a', boardTitle: 'Investigation A' };
+
+    it('keeps the origin on a paste into another board', () => {
+      const { doc, nodeIds } = fixtureBoard(2, 1);
+      const clip = copySubgraph(doc, [nodeIds[0] ?? ''], source);
+      pasteSubgraph(doc, clip, {
+        at: { x: 10, y: 10 },
+        now,
+        makeId: seqIds('p_'),
+        into: { boardId: 'b_b', projectId: 'p_b' },
+      });
+      const pasted = listNodes(doc).find((node) => node.id === 'p_0001');
+      expect(pasted?.data[REFERENCED_FROM]).toEqual(source);
+    });
+
+    it('does not reference the board it was copied from', () => {
+      const { doc, nodeIds } = fixtureBoard(2, 1);
+      const clip = copySubgraph(doc, [nodeIds[0] ?? ''], source);
+      pasteSubgraph(doc, clip, {
+        at: { x: 10, y: 10 },
+        now,
+        makeId: seqIds('p_'),
+        into: { boardId: 'b_a', projectId: 'p_a' },
+      });
+      expect(listNodes(doc).find((node) => node.id === 'p_0001')?.data[REFERENCED_FROM]).toBe(
+        undefined,
+      );
+    });
+
+    it('survives the system clipboard round-trip', () => {
+      const { doc, nodeIds } = fixtureBoard(2, 1);
+      const clip = copySubgraph(doc, [nodeIds[0] ?? ''], source);
+      expect(parseClip(serializeClip(clip))?.source).toEqual(source);
+    });
+
+    it('drops a malformed source rather than failing the paste', () => {
+      const { doc, nodeIds } = fixtureBoard(2, 1);
+      const clip = copySubgraph(doc, [nodeIds[0] ?? '']);
+      const text = JSON.stringify({ ...clip, source: { projectId: 'p_a' } });
+      const parsed = parseClip(text);
+      expect(parsed?.nodes).toHaveLength(1);
+      expect(parsed?.source).toBe(undefined);
+    });
+
+    it('cut carries the source too', () => {
+      const { doc, nodeIds } = fixtureBoard(2, 1);
+      expect(cutSubgraph(doc, [nodeIds[0] ?? ''], { now, source }).source).toEqual(source);
+    });
   });
 });

@@ -194,4 +194,49 @@ describe('Inspector rich text', () => {
       expect(screen.getByTestId(`richtext-${noteId}`)).toHaveAttribute('data-readonly', 'true'),
     );
   });
+
+  describe('cross-project references (§20)', () => {
+    it('links back to the board a pasted node came from', () => {
+      const doc = createBoardDoc({ boardId: 'b_here', now: T0 });
+      const { node } = createNode(
+        doc,
+        {
+          type: 'note',
+          x: 0,
+          y: 0,
+          title: 'Copied finding',
+          data: {
+            referencedFrom: { boardId: 'b_there', projectId: 'p_there', boardTitle: 'Case A' },
+          },
+        },
+        { now: T0, makeId: () => 'n_ref' },
+      );
+      render(
+        <Inspector doc={doc} store={createNodeStore(doc)} selectedIds={[node.id]} now={() => T0} />,
+      );
+      const section = screen.getByTestId('inspector-referenced-from');
+      expect(within(section).getByRole('link', { name: 'Case A' })).toHaveAttribute(
+        'href',
+        '/p/p_there/b/b_there',
+      );
+    });
+
+    it('says nothing when the node has no origin', () => {
+      panel();
+      expect(screen.queryByTestId('inspector-referenced-from')).toBeNull();
+    });
+
+    it('ignores a malformed origin', () => {
+      const doc = createBoardDoc({ boardId: 'b_here', now: T0 });
+      const { node } = createNode(
+        doc,
+        { type: 'note', x: 0, y: 0, title: 'Odd', data: { referencedFrom: { boardId: 7 } } },
+        { now: T0, makeId: () => 'n_bad' },
+      );
+      render(
+        <Inspector doc={doc} store={createNodeStore(doc)} selectedIds={[node.id]} now={() => T0} />,
+      );
+      expect(screen.queryByTestId('inspector-referenced-from')).toBeNull();
+    });
+  });
 });

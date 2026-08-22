@@ -8,6 +8,7 @@
  */
 
 import { createId } from '@paralleldrive/cuid2';
+import { z } from 'zod';
 import type * as Y from 'yjs';
 
 import { tx, type Origin } from '../doc/transactions.ts';
@@ -18,12 +19,29 @@ import { addEdges, addNodes, listEdges, listNodes, removeNodes } from '../doc/mu
 /** Marker so a pasted clip is recognised before the generic text detector sees it. */
 export const CLIP_KIND = 'nexus/subgraph';
 
+const ClipSourceSchema = z.object({
+  boardId: z.string().min(1),
+  projectId: z.string().min(1).optional(),
+  boardTitle: z.string().optional(),
+});
+
+/** Where a clip came from, so a paste into another board can keep the back-reference (§20). */
+export interface ClipSource {
+  readonly boardId: string;
+  readonly projectId?: string | undefined;
+  readonly boardTitle?: string | undefined;
+}
+
 export interface SubgraphClip {
   readonly kind: typeof CLIP_KIND;
   readonly version: 1;
   readonly nodes: readonly BoardNode[];
   readonly edges: readonly BoardEdge[];
+  readonly source?: ClipSource;
 }
+
+/** Key under `node.data` holding the origin of a cross-board paste (§20 cross-project refs). */
+export const REFERENCED_FROM = 'referencedFrom';
 
 export interface PasteOptions {
   /** World point the clip's top-left corner lands on. */
@@ -31,26 +49,34 @@ export interface PasteOptions {
   readonly now: string;
   readonly origin?: Origin;
   readonly makeId?: (() => string) | undefined;
+  /** Board the clip lands in; when it differs from `clip.source`, nodes keep a back-reference. */
+  readonly into?: ClipSource | undefined;
 }
 
 /** Nodes by id plus every edge whose both endpoints are in the selection. */
-export function copySubgraph(doc: Y.Doc, ids: readonly string[]): SubgraphClip {
+export function copySubgraph(
+  doc: Y.Doc,
+  ids: readonly string[],
+  source?: ClipSource,
+): SubgraphClip {
   const wanted = new Set(ids);
   const nodes = listNodes(doc).filter((node) => wanted.has(node.id));
   const kept = new Set(nodes.map((node) => node.id));
   const edges = listEdges(doc).filter(
     (edge) => kept.has(edge.source.nodeId) && kept.has(edge.target.nodeId),
   );
-  return { kind: CLIP_KIND, version: 1, nodes, edges };
+  return source === undefined
+    ? { kind: CLIP_KIND, version: 1, nodes, edges }
+    : { kind: CLIP_KIND, version: 1, nodes, edges, source };
 }
 
 /** Copy, then delete — one undo step, and the clip still holds the edges that went with them. */
 export function cutSubgraph(
   doc: Y.Doc,
   ids: readonly string[],
-  options: { now: string; origin?: Origin },
+  options: { now: string; origin?: Origin; source?: ClipSource | undefined },
 ): SubgraphClip {
-  const clip = copySubgraph(doc, ids);
+  const clip = copySubgraph(doc, ids, options.source);
   if (clip.nodes.length > 0) {
     removeNodes(doc, [...clip.nodes.map((node) => node.id)], {
       origin: options.origin ?? 'local:delete',
@@ -74,14 +100,25 @@ export function parseClip(text: string): SubgraphClip | null {
     return null;
   }
   if (typeof raw !== 'object' || raw === null) return null;
-  const record = raw as { kind?: unknown; nodes?: unknown; edges?: unknown };
+  const record = raw as { kind?: unknown; nodes?: unknown; edges?: unknown; source?: unknown };
   if (record.kind !== CLIP_KIND || !Array.isArray(record.nodes) || !Array.isArray(record.edges)) {
     return null;
   }
   const nodes = NodeSchema.array().safeParse(record.nodes);
   const edges = EdgeSchema.array().safeParse(record.edges);
   if (!nodes.success || !edges.success) return null;
-  return { kind: CLIP_KIND, version: 1, nodes: nodes.data, edges: edges.data };
+  const source = ClipSourceSchema.safeParse(record.source);
+  return source.success
+    ? { kind: CLIP_KIND, version: 1, nodes: nodes.data, edges: edges.data, source: source.data }
+    : { kind: CLIP_KIND, version: 1, nodes: nodes.data, edges: edges.data };
+}
+
+/** A clip pasted into a different board keeps `data.referencedFrom` pointing back at its origin. */
+function referenceOf(clip: SubgraphClip, into: ClipSource | undefined): ClipSource | undefined {
+  const from = clip.source;
+  if (from === undefined) return undefined;
+  if (into !== undefined && into.boardId === from.boardId) return undefined;
+  return from;
 }
 
 /** Writes the clip at `at` with fresh ids. Returns the new node ids in clip order. */
@@ -98,6 +135,7 @@ export function pasteSubgraph(
   const dx = options.at.x - minX;
   const dy = options.at.y - minY;
 
+  const reference = referenceOf(clip, options.into);
   const idMap = new Map<string, string>();
   const nodes = clip.nodes.map((node) => {
     const id = mint();
@@ -105,6 +143,7 @@ export function pasteSubgraph(
     return NodeSchema.parse({
       ...node,
       id,
+      data: reference === undefined ? node.data : { ...node.data, [REFERENCED_FROM]: reference },
       x: node.x + dx,
       y: node.y + dy,
       parentId: null,

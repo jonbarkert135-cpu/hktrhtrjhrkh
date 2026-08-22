@@ -18,10 +18,11 @@ import {
   observeBoard,
   serializeBoardExport,
   NODE_SOFT_LIMIT,
+  type ClipSource,
 } from '@nexus/domain';
 import { Banner, Button } from '@nexus/ui';
 import type { Engine, Intent } from '@nexus/canvas-engine';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { useBoardDoc } from '../../data/docProvider.tsx';
@@ -37,21 +38,33 @@ import { NodeHosts } from '../../nodes/NodeHosts.tsx';
 import { createNodeStore } from '../../nodes/nodeStore.ts';
 import { SyncStatus } from '../shell/SyncStatus.tsx';
 import { useBoardStatus } from '../shell/boardStatus.tsx';
-import { ImportDialog, type ImportPreview } from './ImportDialog.tsx';
+import type { ImportPreview } from './ImportDialog.tsx';
 import { QuickAdd } from '../../capture/QuickAdd.tsx';
 import { PasteToast } from '../../capture/PasteToast.tsx';
 import { captureTransfer, usePaste, type CaptureResult } from '../../capture/usePaste.ts';
 import { useDropZone } from '../../capture/useDropZone.ts';
 import { useCopyCut } from '../../capture/useCopyCut.ts';
 import { groupSelected, ungroupSelected } from './groupCommands.ts';
-import { VersionHistory } from './VersionHistory.tsx';
-import { AIPanel } from '../../ai/AIPanel.tsx';
-import { IntegrationsSurface } from '../../integrations/IntegrationsSurface.tsx';
+
 import { useRegisterCommands } from '../commands/useRegisterCommands.ts';
 import { AutoArrangePanel } from '../../layout/AutoArrangePanel.tsx';
 import { LayoutGhosts } from '../../layout/LayoutGhosts.tsx';
 import { useAutoArrangeStore } from '../../layout/autoArrangeStore.ts';
 import { capabilities } from '../../mode/appMode';
+
+// Panels that only exist once the user opens them, so their code (and their dependencies) stays
+// out of the board's first paint (§23 lazy loading). Each is rendered only while open, which is
+// also what keeps the chunk from being fetched at all on a board nobody opens a panel on.
+const VersionHistory = lazy(async () => ({
+  default: (await import('./VersionHistory.tsx')).VersionHistory,
+}));
+const AIPanel = lazy(async () => ({ default: (await import('../../ai/AIPanel.tsx')).AIPanel }));
+const IntegrationsSurface = lazy(async () => ({
+  default: (await import('../../integrations/IntegrationsSurface.tsx')).IntegrationsSurface,
+}));
+const ImportDialog = lazy(async () => ({
+  default: (await import('./ImportDialog.tsx')).ImportDialog,
+}));
 
 const APP_VERSION = '0.3.0';
 
@@ -101,15 +114,24 @@ export function BoardWorkspace() {
       ? { x: 0, y: 0 }
       : { x: viewport.x + viewport.w / 2, y: viewport.y + viewport.h / 2 };
   }, [engine]);
-  const captureTarget = useMemo(() => ({ doc, history, aim }), [doc, history, aim]);
+  // Identity of this board travels with copy/paste so a clip pasted into another board (or
+  // project) keeps a `Referenced from` back-link instead of losing where it came from (§20).
+  const clipSource = useMemo(
+    (): ClipSource => (projectId === '' ? { boardId } : { boardId, projectId }),
+    [boardId, projectId],
+  );
+  const captureTarget = useMemo(
+    () => ({ doc, history, aim, into: clipSource }),
+    [doc, history, aim, clipSource],
+  );
 
   usePaste(captureTarget, setCapture);
   // Ctrl+C / Ctrl+X over the canvas (§18); the selection lives in the engine, never in the doc.
   const selectedIdsRef = useRef<readonly string[]>([]);
   selectedIdsRef.current = selectedIds;
   const copyTarget = useMemo(
-    () => ({ doc, history, selection: () => selectedIdsRef.current }),
-    [doc, history],
+    () => ({ doc, history, selection: () => selectedIdsRef.current, source: clipSource }),
+    [doc, history, clipSource],
   );
   useCopyCut(copyTarget, setNotice);
   const dropZone = useDropZone(captureTarget, setCapture);
@@ -527,38 +549,46 @@ export function BoardWorkspace() {
         onDismiss={() => setCapture(null)}
       />
 
-      <VersionHistory
-        open={historyOpen}
-        boardId={boardId}
-        store={snapshotStore}
-        onOpenChange={setHistoryOpen}
-        onPreview={setPreviewing}
-        onRestore={restore}
-        previewingId={previewing}
-      />
-      <AIPanel
-        open={aiOpen}
-        onClose={() => setAiOpen(false)}
-        doc={doc}
-        boardId={boardId}
-        selectedIds={selectedIds}
-        onUndo={() => history.undo()}
-      />
-
-      {capabilities.integrations ? (
-        <IntegrationsSurface
-          open={integrationsOpen}
-          onClose={() => setIntegrationsOpen(false)}
-          doc={doc}
-          boardId={boardId}
-          projectId={projectId}
-          selection={selectedIds.map((id) => {
-            const found = listNodes(doc).find((node) => node.id === id);
-            return { id, kind: found?.type ?? 'note', label: found?.title ?? '' };
-          })}
-          onUndo={() => history.undo()}
-        />
-      ) : null}
+      <Suspense fallback={null}>
+        {historyOpen ? (
+          <VersionHistory
+            open={historyOpen}
+            boardId={boardId}
+            store={snapshotStore}
+            onOpenChange={setHistoryOpen}
+            onPreview={setPreviewing}
+            onRestore={restore}
+            previewingId={previewing}
+          />
+        ) : null}
+        {aiOpen ? (
+          <AIPanel
+            open={aiOpen}
+            onClose={() => setAiOpen(false)}
+            doc={doc}
+            boardId={boardId}
+            selectedIds={selectedIds}
+            onUndo={() => history.undo()}
+          />
+        ) : null}
+        {capabilities.integrations && integrationsOpen ? (
+          <IntegrationsSurface
+            open={integrationsOpen}
+            onClose={() => setIntegrationsOpen(false)}
+            doc={doc}
+            boardId={boardId}
+            projectId={projectId}
+            selection={selectedIds.map((id) => {
+              const found = listNodes(doc).find((node) => node.id === id);
+              return { id, kind: found?.type ?? 'note', label: found?.title ?? '' };
+            })}
+            onUndo={() => history.undo()}
+          />
+        ) : null}
+        {importOpen ? (
+          <ImportDialog open={importOpen} onOpenChange={setImportOpen} onConfirm={confirmImport} />
+        ) : null}
+      </Suspense>
 
       <AutoArrangePanel
         doc={doc}
@@ -568,8 +598,6 @@ export function BoardWorkspace() {
           setNotice(`Auto arrange moved ${String(count)} nodes. Press ⌘Z to undo it in one step.`)
         }
       />
-
-      <ImportDialog open={importOpen} onOpenChange={setImportOpen} onConfirm={confirmImport} />
     </section>
   );
 }

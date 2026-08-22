@@ -14,7 +14,9 @@ import {
   setNodeTags,
   updateNode,
   updateNodeData,
+  REFERENCED_FROM,
   type BoardNode,
+  type ClipSource,
 } from '@nexus/domain';
 import { useCallback, useState, useSyncExternalStore } from 'react';
 import type * as Y from 'yjs';
@@ -71,6 +73,35 @@ function connectionsOf(doc: Y.Doc, nodeId: string): Connection[] {
     }
   }
   return out;
+}
+
+/** `data.referencedFrom`, written when a subgraph is pasted into another board (§20). */
+function referencedFrom(node: BoardNode): ClipSource | undefined {
+  const raw = node.data[REFERENCED_FROM];
+  if (typeof raw !== 'object' || raw === null) return undefined;
+  const source = raw as { boardId?: unknown; projectId?: unknown; boardTitle?: unknown };
+  if (typeof source.boardId !== 'string') return undefined;
+  return {
+    boardId: source.boardId,
+    ...(typeof source.projectId === 'string' ? { projectId: source.projectId } : {}),
+    ...(typeof source.boardTitle === 'string' ? { boardTitle: source.boardTitle } : {}),
+  };
+}
+
+function ReferencedFrom({ source }: { source: ClipSource }) {
+  const href =
+    source.projectId === undefined
+      ? `/b/${source.boardId}`
+      : `/p/${source.projectId}/b/${source.boardId}`;
+  return (
+    <section className="nx-inspector-section" data-testid="inspector-referenced-from">
+      <h3>Referenced from</h3>
+      <p className="nx-card-meta">
+        Pasted from <a href={href}>{source.boardTitle ?? source.boardId}</a>. The original stays
+        where it is — this copy is independent.
+      </p>
+    </section>
+  );
 }
 
 function useNode(store: NodeStore, id: string | undefined): BoardNode | undefined {
@@ -195,6 +226,7 @@ export function Inspector({
     );
   }
 
+  const reference = referencedFrom(node);
   const def = builtinNodeTypes().get(node.type);
   const state = cardStateOf(node);
   const connections = connectionsOf(doc, node.id);
@@ -318,6 +350,8 @@ export function Inspector({
           </ul>
         )}
       </section>
+
+      {reference === undefined ? null : <ReferencedFrom source={reference} />}
 
       <section className="nx-inspector-section" data-testid="inspector-provenance">
         <h3>Provenance</h3>

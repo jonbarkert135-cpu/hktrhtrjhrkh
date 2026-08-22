@@ -12,6 +12,7 @@ import {
   makeEdge,
   makeNode,
   parseClip,
+  type ClipSource,
 } from '@nexus/domain';
 import { render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -48,14 +49,48 @@ interface HarnessProps {
   history: ReturnType<typeof board>['history'];
   ids: string[];
   onMessage?: ((message: string) => void) | undefined;
+  source?: ClipSource | undefined;
 }
 
-function Harness({ doc, history, ids, onMessage }: HarnessProps) {
-  useCopyCut({ doc, history, selection: () => ids, now: () => T0 }, onMessage);
+function Harness({ doc, history, ids, onMessage, source }: HarnessProps) {
+  useCopyCut({ doc, history, selection: () => ids, now: () => T0, source }, onMessage);
   return null;
 }
 
 describe('useCopyCut', () => {
+  it('stamps the board a clip was copied from, so a cross-board paste can link back (§20)', () => {
+    const { doc, history } = board();
+    render(
+      <Harness
+        doc={doc}
+        history={history}
+        ids={['n1']}
+        source={{ boardId: 'b_a', projectId: 'p_a' }}
+      />,
+    );
+    const { event, written } = clipboardEvent('copy');
+    window.dispatchEvent(event);
+    expect(parseClip(written['text/plain'] ?? '')?.source).toEqual({
+      boardId: 'b_a',
+      projectId: 'p_a',
+    });
+
+    const target = board();
+    const result = captureTransfer(
+      {
+        doc: target.doc,
+        history: target.history,
+        aim: () => ({ x: 0, y: 0 }),
+        now: () => T0,
+        into: { boardId: 'b_b', projectId: 'p_b' },
+      },
+      { text: written['text/plain'] ?? '' },
+      'paste',
+    );
+    const pasted = listNodes(target.doc).find((node) => node.id === result.ids[0]);
+    expect(pasted?.data['referencedFrom']).toEqual({ boardId: 'b_a', projectId: 'p_a' });
+  });
+
   it('writes the selected subgraph to the clipboard on copy', () => {
     const { doc, history } = board();
     const onMessage = vi.fn((_message: string) => undefined);
