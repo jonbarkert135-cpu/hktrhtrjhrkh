@@ -31,6 +31,7 @@ import { useReportBoardCounts, useTouchBoardOpened } from '../../data/workspace/
 import { restoreSnapshot } from '../../data/snapshots.ts';
 import { useBoardSearchIndex } from '../../search/useBoardSearchIndex.ts';
 import { CanvasHost } from '../canvas/CanvasHost';
+import { useViewportMemory } from '../canvas/useViewportMemory.ts';
 import { VIEW_LABELS, VIEW_MODES, type ViewMode } from '../../views/projections.ts';
 import { applyIntent, connectToEmpty, createNoteNode } from '../canvas/bindings/applyIntents.ts';
 import { EdgeLayer, pendingFromIntent, type PendingEdgeUi } from '../../edges/EdgeLayer.tsx';
@@ -204,6 +205,9 @@ export function BoardWorkspace() {
       setCounts({ nodes: countEntities(doc).nodes, edges: countEntities(doc).edges });
     });
   }, [doc, ready, engine]);
+
+  // Reopening a board lands where the analyst left off (§5.7); runs after the first scene patch.
+  useViewportMemory(engine, boardId, ready);
 
   // The status bar belongs to the shell but the numbers belong here (see shell/boardStatus).
   useEffect(() => {
