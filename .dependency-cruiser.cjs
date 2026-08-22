@@ -31,6 +31,15 @@ module.exports = {
       to: { path: '^(apps/|packages/(?!integrations|domain|config))' },
     },
     {
+      name: 'ai-no-ui',
+      comment:
+        'packages/ai is worker-side: it may use domain/integrations/config, never the canvas or an app ' +
+        '(14_AI_AGENT.md §1).',
+      severity: 'error',
+      from: { path: '^packages/ai' },
+      to: { path: '^(apps/|packages/(?!ai|domain|integrations|config))' },
+    },
+    {
       name: 'packages-never-import-apps',
       severity: 'error',
       from: { path: '^packages/' },
