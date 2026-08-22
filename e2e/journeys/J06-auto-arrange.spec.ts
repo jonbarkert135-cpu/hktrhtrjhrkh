@@ -27,9 +27,9 @@ test.describe('auto arrange', () => {
     await expect(page.getByTestId('layout-toast')).toContainText(/One undo puts them back/i);
 
     // One undo, not six: `moveNodes` writes the whole layout in a single transaction.
-    await expect(page.getByRole('button', { name: /^Undo/ })).toBeEnabled();
+    await expect(page.getByTestId('history-undo')).toBeEnabled();
     await page.getByTestId('layout-toast-undo').click();
-    await expect(page.getByRole('button', { name: /^Undo/ })).toBeDisabled();
+    await expect(page.getByTestId('history-undo')).toBeDisabled();
   });
 
   test('discarding a preview leaves the board untouched', async ({ page }) => {
@@ -44,7 +44,7 @@ test.describe('auto arrange', () => {
     await page.getByTestId('auto-arrange-cancel').click();
     await expect(page.getByTestId('layout-ghosts')).toBeHidden();
     await expect(page.getByTestId('layout-toast')).toBeHidden();
-    await expect(page.getByRole('button', { name: /^Undo/ })).toBeEnabled(); // only the 4 creates
+    await expect(page.getByTestId('history-undo')).toBeEnabled(); // only the 4 creates
   });
 
   test('is reachable from the command palette and offers every algorithm', async ({ page }) => {

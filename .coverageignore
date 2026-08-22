@@ -26,6 +26,7 @@ packages/domain/src/edges/index.ts
 packages/domain/src/edges/routing/index.ts
 packages/domain/src/projection/index.ts
 packages/canvas-engine/src/index.ts
+packages/layout/src/index.ts
 packages/transforms/src/index.ts
 packages/transforms/src/catalog/index.ts
 packages/transforms/src/sdk/index.ts
@@ -46,3 +47,8 @@ apps/web/src/app/canvas/useCanvasEngine.ts
 # `coverage.exclude` drops `*.config.*` for the same reason. Its correctness shows up as the
 # coverage floors it enforces on every other package.
 packages/config/vitest/base.ts
+
+# Worker bootstrap: binds `self.onmessage` in a DedicatedWorkerGlobalScope, so it cannot be
+# imported under jsdom. The layout it runs is covered by packages/layout unit tests and the
+# runner tests; the message plumbing is exercised by the e2e J06 journey.
+apps/web/src/layout/layout.worker.ts
