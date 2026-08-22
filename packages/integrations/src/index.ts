@@ -11,3 +11,5 @@ export * from './extract/patterns.ts';
 export * from './resolve/identity.ts';
 export * from './resolve/merge.ts';
 export * from './consent.ts';
+export * from './declarativeParser.ts';
+export * from './plugins.ts';

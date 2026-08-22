@@ -13,7 +13,9 @@
     "./github/jobs": "./github/jobs.ts",
     "./github/client": "./github/client.ts",
     "./github/handlers": "./github/handlers.ts",
-    "./github/proposal": "./github/proposal.ts"
+    "./github/proposal": "./github/proposal.ts",
+    "./github/parser": "./github/parser.ts",
+    "./plugins": "./src/plugins.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
