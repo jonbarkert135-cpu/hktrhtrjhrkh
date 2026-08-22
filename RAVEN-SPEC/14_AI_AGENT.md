@@ -1,19 +1,28 @@
-# Raven — 14 — AI LAYER (CANCELLED, historical reference only)
+# Raven — 14 — AI LAYER (agent, proposals, retrieval, guardrails)
 
-> **STATUS: CANCELLED — 2026-08-22, owner decision.**
-> Raven ships with **no LLM layer**: no provider keys, no hosted model calls, no embeddings/pgvector,
-> no AI proposals. The project must stay free to develop and free to run.
-> Phase **P13 is removed from the roadmap** (`20_ROADMAP.md`).
+> **PROVIDER CONSTRAINT (owner decision, 2026-08-22): keyless and free.**
+> Raven never ships a paid API key and never calls a hosted commercial model by default.
+> The `AIProvider` abstraction stays exactly as speced below, but it has **one** transport:
+> an **OpenAI-compatible HTTP endpoint with a user-configured base URL**, disabled by default.
 >
-> Replacements for everything that depended on it:
+> Supported deployments, all free:
 >
-> - Repository analysis → deterministic static analysis, already speced in `11_GITHUB.md` §5 (P10).
-> - Entity extraction from tool output → deterministic parsers (`10_INTEGRATIONS.md`, shipped in P9).
-> - Duplicate detection / clustering / link suggestions → optional local heuristics only (string
->   similarity, shared attributes, graph metrics), still previewable, reversible and explainable
->   through the existing Proposal layer. Not part of any planned phase.
+> - **Local runtime (recommended default): Ollama / llama.cpp / LM Studio** on `http://localhost:11434/v1`
+>   or similar. Fully offline, stable API, no keys, no data leaves the machine — the same
+>   "run it yourself" model as SpiderFoot.
+> - **g4f (gpt4free)** in its OpenAI-compatible server mode, for users who want it. Community
+>   endpoints are unofficial, unstable and provider-ToS-grey, so g4f is **never** enabled on a hosted
+>   Raven server and never a default; it is a user-side choice, shown with an explicit warning.
+> - **Any other OpenAI-compatible endpoint** the user pastes (their own key, their own bill).
 >
-> Everything below is kept for history. Do not implement it.
+> Consequences for this document: cost accounting and budget caps become _optional_ (zero-cost for
+> local runtimes), model routing is "whatever models the configured endpoint reports", and every
+> capability must degrade gracefully to "AI unavailable" when no endpoint is configured. Embeddings
+> use a local embedding model through the same endpoint (or the deterministic fallback in
+> `01_PRODUCT.md` §6.3) — pgvector stays optional, never required to run Raven.
+>
+> Everything else below stands: **N4 holds — AI output only ever enters the graph through a
+> user-accepted Proposal** (previewable, reversible, explainable).
 
 ---
 
