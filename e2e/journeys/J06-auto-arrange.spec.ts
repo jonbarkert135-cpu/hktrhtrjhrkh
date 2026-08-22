@@ -26,10 +26,15 @@ test.describe('auto arrange', () => {
     await expect(panel).toBeHidden();
     await expect(page.getByTestId('layout-toast')).toContainText(/One undo puts them back/i);
 
-    // One undo, not six: `moveNodes` writes the whole layout in a single transaction.
+    // One undo, not six: `moveNodes` writes the whole layout in a single transaction, so a single
+    // undo consumes the arrange and leaves the six note creations sitting on the stack below it.
     await expect(page.getByTestId('history-undo')).toBeEnabled();
     await page.getByTestId('layout-toast-undo').click();
-    await expect(page.getByTestId('history-undo')).toBeDisabled();
+    await expect(page.getByTestId('history-redo')).toBeEnabled();
+    await expect(page.getByTestId('history-undo')).toHaveAttribute(
+      'aria-label',
+      'Undo: create 1 node',
+    );
   });
 
   test('discarding a preview leaves the board untouched', async ({ page }) => {

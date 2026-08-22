@@ -67,6 +67,7 @@ export function SyncStatus({
         variant="ghost"
         onClick={() => history.redo()}
         disabled={!state.canRedo}
+        data-testid="history-redo"
         title={state.canRedo ? `Redo: ${state.redoLabel ?? 'last change'}` : 'Nothing to redo'}
         aria-label={state.canRedo ? `Redo: ${state.redoLabel ?? 'last change'}` : 'Redo'}
       >
