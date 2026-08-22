@@ -32,7 +32,7 @@ const ignored = new Set(
 
 let changed;
 try {
-  changed = execFileSync('git', ['diff', '--name-only', `${base}...HEAD`], {
+  changed = execFileSync('git', ['diff', '--name-only', '--diff-filter=d', `${base}...HEAD`], {
     cwd: repoRoot,
     encoding: 'utf8',
   })
@@ -52,7 +52,7 @@ try {
 changed = changed.filter((file) => {
   const before = show(`${base}:${file}`);
   const after = show(`HEAD:${file}`);
-  if (before === null || after === null) return true; // added or deleted: keep the obligation
+  if (before === null || after === null) return true; // added: keep the obligation (deleted files are filtered out of the diff)
   const fb = format(before, file);
   const fa = format(after, file);
   if (fb !== null && fa !== null) return fb !== fa;
