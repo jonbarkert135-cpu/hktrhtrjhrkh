@@ -9,7 +9,8 @@
   },
   "dependencies": {
     "@nexus/canvas-engine": "workspace:*",
-    "@nexus/domain": "workspace:*"
+    "@nexus/domain": "workspace:*",
+    "@nexus/layout": "workspace:*"
   },
   "devDependencies": {
     "@playwright/test": "1.49.1",

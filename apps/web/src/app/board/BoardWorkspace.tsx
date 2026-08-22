@@ -45,6 +45,9 @@ import { useDropZone } from '../../capture/useDropZone.ts';
 import { VersionHistory } from './VersionHistory.tsx';
 import { IntegrationsSurface } from '../../integrations/IntegrationsSurface.tsx';
 import { useRegisterCommands } from '../commands/useRegisterCommands.ts';
+import { AutoArrangePanel } from '../../layout/AutoArrangePanel.tsx';
+import { LayoutGhosts } from '../../layout/LayoutGhosts.tsx';
+import { useAutoArrangeStore } from '../../layout/autoArrangeStore.ts';
 import { capabilities } from '../../mode/appMode';
 
 const APP_VERSION = '0.3.0';
@@ -64,6 +67,11 @@ export function BoardWorkspace() {
   const [inspectorWidth, setInspectorWidth] = useState(360);
   // Absent, not disabled, when the capability is off (ADR-002, N2): nothing below renders.
   const [integrationsOpen, setIntegrationsOpen] = useState(false);
+
+  // Auto Arrange is ephemeral UI state, never document state (P14a, N2).
+  const arrangeOpen = useAutoArrangeStore((state) => state.open);
+  const arrangeDiff = useAutoArrangeStore((state) => state.diff);
+  const setArrangeOpen = useAutoArrangeStore((state) => state.setOpen);
 
   const boardStatus = useBoardStatus();
   const [capture, setCapture] = useState<CaptureResult | null>(null);
@@ -202,6 +210,30 @@ export function BoardWorkspace() {
   }, [history]);
 
   // Second entry point (§7.1): the P7 command palette. Registered only where the surface exists.
+  useRegisterCommands([
+    {
+      id: 'board.autoArrange',
+      title: 'Auto arrange…',
+      group: 'board' as const,
+      keywords: ['layout', 'arrange', 'tidy', 'organise', 'organize', 'graph'],
+      shortcut: 'Ctrl+Alt+R',
+      when: (ctx: { view: string }) => ctx.view === 'board',
+      run: () => setArrangeOpen(true),
+    },
+  ]);
+
+  // `Ctrl/⌘+Alt+R` — the canvas view keymap (03_UX.md §15.4).
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent): void => {
+      if (!(event.metaKey || event.ctrlKey) || !event.altKey) return;
+      if (event.key.toLowerCase() !== 'r') return;
+      event.preventDefault();
+      setArrangeOpen(true);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [setArrangeOpen]);
+
   useRegisterCommands(
     capabilities.integrations
       ? [
@@ -301,6 +333,14 @@ export function BoardWorkspace() {
           Add note
         </Button>
         <QuickAdd onNote={addNote} onCapture={quickCapture} />
+        <Button
+          variant="secondary"
+          onClick={() => setArrangeOpen(!arrangeOpen)}
+          aria-expanded={arrangeOpen}
+          data-testid="auto-arrange-open"
+        >
+          Auto arrange
+        </Button>
         <Button variant="secondary" onClick={() => setHistoryOpen(true)}>
           Version history
         </Button>
@@ -373,6 +413,7 @@ export function BoardWorkspace() {
                       : undefined
                   }
                 />
+                <LayoutGhosts engine={engine} diff={arrangeDiff} />
                 <EdgeLayer
                   doc={doc}
                   context={context}
@@ -439,6 +480,15 @@ export function BoardWorkspace() {
           onUndo={() => history.undo()}
         />
       ) : null}
+
+      <AutoArrangePanel
+        doc={doc}
+        history={history}
+        selectedIds={selectedIds}
+        onApplied={(count) =>
+          setNotice(`Auto arrange moved ${String(count)} nodes. Press ⌘Z to undo it in one step.`)
+        }
+      />
 
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} onConfirm={confirmImport} />
     </section>

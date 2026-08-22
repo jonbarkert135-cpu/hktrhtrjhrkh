@@ -429,6 +429,96 @@
     font: var(--text-body-sm);
   }
 
+  /* --------------------------------------------------- auto layout (P14a, 03_UX.md §16) */
+
+  /* The ghost preview sits above the canvas and is completely transparent to the pointer: the
+     engine stays the only hit-test authority (05_CANVAS_ENGINE.md §13.6). */
+  .nx-layout-ghosts {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .nx-layout-ghost-world {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    transform-origin: 0 0;
+  }
+
+  .nx-layout-ghost {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    border-radius: var(--nx-radius-3);
+  }
+
+  .nx-layout-ghost--from {
+    border: var(--nx-border-thin) dashed var(--border-subtle);
+    opacity: 0.5;
+  }
+
+  .nx-layout-ghost--to {
+    border: var(--nx-border-heavy) solid var(--border-accent);
+    background: var(--surface-selected);
+  }
+
+  .nx-layout-panel {
+    position: absolute;
+    inset-block-start: var(--nx-space-5);
+    inset-inline-end: var(--nx-space-5);
+    z-index: var(--nx-z-dropdown);
+    display: flex;
+    flex-direction: column;
+    gap: var(--nx-space-2);
+    inline-size: 20rem;
+    padding: var(--nx-space-4);
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--nx-radius-3);
+    color: var(--fg-default);
+    font: var(--text-body-sm);
+  }
+
+  .nx-layout-panel fieldset {
+    display: flex;
+    gap: var(--nx-space-3);
+    border: 0;
+    padding: 0;
+  }
+
+  .nx-layout-panel-actions {
+    display: flex;
+    gap: var(--nx-space-2);
+    margin-block-start: var(--nx-space-2);
+  }
+
+  .nx-layout-progress {
+    display: flex;
+    align-items: center;
+    gap: var(--nx-space-2);
+    color: var(--fg-muted);
+  }
+
+  .nx-layout-toast {
+    position: absolute;
+    inset-inline-start: 50%;
+    inset-block-end: var(--nx-space-6);
+    transform: translateX(-50%);
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: var(--nx-space-3);
+    padding: var(--nx-space-2) var(--nx-space-4);
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--nx-radius-3);
+    color: var(--fg-default);
+    font: var(--text-body-sm);
+  }
+
   /* ---------------------------------------------------------------- node cards (P4) */
 
   .nx-board-main {

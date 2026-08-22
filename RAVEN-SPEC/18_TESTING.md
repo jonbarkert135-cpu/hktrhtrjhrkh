@@ -1071,6 +1071,7 @@ the PR pipeline depend on third-party availability.
 | `packages/domain`        | 90 %  | 85 %     | hard fail (gate says ≥ 85 %, we set the bar higher where logic is pure) |
 | `packages/canvas-engine` | 85 %  | 80 %     | hard fail                                                               |
 | `packages/integrations`  | 85 %  | 75 %     | hard fail                                                               |
+| `packages/layout`        | 95 %  | 75 %     | hard fail (pure geometry: lines higher, branches lower — see ADR-006)   |
 | `packages/ui`            | 70 %  | 60 %     | hard fail                                                               |
 | `apps/api`               | 80 %  | 70 %     | hard fail                                                               |
 | `apps/sync`              | 75 %  | 65 %     | hard fail                                                               |

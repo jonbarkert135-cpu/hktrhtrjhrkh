@@ -103,8 +103,10 @@ the area spec plus the code. Read `AGENTS.md` first.
 | P7 Projects & search | #25                | `packages/domain/src/{search,templates}`, `apps/api/.../{project,board}.ts`, `apps/web/src/{projects,app/commands,search}` — §6/§2 (partial)/§11 still open | `09_BACKEND.md`, `03_UX.md` §8–9    |
 | P8 Sync & collab     | #24                | `apps/sync` (Hocuspocus, projection, presence, eviction), `apps/web/src/collab`, `packages/domain/src/projection`                                           | `09_BACKEND.md`, `08_DATA_MODEL.md` |
 | Agent memory         | #18                | `AGENTS.md`, `.mcp.json`                                                                                                                                    | —                                   |
+| P14a Auto-layout     | this PR            | `packages/layout` (7 algorithms, diff, scope), `apps/web/src/layout` (worker, panel, ghosts, undo), `bench/layout.bench.ts`                                 | `05_CANVAS_ENGINE.md` §13, ADR-006  |
 
-Open phases in this file: **P9**, **P10**, **P17**, **L4.4–L4.7**, plus the two deferred P6 items and
+Open phases in this file: **P9**, **P10**, **P17**, **L4.4–L4.7**, plus the two deferred P6 items, the
+remaining half of P14 (**P14b**, view modes — P14a auto-layout is shipped) and
 the remaining P7 items (§6 global search, §2 member management, §11 thumbnails, §3 move-board
 picker, §10 virtualization, §14 UI disclosure). P11–P16 have short scope stubs below the P10 prompt;
 write their full 15-section prompt in this format when their turn comes, expanding the stub rather
@@ -790,20 +792,45 @@ exact dependency list: P3, P4, P7, P9):
 
 ---
 
-# P14 — Views (scope stub)
+# P14 — Views (scope stub; **P14a auto-layout shipped**)
 
-Full 15-section prompt not yet written; expand this stub when P14's turn comes. Canonical scope per
-`00_MASTER.md` §7 and `03_UX.md` §16 (view modes already specified) and the `?view=` route param
-already reserved in `03_UX.md` §2:
+Full 15-section prompt not yet written for the remaining half; expand this stub when P14b's turn
+comes. Canonical scope per `00_MASTER.md` §7 and `03_UX.md` §16 (view modes already specified) and
+the `?view=` route param already reserved in `03_UX.md` §2.
 
-- Graph (force-directed), timeline (chronology by `observed_at`, already speced in `03_UX.md` §16),
-  table, list and map view modes as canvas-area replacements, sharing the same underlying node/edge
-  selection and the existing keyboard map (`Ctrl+Alt+1..6`, already reserved in `03_UX.md` §15).
-- Auto-layout suite (the structure-is-earned-not-demanded principle, `00_MASTER.md` §3.3): a
-  reversible, previewable layout pass per view, never applied without an explicit accept (same
-  Proposal discipline, though this is a layout diff, not new nodes).
+**P14a — auto-layout suite — is shipped** (see the ledger). What it covers, so it is not
+re-implemented:
+
+- `packages/layout` (`@nexus/layout`), pure and dependency-free: seven algorithms — hierarchical
+  (Sugiyama-style layered), tree (Reingold–Tilford), radial, force-directed (Fruchterman–Reingold
+  with grid-neighbourhood repulsion), flow, timeline (by `observed_at` with the documented
+  `created_at` fallback) and cluster — plus seeded RNG, overlap separation, grid snapping, scoping
+  (board / selection / subgraph) and layout diffing. Determinism, no-overlap, re-run stability and
+  pinned-node immovability are asserted per algorithm.
+- Proposal discipline (`00_MASTER.md` §3.3, N4): "Auto Arrange" computes a **diff**, previews it as
+  ghosts on the canvas, and writes nothing until an explicit Apply. The apply is one `moveNodes`
+  transaction — **one** undo step — with a toast that offers it. Algorithm, options, progress and
+  the pending diff are Zustand state and never enter the CRDT.
+- UX in `apps/web/src/layout`: board-bar control, command-palette entry `board.autoArrange`,
+  `Ctrl/⌘+Alt+R`, algorithm picker with per-algorithm options, and empty / loading (with progress
+  and cancel) / error / success states.
+- Performance: the layout runs in a module worker with progress and cancellation, with an inline
+  fallback where `Worker` is unavailable. `bench/layout.bench.ts` fills the `autolayout-1000`
+  metric (measured 826 ms against a 1,500 ms budget; hierarchical on 5,000 nodes / 10,000 edges:
+  126 ms).
+- Spec: `05_CANVAS_ENGINE.md` §13, `docs/adr/ADR-006-layout-package.md`, `03_UX.md` §15.4.
+
+**Still open in P14 (P14b):**
+
+- Graph, table, list and map view modes as canvas-area replacements, sharing the same underlying
+  node/edge selection and the existing keyboard map (`Ctrl+Alt+1..6`, already reserved in
+  `03_UX.md` §15). The timeline _layout_ exists; the timeline _view_ (horizontal zoom, lanes,
+  drag-to-correct-a-date, gap highlighting) does not.
 - View state (which view, per board) is UI state, not document state (N2's "Zustand for ephemeral
-  UI state only" rule) — must not enter the CRDT.
+  UI state only" rule) — must not enter the CRDT. `apps/web/src/layout/autoArrangeStore.ts` is the
+  pattern to follow.
+- Per-view "apply layout to canvas" wiring: the proposal machinery is built, each view only has to
+  name the algorithm it wants.
 - Depends on: P2 (canvas engine), P4/P5 (nodes/edges) — no dependency on P9-P13.
 
 ---

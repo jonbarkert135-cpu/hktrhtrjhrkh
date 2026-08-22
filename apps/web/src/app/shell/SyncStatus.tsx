@@ -57,6 +57,7 @@ export function SyncStatus({
         variant="ghost"
         onClick={() => history.undo()}
         disabled={!state.canUndo}
+        data-testid="history-undo"
         title={state.canUndo ? `Undo: ${state.undoLabel ?? 'last change'}` : 'Nothing to undo yet'}
         aria-label={state.canUndo ? `Undo: ${state.undoLabel ?? 'last change'}` : 'Undo'}
       >
@@ -66,6 +67,7 @@ export function SyncStatus({
         variant="ghost"
         onClick={() => history.redo()}
         disabled={!state.canRedo}
+        data-testid="history-redo"
         title={state.canRedo ? `Redo: ${state.redoLabel ?? 'last change'}` : 'Nothing to redo'}
         aria-label={state.canRedo ? `Redo: ${state.redoLabel ?? 'last change'}` : 'Redo'}
       >
