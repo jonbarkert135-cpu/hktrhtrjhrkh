@@ -57,7 +57,14 @@ vi.mock('../src/queues/integration.parse.ts', async (importOriginal) => ({
   processParseJob: (...args: unknown[]) => parseJob(...(args as [])),
 }));
 
-const { PARSE_QUEUE, prismaParseStore, s3ArtifactReader, start } = await import('../src/main.ts');
+const {
+  PARSE_QUEUE,
+  prismaGithubJobStore,
+  prismaParseStore,
+  s3ArtifactReader,
+  start,
+  startGithubWorker,
+} = await import('../src/main.ts');
 
 const env = { S3_ENDPOINT: 'https://s3.test/' } as Parameters<typeof s3ArtifactReader>[0];
 
@@ -322,5 +329,89 @@ describe('start()', () => {
     deps.publish('run-7', { t: 'done' });
     expect(redisInstances[1]?.publish).toHaveBeenCalledWith('run:run-7', '{"t":"done"}');
     parseJob.mockClear();
+  });
+});
+
+describe('startGithubWorker()', () => {
+  const redis = {} as unknown as Parameters<typeof startGithubWorker>[0];
+  const handlers = {
+    'github.hydrate': vi.fn(() => Promise.resolve()),
+    'github.tab': vi.fn(() => Promise.resolve()),
+    'github.analyze': vi.fn(() => Promise.resolve()),
+    'github.proposal': vi.fn(() => Promise.resolve()),
+    'github.sweep': vi.fn(() => Promise.resolve()),
+  };
+  const store = {
+    markSucceeded: vi.fn(() => Promise.resolve()),
+    markCanceled: vi.fn(() => Promise.resolve()),
+    markFailed: vi.fn(() => Promise.resolve()),
+  };
+
+  it('registers one worker on the github queue at the table max concurrency', () => {
+    startGithubWorker(redis, handlers, store);
+    expect(workerCtor.mock.lastCall?.[0]).toBe('github');
+    expect(workerCtor.mock.lastCall?.[2]).toMatchObject({ concurrency: 8 });
+  });
+
+  it('routes a job by name and marks the run succeeded', async () => {
+    startGithubWorker(redis, handlers, store);
+    const handler = workerCtor.mock.lastCall?.[1] as (job: unknown) => Promise<void>;
+    await handler({
+      name: 'github.tab',
+      data: { runId: 'run-9', nodeId: 'n1', tab: 'readme' },
+      isActive: () => Promise.resolve(true),
+    });
+    expect(handlers['github.tab']).toHaveBeenCalled();
+    expect(store.markSucceeded).toHaveBeenCalledWith('run-9');
+  });
+
+  it('rethrows a handler failure so BullMQ applies the retry policy', async () => {
+    handlers['github.analyze'].mockRejectedValueOnce(new Error('boom'));
+    startGithubWorker(redis, handlers, store);
+    const handler = workerCtor.mock.lastCall?.[1] as (job: unknown) => Promise<void>;
+    await expect(
+      handler({
+        name: 'github.analyze',
+        data: { runId: 'run-10' },
+        isActive: () => Promise.resolve(true),
+      }),
+    ).rejects.toThrow();
+    expect(store.markFailed).toHaveBeenCalled();
+  });
+
+  it('uses the §10 backoff delays', () => {
+    startGithubWorker(redis, handlers, store);
+    const settings = (
+      workerCtor.mock.lastCall?.[2] as {
+        settings: { backoffStrategy: (n: number, t?: string, e?: unknown, j?: unknown) => number };
+      }
+    ).settings;
+    expect(settings.backoffStrategy(1, '', null, { name: 'github.hydrate' })).toBe(2_000);
+    expect(settings.backoffStrategy(3, '', null, { name: 'github.hydrate' })).toBe(30_000);
+    expect(settings.backoffStrategy(1, '', null, undefined)).toBe(0);
+  });
+});
+
+describe('prismaGithubJobStore', () => {
+  it.each([
+    ['markSucceeded', 'succeeded'],
+    ['markCanceled', 'cancelled'],
+  ] as const)('%s writes status %s', async (method, status) => {
+    prismaMock.integrationRun.update.mockClear();
+    await prismaGithubJobStore[method]('run-1');
+    expect(prismaMock.integrationRun.update).toHaveBeenCalledWith({
+      where: { id: 'run-1' },
+      data: { status },
+    });
+  });
+
+  it('markFailed records the error code and detail', async () => {
+    prismaMock.integrationRun.update.mockClear();
+    const payload = { code: 'GH_RATE_LIMITED', message: 'slow down', runId: 'run-1' };
+    await prismaGithubJobStore.markFailed('run-1', payload as never);
+    expect(prismaMock.integrationRun.update).toHaveBeenCalledWith({
+      where: { id: 'run-1' },
+      data: { status: 'failed', errorCode: 'GH_RATE_LIMITED', errorDetail: payload },
+    });
   });
 });

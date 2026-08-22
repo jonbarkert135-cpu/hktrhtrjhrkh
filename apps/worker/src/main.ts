@@ -16,6 +16,15 @@ import { newId } from '@nexus/domain';
 import { IDENTITY_KEY_PROP, type ArtifactRef, type ExistingNodeMatch } from '@nexus/integrations';
 
 import {
+  GITHUB_JOB_SPECS,
+  GITHUB_QUEUE,
+  githubBackoff,
+  type GithubJobName,
+  type GithubJobPayload,
+} from '@nexus/integrations/github/jobs';
+
+import { processGithubJob, type GithubHandlers, type GithubJobStore } from './queues/github.ts';
+import {
   processParseJob,
   type ArtifactReader,
   type ParseStore,
@@ -164,6 +173,81 @@ export const prismaParseStore: ParseStore = {
     });
   },
 };
+
+/** Runs on `IntegrationRun` rows, same as the parse queue — §10's lifecycle is per run, not per job. */
+export const prismaGithubJobStore: GithubJobStore = {
+  async markSucceeded(runId) {
+    await prisma.integrationRun.update({ where: { id: runId }, data: { status: 'succeeded' } });
+  },
+  async markCanceled(runId) {
+    await prisma.integrationRun.update({ where: { id: runId }, data: { status: 'cancelled' } });
+  },
+  async markFailed(runId, payload) {
+    await prisma.integrationRun.update({
+      where: { id: runId },
+      data: {
+        status: 'failed',
+        errorCode: payload.code,
+        errorDetail: payload as unknown as Record<string, never>,
+      },
+    });
+  },
+};
+
+/**
+ * Registers the single `github` queue (§10). BullMQ has one concurrency per worker, not per job
+ * name, so the highest value in the table is used and the slow jobs (`analyze`, `proposal`,
+ * `sweep`) are kept in line by their own enqueue-time dedupe key rather than by a second worker.
+ */
+export function startGithubWorker(
+  connection: IORedis,
+  handlers: GithubHandlers,
+  store: GithubJobStore = prismaGithubJobStore,
+): Worker {
+  const concurrency = Math.max(...Object.values(GITHUB_JOB_SPECS).map((spec) => spec.concurrency));
+  return new Worker(
+    GITHUB_QUEUE,
+    async (job: Job) => {
+      const name = job.name as GithubJobName;
+      const data = job.data as { runId?: string } & GithubJobPayload[GithubJobName];
+      // Cancellation is a Redis-side flag; the poller turns it into the AbortSignal §10 requires.
+      const controller = new AbortController();
+      const poll = setInterval(() => {
+        void job
+          .isActive()
+          .then((active) => {
+            if (!active) controller.abort();
+          })
+          .catch(() => controller.abort());
+      }, 2_000);
+      try {
+        const outcome = await processGithubJob(
+          { handlers, store },
+          name,
+          data,
+          data.runId ?? '',
+          controller.signal,
+        );
+        log.info(
+          { event: 'github.finished', job: name, status: outcome.status },
+          'github job done',
+        );
+        // A failure must reach BullMQ too, or the retry policy in §10 never fires.
+        if (outcome.status === 'failed') throw new Error(outcome.error?.code ?? 'GH_UNKNOWN');
+      } finally {
+        clearInterval(poll);
+      }
+    },
+    {
+      connection,
+      concurrency,
+      settings: {
+        backoffStrategy: (attemptsMade, _type, _err, job) =>
+          githubBackoff((job?.name ?? 'github.sweep') as GithubJobName, attemptsMade),
+      },
+    },
+  );
+}
 
 export function start(): Promise<() => Promise<void>> {
   const env = loadServerEnvFromProcess();
