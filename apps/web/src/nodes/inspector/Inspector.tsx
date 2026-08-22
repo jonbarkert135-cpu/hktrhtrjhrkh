@@ -318,6 +318,43 @@ export function Inspector({
           disabled={node.locked}
           onChange={(tags) => commitTags(node.id, tags)}
         />
+        {/* Lock and hide were domain state nothing could reach: the engine already honours both
+            (locked cards refuse edits, hidden ones are not drawn), so the panel just needs the
+            two switches (P4 §6). */}
+        <div className="nx-inspector-toggles">
+          <button
+            type="button"
+            className="nx-link-button"
+            aria-pressed={node.locked}
+            data-testid="inspector-lock"
+            onClick={() => {
+              updateNode(
+                doc,
+                node.id,
+                { locked: !node.locked },
+                { origin: 'local:edit', now: now() },
+              );
+            }}
+          >
+            {node.locked ? 'Unlock' : 'Lock'}
+          </button>
+          <button
+            type="button"
+            className="nx-link-button"
+            aria-pressed={node.hidden}
+            data-testid="inspector-hide"
+            onClick={() => {
+              updateNode(
+                doc,
+                node.id,
+                { hidden: !node.hidden },
+                { origin: 'local:edit', now: now() },
+              );
+            }}
+          >
+            {node.hidden ? 'Show' : 'Hide'}
+          </button>
+        </div>
       </section>
 
       {sections.map((section) => {

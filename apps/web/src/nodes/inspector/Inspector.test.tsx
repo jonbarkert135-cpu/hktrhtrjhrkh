@@ -124,6 +124,23 @@ describe('Inspector', () => {
     expect(getNode(doc, ids[0] ?? '')?.tags).toEqual(['osint']);
   });
 
+  it('locks and hides the selected node from the panel', async () => {
+    const { doc, store, ids } = board();
+    const id = ids[0] ?? '';
+    render(<Inspector doc={doc} store={store} selectedIds={[id]} now={() => T0} />);
+
+    await userEvent.click(screen.getByTestId('inspector-lock'));
+    expect(getNode(doc, id)?.locked).toBe(true);
+    expect(screen.getByTestId('inspector-lock')).toHaveTextContent('Unlock');
+
+    await userEvent.click(screen.getByTestId('inspector-hide'));
+    expect(getNode(doc, id)?.hidden).toBe(true);
+    expect(screen.getByTestId('inspector-hide')).toHaveTextContent('Show');
+
+    await userEvent.click(screen.getByTestId('inspector-hide'));
+    expect(getNode(doc, id)?.hidden).toBe(false);
+  });
+
   it('names the shortcut the engine actually binds when there are no connections', () => {
     const { doc, store, ids } = board();
     render(<Inspector doc={doc} store={store} selectedIds={[ids[0] ?? '']} now={() => T0} />);

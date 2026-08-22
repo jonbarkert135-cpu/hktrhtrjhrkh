@@ -903,6 +903,11 @@
     gap: var(--nx-space-2);
   }
 
+  .nx-inspector-toggles {
+    display: flex;
+    gap: var(--nx-space-2);
+  }
+
   .nx-link-button {
     border: 0;
     background: none;
