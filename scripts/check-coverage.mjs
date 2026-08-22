@@ -11,6 +11,8 @@ import { repoRoot, exists, report } from './lib.mjs';
 const TARGETS = [
   ['packages/domain', 90, 85, true],
   ['packages/canvas-engine', 85, 80, true],
+  // Layout: lines above the §14 floor, branches below it — see packages/config/vitest/base.ts.
+  ['packages/layout', 95, 75, true],
   ['packages/integrations', 85, 75, true],
   ['packages/ui', 70, 60, true],
   ['apps/api', 80, 70, true],

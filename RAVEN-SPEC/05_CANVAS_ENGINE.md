@@ -1336,6 +1336,62 @@ through the same listeners as production, so the FSM is exercised end-to-end wit
 
 ---
 
+## 13. Auto-layout (P14a, shipped)
+
+Layout is **not** in the engine. It lives in `packages/layout` (`@nexus/layout`), a pure package
+with no internal dependencies; `docs/adr/ADR-006-layout-package.md` records why. The engine never
+calls it and never learns that it exists: a layout run produces a _proposal_, the host previews it
+and, if the analyst accepts, writes it to the document — after which the engine sees ordinary
+`upsert-node` patches, exactly as it would for a drag.
+
+### 13.1 The contract
+
+```ts
+runLayout(graph, { algorithm, seed?, spacingX?, spacingY?, direction?, iterations? }, ctx)
+  -> { algorithm, seed, positions, stats }
+proposeLayout(graph, request, ctx) -> LayoutDiff   // only what would move, with where it came from
+applyScope(graph, { kind: 'board' | 'selection' | 'subgraph', ... }) -> { graph, excluded }
+```
+
+`graph` is `{ nodes: { id, x, y, w, h, pinned?, observedAt?, group? }[], edges: { id, source,
+target }[] }` — the app maps `BoardNode` onto it in `apps/web/src/layout/graphFromDoc.ts`, which is
+also where "locked ⇒ pinned" and the `observed_at → created_at` fallback are decided.
+
+### 13.2 Algorithms
+
+| id             | Family                               | Notes                                                         |
+| -------------- | ------------------------------------ | ------------------------------------------------------------- |
+| `hierarchical` | Sugiyama: cycle break → rank → order | longest-path layering, 4 barycentre sweeps                    |
+| `tree`         | Reingold–Tilford (first pass)        | spanning forest, parents centred over children                |
+| `radial`       | BFS rings, leaf-weighted wedges      | ring radii computed from contents, never a fixed step         |
+| `force`        | Fruchterman–Reingold + cooling       | grid-neighbourhood repulsion, O(n·k) not O(n²); seeded start  |
+| `flow`         | BFS depth per connected component    | one band per chain                                            |
+| `timeline`     | chronology by `observed_at`          | undated nodes get their own lane, below and clearly separated |
+| `cluster`      | group key, else connected components | square-ish blocks, largest first                              |
+
+Every algorithm is deterministic: the only randomness is a seeded mulberry32 PRNG plus an
+id-derived hash, so the same board and seed always produce the same positions. Every run ends with
+the shared post-pass — pinned nodes restored, overlaps separated on a uniform grid, positions
+snapped to the 8-unit grid, and the whole arrangement translated back onto the centroid it started
+from. Re-running a layout on its own output moves nothing (asserted per algorithm).
+
+### 13.3 Threading, cancellation, N1
+
+`apps/web/src/layout/layout.worker.ts` runs the package in a module worker; the host
+(`runner.ts`) keeps one run in flight, reports progress every 5 %, and cancels cooperatively — the
+checkpoints inside the algorithms observe a flag, so an abandoned 5,000-node run stops instead of
+finishing. Where `Worker` is unavailable (jsdom, a CSP that forbids workers) the same code runs
+inline: slower, never absent (N2). Budget and measurement: `autolayout-1000` in `bench/`.
+
+### 13.4 Preview and accept
+
+The preview is drawn by `LayoutGhosts.tsx` into one world-space container whose transform is
+updated imperatively on `cameraChanged` — panning a preview costs no React render. The overlay is
+`pointer-events: none`, so §13.6's rule that the engine is the only hit-test authority still holds.
+Accepting calls `moveNodes` once: one transaction, one undo step, origin `local:layout`.
+
+---
+
 ## Open risks
 
 | #   | Risk                                                                                                                                                            | Impact                                       | Mitigation / trigger                                                                                                                                                                                                              |
