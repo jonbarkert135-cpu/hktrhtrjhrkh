@@ -915,7 +915,7 @@ days fails a nightly lint. Flags gate _unfinished_ surfaces (e.g. `views.map`, `
 never security controls. Flag state is included in error reports and in the support diagnostics
 bundle, because "works for me" is usually a flag difference.
 
-Phase mapping: P14 (views), P15 (presentation/export) ship behind flags enabled first for
+Phase mapping: P13 (AI), P14 (views), P15 (presentation/export) ship behind flags enabled first for
 internal orgs.
 
 ---
@@ -1144,7 +1144,7 @@ planning numbers, not guarantees):
   per day for 30 days). 1,000 active boards averaging 800 nodes ≈ 2 GB rows + ~6 GB snapshots.
   Plan 50 GB for the first 1,000 orgs and alert at 70 % disk.
 - **pgvector**: 1,536-dim `halfvec` ≈ 3 KB/embedding; embedding 1 M nodes ≈ 3 GB + HNSW index
-  ≈ 1.5×. Enable per-org, not globally (P11 flag).
+  ≈ 1.5×. Enable per-org, not globally (P11/P13 flag).
 - **Runs**: a Sherlock run is ~20–90 s and ~1 CPU; SpiderFoot scans can run for tens of minutes and
   are capped by `activeDeadlineSeconds`. Concurrency is capped per org (default 3) and per cluster
   (`RUNNER_MAX_CONCURRENCY`, default 4 per runner pod). Size the gVisor pool for

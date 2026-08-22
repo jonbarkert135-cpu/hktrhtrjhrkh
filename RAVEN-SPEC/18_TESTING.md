@@ -580,28 +580,28 @@ export const test = base.extend<{ board: SeededBoard }>({
 
 ### 7.3 Critical journeys (must exist by the phase indicated)
 
-| #       | Journey                                                                                    | Phase  |
-| ------- | ------------------------------------------------------------------------------------------ | ------ |
-| J1      | Sign up → create project → create board → land on empty canvas with teaching empty state   | P1/P7  |
-| J2      | Paste a URL → website node with unfurled title/favicon appears at cursor                   | P6     |
-| J3      | Paste an image / drag a file → node with thumbnail, upload progress, retry on failure      | P6     |
-| J4      | Create 2 nodes → drag an edge → change edge type and routing → label it                    | P5     |
-| J5      | Select 20 nodes → group → collapse → expand → undo everything back to start                | P15/P3 |
-| J6      | Edit rich text in a note, blur, reload the page, content is intact                         | P4     |
-| J7      | Go offline → make 10 edits → reload while offline → go online → all edits synced, no dupes | P3/P8  |
-| J8      | Two tabs on one board: edit in A appears in B < 1 s; presence cursors visible              | P8     |
-| J9      | Run a tool (stubbed) → review Import Proposal → accept partially → nodes carry provenance  | P9     |
-| J10     | GitHub repo URL → repo node with README, releases, contributors, analysis summary          | P10    |
-| J11     | Sherlock run on a username → proposal with per-site accounts → accept → person node linked | P11    |
-| J12     | SpiderFoot scan → correlation import → entity dedupe prompt                                | P12    |
-| ~~J13~~ | ~~AI suggest links~~ — cancelled with the AI layer (2026-08-22)                            | —      |
-| J14     | Switch views: canvas → graph → timeline → table → map, selection preserved                 | P14    |
-| J15     | Global search finds a node by content, jumps to it, highlights it                          | P7     |
-| J16     | `Ctrl+K` opens palette, fuzzy-run "auto layout", layout preview → apply → undo             | P7/P14 |
-| J17     | Export board JSON → new board → import → identical scene                                   | P15    |
-| J18     | Export report PDF/HTML with provenance appendix                                            | P15    |
-| J19     | Presentation mode: define 4 steps, present, arrow-key navigation, escape exits             | P15    |
-| J20     | Permission: viewer cannot mutate; every mutating control is disabled with a reason tooltip | P7/P8  |
+| #   | Journey                                                                                    | Phase  |
+| --- | ------------------------------------------------------------------------------------------ | ------ |
+| J1  | Sign up → create project → create board → land on empty canvas with teaching empty state   | P1/P7  |
+| J2  | Paste a URL → website node with unfurled title/favicon appears at cursor                   | P6     |
+| J3  | Paste an image / drag a file → node with thumbnail, upload progress, retry on failure      | P6     |
+| J4  | Create 2 nodes → drag an edge → change edge type and routing → label it                    | P5     |
+| J5  | Select 20 nodes → group → collapse → expand → undo everything back to start                | P15/P3 |
+| J6  | Edit rich text in a note, blur, reload the page, content is intact                         | P4     |
+| J7  | Go offline → make 10 edits → reload while offline → go online → all edits synced, no dupes | P3/P8  |
+| J8  | Two tabs on one board: edit in A appears in B < 1 s; presence cursors visible              | P8     |
+| J9  | Run a tool (stubbed) → review Import Proposal → accept partially → nodes carry provenance  | P9     |
+| J10 | GitHub repo URL → repo node with README, releases, contributors, analysis summary          | P10    |
+| J11 | Sherlock run on a username → proposal with per-site accounts → accept → person node linked | P11    |
+| J12 | SpiderFoot scan → correlation import → entity dedupe prompt                                | P12    |
+| J13 | AI: select 5 nodes → "suggest links" → preview diff → accept 2 of 4 suggestions → undo     | P13    |
+| J14 | Switch views: canvas → graph → timeline → table → map, selection preserved                 | P14    |
+| J15 | Global search finds a node by content, jumps to it, highlights it                          | P7     |
+| J16 | `Ctrl+K` opens palette, fuzzy-run "auto layout", layout preview → apply → undo             | P7/P14 |
+| J17 | Export board JSON → new board → import → identical scene                                   | P15    |
+| J18 | Export report PDF/HTML with provenance appendix                                            | P15    |
+| J19 | Presentation mode: define 4 steps, present, arrow-key navigation, escape exits             | P15    |
+| J20 | Permission: viewer cannot mutate; every mutating control is disabled with a reason tooltip | P7/P8  |
 
 Each journey is one spec file named `e2e/journeys/J<nn>-<slug>.spec.ts`.
 

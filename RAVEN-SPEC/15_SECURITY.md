@@ -1448,7 +1448,7 @@ documented in `19_DEPLOYMENT.md`.
 | P8      | sync ticket tests, readOnly enforcement, awareness payload filtering                                   |
 | P9      | sandbox escape suite, NetworkPolicy test, secret-not-in-argv test, output cap test                     |
 | P10–P12 | per-integration egress allowlist test, digest pinning check, parser fuzzing                            |
-| ~~P13~~ | ~~AI guardrail suite~~ — cancelled with the AI layer (2026-08-22)                                      |
+| P13     | AI guardrail suite (`14_AI_AGENT.md` §10 items 3, 4, 6)                                                |
 | P15     | export manifest hashes, share-link e2e (expiry, revoke, password, redaction)                           |
 | P16     | full audit: dependency review, SBOM diff, chain verification, pen-test checklist, threat model re-read |
 
