@@ -1161,3 +1161,82 @@
     }
   }
 }
+
+/* §32 — non-canvas representations. They replace the canvas inside the board surface, so they
+   inherit its scroll container and need no layout of their own beyond padding and overflow. */
+.nx-view {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: var(--nx-space-4);
+  background: var(--surface-1);
+}
+
+.nx-view-list {
+  margin: 0;
+  list-style: none;
+}
+
+.nx-table {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--text-body);
+}
+
+.nx-table th,
+.nx-table td {
+  padding: var(--nx-space-2);
+  border-bottom: 1px solid var(--border-subtle);
+  text-align: left;
+}
+
+.nx-table tbody tr:hover {
+  background: var(--surface-2);
+}
+
+.nx-timeline-day {
+  border-left: 2px solid var(--border-subtle);
+  padding-left: var(--nx-space-3);
+  margin-bottom: var(--nx-space-4);
+}
+
+.nx-map {
+  position: relative;
+  aspect-ratio: 2 / 1;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--nx-radius-2);
+  background: var(--surface-2);
+}
+
+.nx-map-pin {
+  position: absolute;
+  inline-size: 12px;
+  block-size: 12px;
+  translate: -50% -50%;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent-solid);
+  cursor: pointer;
+}
+
+/* §31 — presentation overlay. Fixed, above everything, deliberately sparse: one idea per slide. */
+.nx-presentation {
+  position: fixed;
+  inset: 0;
+  z-index: var(--nx-z-dialog);
+  display: grid;
+  place-items: center;
+  padding: var(--nx-space-6);
+  background: var(--surface-0);
+}
+
+.nx-presentation-slide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nx-space-4);
+  max-inline-size: 46rem;
+  text-align: center;
+}
+
+.nx-presentation-slide h2 {
+  font: var(--text-display);
+}

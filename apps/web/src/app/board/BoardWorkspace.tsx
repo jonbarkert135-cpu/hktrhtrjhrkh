@@ -12,6 +12,7 @@ import {
   duplicateNode,
   exportBoard,
   importBoard,
+  listEdges,
   listNodes,
   newId,
   nodeBudget,
@@ -30,6 +31,7 @@ import { useReportBoardCounts, useTouchBoardOpened } from '../../data/workspace/
 import { restoreSnapshot } from '../../data/snapshots.ts';
 import { useBoardSearchIndex } from '../../search/useBoardSearchIndex.ts';
 import { CanvasHost } from '../canvas/CanvasHost';
+import { VIEW_LABELS, VIEW_MODES, type ViewMode } from '../../views/projections.ts';
 import { applyIntent, connectToEmpty, createNoteNode } from '../canvas/bindings/applyIntents.ts';
 import { EdgeLayer, pendingFromIntent, type PendingEdgeUi } from '../../edges/EdgeLayer.tsx';
 import { BoardInspector } from './BoardInspector.tsx';
@@ -62,6 +64,18 @@ const AIPanel = lazy(async () => ({ default: (await import('../../ai/AIPanel.tsx
 const IntegrationsSurface = lazy(async () => ({
   default: (await import('../../integrations/IntegrationsSurface.tsx')).IntegrationsSurface,
 }));
+const PresentationMode = lazy(async () => ({
+  default: (await import('../../presentation/PresentationMode.tsx')).PresentationMode,
+}));
+
+const ViewPanel = lazy(async () => ({
+  default: (await import('../../views/ViewPanel.tsx')).ViewPanel,
+}));
+
+const ExportDialog = lazy(async () => ({
+  default: (await import('../../export/ExportDialog.tsx')).ExportDialog,
+}));
+
 const ImportDialog = lazy(async () => ({
   default: (await import('./ImportDialog.tsx')).ImportDialog,
 }));
@@ -75,6 +89,9 @@ export function BoardWorkspace() {
   const onEngine = useCallback((next: Engine | null) => setEngine(next), []);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('canvas');
+  const [presenting, setPresenting] = useState(false);
   const [previewing, setPreviewing] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [budgetWarning, setBudgetWarning] = useState(false);
@@ -386,6 +403,11 @@ export function BoardWorkspace() {
     URL.revokeObjectURL(url);
   }, [doc]);
 
+  const buildArchive = useCallback(
+    () => exportBoard(doc, { appVersion: APP_VERSION, now: new Date().toISOString() }),
+    [doc],
+  );
+
   const confirmImport = useCallback(
     (preview: ImportPreview) => {
       // An import is preceded by a checkpoint, so one undo (or one restore) reverses it.
@@ -436,7 +458,24 @@ export function BoardWorkspace() {
         <Button variant="secondary" onClick={() => setHistoryOpen(true)}>
           Version history
         </Button>
-        <Button variant="secondary" onClick={download}>
+        <label className="nx-inline">
+          <span className="nx-visually-hidden">View mode</span>
+          <select
+            data-testid="view-mode"
+            value={viewMode}
+            onChange={(event) => setViewMode(event.target.value as ViewMode)}
+          >
+            {VIEW_MODES.map((value) => (
+              <option key={value} value={value}>
+                {VIEW_LABELS[value]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Button variant="secondary" onClick={() => setPresenting(true)}>
+          Present
+        </Button>
+        <Button variant="secondary" onClick={() => setExportOpen(true)}>
           Export
         </Button>
         <Button variant="secondary" onClick={() => setImportOpen(true)}>
@@ -478,6 +517,16 @@ export function BoardWorkspace() {
             <span>Drop to add {dropZone.state.summary}</span>
           </div>
         ) : null}
+        {viewMode === 'canvas' ? null : (
+          <Suspense fallback={null}>
+            <ViewPanel
+              mode={viewMode}
+              nodes={listNodes(doc)}
+              edges={listEdges(doc)}
+              onSelect={(id) => setSelectedIds([id])}
+            />
+          </Suspense>
+        )}
         <CanvasHost onIntent={onIntent} onEngine={onEngine} nodeCount={counts.nodes}>
           {({ slotOf, screenOf }) => {
             slotOfRef.current = slotOf;
@@ -583,6 +632,26 @@ export function BoardWorkspace() {
               return { id, kind: found?.type ?? 'note', label: found?.title ?? '' };
             })}
             onUndo={() => history.undo()}
+          />
+        ) : null}
+        {presenting ? (
+          <PresentationMode
+            open={presenting}
+            nodes={listNodes(doc)}
+            edges={listEdges(doc)}
+            selectedIds={selectedIds}
+            onClose={() => setPresenting(false)}
+            onFocus={(ids) => {
+              if (ids.length > 0) setSelectedIds([...ids]);
+            }}
+          />
+        ) : null}
+        {exportOpen ? (
+          <ExportDialog
+            open={exportOpen}
+            onOpenChange={setExportOpen}
+            buildArchive={buildArchive}
+            canvas={() => document.querySelector('canvas')}
           />
         ) : null}
         {importOpen ? (
