@@ -10,7 +10,8 @@
     "./errors": "./src/errors.ts",
     "./testkit": "./src/testkit/index.ts",
     "./builtin/expand-url": "./builtin/manifest.ts",
-    "./github/jobs": "./github/jobs.ts"
+    "./github/jobs": "./github/jobs.ts",
+    "./github/client": "./github/client.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
