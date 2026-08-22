@@ -12,7 +12,8 @@
     "./builtin/expand-url": "./builtin/manifest.ts",
     "./github/jobs": "./github/jobs.ts",
     "./github/client": "./github/client.ts",
-    "./github/handlers": "./github/handlers.ts"
+    "./github/handlers": "./github/handlers.ts",
+    "./github/proposal": "./github/proposal.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",

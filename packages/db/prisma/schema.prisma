@@ -538,3 +538,20 @@ model ApiToken {
   @@index([orgId, userId])
   @@map("api_tokens")
 }
+
+/// One `RepositoryAnalysis` (11_GITHUB.md §5.10). Keyed by repo + head SHA + analyzer version, so a
+/// re-analysis of an unchanged head is a cache hit and old rows stay for the "what changed" diff.
+/// `proposal` holds the draft Integration Proposal (§6) built from this analysis, when eligible.
+model GithubAnalysis {
+  id              String   @id
+  repoKey         String   @map("repo_key") @db.VarChar(255)
+  headSha         String   @map("head_sha") @db.VarChar(64)
+  analyzerVersion String   @map("analyzer_version") @db.VarChar(32)
+  payload         Json
+  proposal        Json?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@unique([repoKey, headSha, analyzerVersion])
+  @@index([repoKey, createdAt(sort: Desc)])
+  @@map("github_analyses")
+}

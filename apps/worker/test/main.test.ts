@@ -24,7 +24,14 @@ const redisInstances: {
 
 vi.mock('@nexus/db', () => ({ prisma: prismaMock }));
 
+const queueAdd = vi.fn(() => Promise.resolve());
+const queueClose = vi.fn(() => Promise.resolve());
+
 vi.mock('bullmq', () => ({
+  Queue: class {
+    add = queueAdd;
+    close = queueClose;
+  },
   Worker: class {
     constructor(...args: unknown[]) {
       workerCtor(...args);
@@ -48,7 +55,15 @@ vi.mock('@nexus/config/env-file', () => ({
   loadServerEnvFromProcess: () => ({
     REDIS_URL: 'redis://localhost:6379',
     S3_ENDPOINT: 'https://s3.test/',
+    SYNC_URL: 'http://sync:3002',
+    SYNC_SHARED_SECRET: 's'.repeat(32),
   }),
+}));
+
+const createHandlers = vi.fn((_deps: unknown) => ({}) as Record<string, unknown>);
+vi.mock('@nexus/integrations/github/handlers', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  createGithubHandlers: (deps: unknown) => createHandlers(deps),
 }));
 
 const parseJob = vi.fn(() => Promise.resolve({ status: 'succeeded' as const }));
@@ -306,16 +321,53 @@ describe('start()', () => {
 
   it('honours WORKER_CONCURRENCY', async () => {
     vi.stubEnv('WORKER_CONCURRENCY', '9');
+    workerCtor.mockClear();
     await start();
-    expect(workerCtor.mock.lastCall?.[2]).toMatchObject({ concurrency: 9 });
+    expect(workerCtor.mock.calls[0]?.[2]).toMatchObject({ concurrency: 9 });
+  });
+
+  it('also registers the github queue and its worker', async () => {
+    workerCtor.mockClear();
+    const stop = await start();
+    expect(workerCtor.mock.calls[1]?.[0]).toBe('github');
+
+    await stop();
+    expect(queueClose).toHaveBeenCalled();
+  });
+
+  it('enqueues a hydrate job with the §10 idempotency key', async () => {
+    workerCtor.mockClear();
+    queueAdd.mockClear();
+    await start();
+    const deps = createHandlers.mock.lastCall?.[0] as {
+      enqueueHydrate: (p: unknown) => Promise<void>;
+      newId: () => string;
+      now: () => number;
+      createClient: (s: AbortSignal) => unknown;
+    };
+    await deps.enqueueHydrate({
+      nodeId: 'n1',
+      ref: { kind: 'repo', owner: 'a', repo: 'b', ref: null },
+      boardId: 'b1',
+      userId: 'u1',
+    });
+    expect(queueAdd.mock.lastCall).toMatchObject([
+      'github.hydrate',
+      { nodeId: 'n1' },
+      { jobId: 'hydrate:n1:gh:repo:a/b', attempts: 4 },
+    ]);
+    expect(deps.newId()).not.toBe(deps.newId());
+    expect(deps.now()).toBeGreaterThan(0);
+    expect(deps.createClient(new AbortController().signal)).toBeDefined();
   });
 
   it.each([
     ['the job payload', { runId: 'run-7' }, 'run-7'],
     ['an empty payload', {}, ''],
   ])('processes a job with the run id from %s', async (_label, data, expectedRunId) => {
+    workerCtor.mockClear();
     await start();
-    const handler = workerCtor.mock.lastCall?.[1] as (job: unknown) => Promise<void>;
+    const handler = workerCtor.mock.calls[0]?.[1] as (job: unknown) => Promise<void>;
     await handler({ data });
 
     expect(parseJob).toHaveBeenCalledTimes(1);

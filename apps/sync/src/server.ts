@@ -34,6 +34,7 @@ import {
   syncUpdateBytesTotal,
 } from './metrics.ts';
 import { createPrismaProjectionWriter, createPrismaSnapshotStore } from './persistence.ts';
+import { patchNodeData, type PatchNodeRequest } from './nodePatch.ts';
 import { applyProposalToBoard, type ApplyProposalRequest } from './proposalApply.ts';
 import { projectBoard } from './projection.ts';
 
@@ -123,12 +124,15 @@ const server = new Server<Ctx>({
   ],
 
   /**
-   * The one plain-HTTP route this service exposes: headless proposal apply (§10). It is guarded by
-   * the same shared secret the API signs board tokens with, and it reuses the client's Applier so
-   * there is exactly one write path into a board (N4).
+   * The two plain-HTTP routes this service exposes: headless proposal apply (§10) and the worker's
+   * node `data` patch (11_GITHUB.md §3.5). Both are guarded by the same shared secret the API signs
+   * board tokens with, and both go through the doc, so there is exactly one write path (N4).
    */
   async onRequest({ request, response }) {
-    if (request.method !== 'POST' || !(request.url ?? '').startsWith('/internal/proposals/apply')) {
+    const url = request.url ?? '';
+    const isApply = url.startsWith('/internal/proposals/apply');
+    const isPatch = url.startsWith('/internal/nodes/patch');
+    if (request.method !== 'POST' || (!isApply && !isPatch)) {
       return;
     }
     if (request.headers.authorization !== `Bearer ${env.SYNC_SHARED_SECRET}`) {
@@ -138,13 +142,13 @@ const server = new Server<Ctx>({
     const chunks: Buffer[] = [];
     for await (const chunk of request) chunks.push(chunk as Buffer);
     try {
-      const body = JSON.parse(Buffer.concat(chunks).toString('utf8')) as ApplyProposalRequest;
-      const outcome = await applyProposalToBoard(snapshotStore, body);
-      response
-        .writeHead(200, { 'content-type': 'application/json' })
-        .end(JSON.stringify(outcome.result));
+      const raw: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+      const result = isApply
+        ? (await applyProposalToBoard(snapshotStore, raw as ApplyProposalRequest)).result
+        : await patchNodeData(snapshotStore, raw as PatchNodeRequest);
+      response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(result));
     } catch (error) {
-      logger.warn({ event: 'sync.proposal.apply_failed', err: error }, 'proposal apply failed');
+      logger.warn({ event: 'sync.internal.failed', url, err: error }, 'internal write failed');
       response
         .writeHead(422, { 'content-type': 'application/json' })
         .end(JSON.stringify({ error: error instanceof Error ? error.message : 'apply failed' }));
