@@ -9,6 +9,8 @@
 
 import {
   createNodesFromPlan,
+  parseClip,
+  pasteSubgraph,
   detectTransfer,
   occupiedBoxes,
   planCapture,
@@ -68,6 +70,22 @@ export function captureTransfer(
   origin: CaptureOrigin,
   options: { asList?: boolean } = {},
 ): CaptureResult {
+  // An internal clip (§18) short-circuits the detector: it is our own JSON, not outside content.
+  const clip = snapshot.text === undefined ? null : parseClip(snapshot.text);
+  if (clip !== null && clip.nodes.length > 0) {
+    const now = (target.now ?? (() => new Date().toISOString()))();
+    target.history?.label('paste selection');
+    const { nodeIds } = pasteSubgraph(target.doc, clip, { at: target.aim(), now });
+    target.history?.separate();
+    const count = nodeIds.length;
+    return {
+      ids: nodeIds,
+      message: `Pasted ${String(count)} node${count === 1 ? '' : 's'}`,
+      overflow: null,
+      snapshot,
+    };
+  }
+
   const detection = detectTransfer(snapshot);
   const plan = planCapture(detection, {
     at: target.aim(),
