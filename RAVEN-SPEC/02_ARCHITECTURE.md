@@ -939,7 +939,7 @@ a board never flickers between two canvas code paths mid-session.
 | `integrations.sherlock`                        | bool   | false               | L7    | on at P11 GA                                                    |
 | `integrations.spiderfoot`                      | bool   | false               | L7    | on at P12 GA; **stays a kill-switch** (§10 ADR-011)             |
 | `integrations.github`                          | bool   | false               | L7    | on at P10 GA                                                    |
-| `ai.enabled`                                   | bool   | false               | L8    | on at P13 GA                                                    |
+| `ai.enabled`                                   | bool   | false               | L8    | permanently off — AI layer cancelled 2026-08-22                 |
 | `ai.provider`                                  | string | `openai-compatible` | L8    | permanent                                                       |
 | `views.timeline` / `views.map` / `views.table` | bool   | false               | L1    | on at P14 GA                                                    |
 | `export.pdf`                                   | bool   | false               | L1    | on at P15 GA                                                    |

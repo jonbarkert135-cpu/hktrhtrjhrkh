@@ -1,4 +1,21 @@
-# Raven — 14 — AI LAYER (agent, proposals, retrieval, guardrails)
+# Raven — 14 — AI LAYER (CANCELLED, historical reference only)
+
+> **STATUS: CANCELLED — 2026-08-22, owner decision.**
+> Raven ships with **no LLM layer**: no provider keys, no hosted model calls, no embeddings/pgvector,
+> no AI proposals. The project must stay free to develop and free to run.
+> Phase **P13 is removed from the roadmap** (`20_ROADMAP.md`).
+>
+> Replacements for everything that depended on it:
+>
+> - Repository analysis → deterministic static analysis, already speced in `11_GITHUB.md` §5 (P10).
+> - Entity extraction from tool output → deterministic parsers (`10_INTEGRATIONS.md`, shipped in P9).
+> - Duplicate detection / clustering / link suggestions → optional local heuristics only (string
+>   similarity, shared attributes, graph metrics), still previewable, reversible and explainable
+>   through the existing Proposal layer. Not part of any planned phase.
+>
+> Everything below is kept for history. Do not implement it.
+
+---
 
 ## Scope
 

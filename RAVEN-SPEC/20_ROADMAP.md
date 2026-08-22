@@ -723,7 +723,7 @@ reused unmodified — this phase does not fork or extend the pipeline contracts.
 example of a real, non-`builtin` manifest, if the example section references one), `15_SECURITY.md`
 (per-manifest egress allowlist as shipped), tracker. Out of scope for this phase's docs: webhook
 receiver (no inbound endpoint exists yet — first candidate for a later hardening pass, not
-re-litigated here), AI-driven analysis narrative (`14_AI_AGENT.md`, P13).
+re-litigated here). AI-driven analysis narrative is cancelled (`14_AI_AGENT.md`).
 
 ---
 
@@ -762,23 +762,18 @@ per `00_MASTER.md` §7 and `12_SPIDERFOOT.md` (already fully specified):
 
 ---
 
-# P13 — AI layer (scope stub)
+# P13 — AI layer — **CANCELLED**
 
-Full 15-section prompt not yet written; expand this stub when P13's turn comes. Canonical scope per
-`00_MASTER.md` §7 and `14_AI_AGENT.md` (already fully specified — see its own Scope section for the
-exact dependency list: P3, P4, P7, P9):
+Cancelled by the owner on 2026-08-22: the project stays free to develop and free to run, and there
+are no LLM API keys. No provider abstraction, no embeddings/pgvector, no AI proposals, no AI
+activity log. `14_AI_AGENT.md` is archived (historical reference only, do not implement).
 
-- Provider abstraction (`AIProvider` interface), model routing, cost accounting and the user-facing
-  AI activity log.
-- `AIProposal` write model — reuses P9's Proposal/Apply layer verbatim (`14_AI_AGENT.md` Scope:
-  "Out of scope: integration execution", i.e. this phase does not touch `apps/runner`).
-- The twelve shipped capabilities (summarize, explain, suggest links, dedupe, cluster, investigation
-  summary, etc.) each as trigger → context → prompt → schema → validation → UX.
-- Retrieval: embeddings, chunking, pgvector (already reserved in `00_MASTER.md` §2's database row),
-  hybrid search on top of P7's FTS.
-- Guardrails: prompt-injection, hallucination, PII handling, retention limits.
-- Depends on: P3, P4, P7, P9. Ships no execution sandbox of its own — it is a proposer, like every
-  integration, never a direct writer (N4).
+Nothing else in the roadmap depends on it: P10's Repository Analysis is deterministic by spec
+(`11_GITHUB.md` §5), P11/P12 map tool output with deterministic parsers, and P14–P16 never listed
+P13 as a dependency. Any future "smart" feature (dedupe, clustering, link suggestions) must be a
+local heuristic and must still go through the Proposal layer (previewable, reversible, explainable).
+
+The phase number is retired — it is not reused.
 
 ---
 

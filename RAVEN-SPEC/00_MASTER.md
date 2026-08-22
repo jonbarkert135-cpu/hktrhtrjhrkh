@@ -51,7 +51,7 @@ Three properties define the product and are non-negotiable:
 | Jobs              | **BullMQ + Redis**                                                                                                                                                                                                   | integration runs, link unfurling, thumbnails, repo analysis                                                                                                                                         |
 | Tool execution    | **Runner service** executing every tool in a locked-down container (`--network` allowlist proxy, `--read-only`, `--cap-drop ALL`, non-root, pids/mem/cpu caps, hard timeout); **gVisor runtime class in production** | tools are untrusted third-party code; container flags + user-space kernel are the practical 2026 baseline                                                                                           |
 | Auth              | **Better-Auth** (email + OAuth) with sessions in Postgres, org/project RBAC                                                                                                                                          | mature, self-hostable, no vendor lock                                                                                                                                                               |
-| AI layer          | Provider-abstracted (`AIProvider` interface), default OpenAI-compatible endpoint; **all writes go through a Proposal object**                                                                                        | model choice must be swappable; AI never mutates the graph directly                                                                                                                                 |
+| ~~AI layer~~      | **CANCELLED — not built.** No LLM provider, no API keys, no embeddings/pgvector. All "smart" behaviour is deterministic/heuristic and local (`14_AI_AGENT.md`)                                                       | model choice must be swappable; AI never mutates the graph directly                                                                                                                                 |
 | Styling           | **CSS custom properties (design tokens) + Tailwind v4 preset generated from the tokens**                                                                                                                             | one token source, light theme later without touching components                                                                                                                                     |
 | Component base    | **Radix primitives**, all skinned; zero default browser controls                                                                                                                                                     | accessibility for free, full visual control                                                                                                                                                         |
 | Motion            | **Motion (framer-motion 12)** for UI chrome only; canvas animates via rAF on transforms                                                                                                                              | never animate layout inside the canvas                                                                                                                                                              |
@@ -111,8 +111,8 @@ never a change to the canvas. See `10_INTEGRATIONS.md` and `17_PLUGIN_SDK.md`.
 | --- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | N1  | 5,000 nodes / 10,000 edges: pan-zoom p95 frame ≤ 16.6 ms, first interactive ≤ 2.5 s                                                | `bench/canvas.bench.ts` in CI, fails the build on regression                       |
 | N2  | No data loss: every mutation is durable locally within 100 ms, server-acked within 2 s, `Saved / Saving… / Offline` always visible | Playwright offline suite + kill-tab test                                           |
-| N3  | Undo/redo works for every mutation including tool imports and AI actions                                                           | e2e matrix, one case per mutation type                                             |
-| N4  | No AI or tool output enters the graph without an explicit user-accepted **Proposal**                                               | e2e + code-level lint rule (`no-direct-graph-write` outside `applyProposal`)       |
+| N3  | Undo/redo works for every mutation including tool imports                                                                          | e2e matrix, one case per mutation type                                             |
+| N4  | No tool output enters the graph without an explicit user-accepted **Proposal**                                                     | e2e + code-level lint rule (`no-direct-graph-write` outside `applyProposal`)       |
 | N5  | Every tool runs inside the sandboxed runner; no tool ever executes in the API process                                              | architecture test: runner is a separate service, API has no `child_process` import |
 | N6  | Full keyboard operability, visible focus, `prefers-reduced-motion` honored, contrast ≥ 4.5:1 for text / 3:1 for UI                 | axe-core in CI + manual checklist per phase                                        |
 | N7  | SSRF-safe URL handling for every user-supplied URL (DNS re-resolution pinning, private-range denylist, redirect cap)               | unit tests with a hostile URL corpus                                               |
@@ -136,7 +136,7 @@ never a change to the canvas. See `10_INTEGRATIONS.md` and `17_PLUGIN_SDK.md`.
 ┌───────────────────────────────────┴───────────────────────────────────────────────┐
 │ Sync Service (Hocuspocus)   auth hook · awareness · Redis fanout · projection hook │
 │ API Service (Fastify+tRPC)  projects · boards · files · search · runs · admin      │
-│ Worker Service (BullMQ)     unfurl · thumbnails · repo analysis · AI jobs          │
+│ Worker Service (BullMQ)     unfurl · thumbnails · repo analysis (deterministic)          │
 │ Runner Service              manifest-driven sandboxed tool execution (gVisor)      │
 │ Storage                     Postgres 16 (+pgvector) · Redis · S3/MinIO             │
 └───────────────────────────────────────────────────────────────────────────────────┘
@@ -182,25 +182,25 @@ depend on nothing internal except `packages/config`.
 Each phase has a self-contained implementation prompt in `20_ROADMAP.md` and ships behind a
 quality gate (§8). Order optimizes for "the risky, architecture-defining parts first".
 
-| Phase | Name                          | Ships                                                                          |
-| ----- | ----------------------------- | ------------------------------------------------------------------------------ |
-| P0    | Architecture                  | this spec (done)                                                               |
-| P1    | Foundation                    | monorepo, tokens, app shell, auth, Postgres, CI, benchmark harness             |
-| P2    | Canvas engine                 | camera, spatial index, hybrid renderer, selection, drag, grid, minimap         |
-| P3    | Document & persistence        | Y.Doc schema, IndexedDB, undo/redo, save indicator, snapshots                  |
-| P4    | Node system                   | all node types, inspector, rich text, files, images, tags                      |
-| P5    | Edge system                   | typed edges, routing modes (curved/orthogonal/straight/smart), labels, editing |
-| P6    | Capture                       | paste pipeline, drag-drop, unfurl service, quick-add, browser extension hook   |
-| P7    | Projects & search             | multi-project, boards, global search, `Ctrl+K` command palette                 |
-| P8    | Sync & collaboration          | Hocuspocus, projection, presence, comments, conflict UX                        |
-| P9    | Integration framework         | manifest schema, runner sandbox, proposal/import UX, run history               |
-| P10   | GitHub integration            | repo nodes, README/releases/contributors, repo analysis agent                  |
-| P11   | Sherlock integration          | username enumeration → entity mapping                                          |
-| P12   | SpiderFoot integration        | scan orchestration → entity mapping, correlation import                        |
-| P13   | AI layer                      | summarize, explain, suggest links, dedupe, cluster, investigation summary      |
-| P14   | Views                         | graph / timeline / table / list / map modes, auto-layout suite                 |
-| P15   | Groups, presentation & export | groups, presentation mode, report export, archives                             |
-| P16   | Hardening                     | performance pass, security audit, a11y audit, observability, GA                |
+| Phase   | Name                                                                                              | Ships                                                                          |
+| ------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| P0      | Architecture                                                                                      | this spec (done)                                                               |
+| P1      | Foundation                                                                                        | monorepo, tokens, app shell, auth, Postgres, CI, benchmark harness             |
+| P2      | Canvas engine                                                                                     | camera, spatial index, hybrid renderer, selection, drag, grid, minimap         |
+| P3      | Document & persistence                                                                            | Y.Doc schema, IndexedDB, undo/redo, save indicator, snapshots                  |
+| P4      | Node system                                                                                       | all node types, inspector, rich text, files, images, tags                      |
+| P5      | Edge system                                                                                       | typed edges, routing modes (curved/orthogonal/straight/smart), labels, editing |
+| P6      | Capture                                                                                           | paste pipeline, drag-drop, unfurl service, quick-add, browser extension hook   |
+| P7      | Projects & search                                                                                 | multi-project, boards, global search, `Ctrl+K` command palette                 |
+| P8      | Sync & collaboration                                                                              | Hocuspocus, projection, presence, comments, conflict UX                        |
+| P9      | Integration framework                                                                             | manifest schema, runner sandbox, proposal/import UX, run history               |
+| P10     | GitHub integration                                                                                | repo nodes, README/releases/contributors, repo analysis agent                  |
+| P11     | Sherlock integration                                                                              | username enumeration → entity mapping                                          |
+| P12     | SpiderFoot integration                                                                            | scan orchestration → entity mapping, correlation import                        |
+| ~~P13~~ | ~~AI layer~~ — **CANCELLED** (owner decision 2026-08-22: project stays 100% free, no AI API keys) | see `14_AI_AGENT.md` header                                                    |
+| P14     | Views                                                                                             | graph / timeline / table / list / map modes, auto-layout suite                 |
+| P15     | Groups, presentation & export                                                                     | groups, presentation mode, report export, archives                             |
+| P16     | Hardening                                                                                         | performance pass, security audit, a11y audit, observability, GA                |
 
 ---
 
