@@ -34,9 +34,15 @@ export function unavailableProvider(): AIProvider {
   };
 }
 
+function stripTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === '/') end -= 1;
+  return value.slice(0, end);
+}
+
 export function openAICompatibleProvider(options: OpenAICompatibleOptions): AIProvider {
   const doFetch = options.fetchImpl ?? fetch;
-  const url = `${options.baseUrl.replace(/\/+$/, '')}/chat/completions`;
+  const url = `${stripTrailingSlashes(options.baseUrl)}/chat/completions`;
   return {
     modelId: options.model,
     async complete(prompt, signal) {
