@@ -40,6 +40,8 @@ model Organization {
   proposals ImportProposal[]
   consents  Consent[]
   apiTokens ApiToken[]
+  aiActions AiAction[]
+  settings  WorkspaceSetting[]
 
   @@map("organizations")
 }
@@ -143,7 +145,7 @@ model Project {
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org    Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
   boards Board[]
   files  File[]
   runs   IntegrationRun[]
@@ -554,4 +556,63 @@ model GithubAnalysis {
   @@unique([repoKey, headSha, analyzerVersion])
   @@index([repoKey, createdAt(sort: Desc)])
   @@map("github_analyses")
+}
+
+/// A tracked source repository (§27). One row per canonical `host/owner/name`; the per-head
+/// analysis rows live in `GithubAnalysis` and point back here by `repoKey`.
+model Repository {
+  id            String    @id
+  /// Canonical `host/owner/name`, lowercased. Matches `GithubAnalysis.repoKey`.
+  repoKey       String    @map("repo_key") @db.VarChar(255)
+  host          String    @db.VarChar(64)
+  owner         String    @db.VarChar(128)
+  name          String    @db.VarChar(128)
+  defaultBranch String?   @map("default_branch") @db.VarChar(128)
+  lastHeadSha   String?   @map("last_head_sha") @db.VarChar(64)
+  lastFetchedAt DateTime? @map("last_fetched_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@unique([repoKey])
+  @@map("repositories")
+}
+
+/// One AI capability run (§16, §27). Proposals only (N4): `output` holds the proposed patch, it is
+/// never applied here. Kept for history, cost accounting and cache lookups by `inputHash`.
+model AiAction {
+  id         String    @id
+  orgId      String    @map("org_id")
+  projectId  String?   @map("project_id")
+  boardId    String?   @map("board_id")
+  capability String    @db.VarChar(64)
+  model      String    @db.VarChar(120)
+  status     String    @db.VarChar(16)
+  inputHash  String    @map("input_hash") @db.VarChar(64)
+  output     Json?
+  error      String?   @db.VarChar(500)
+  tokensIn   Int?      @map("tokens_in")
+  tokensOut  Int?      @map("tokens_out")
+  startedAt  DateTime  @default(now()) @map("started_at")
+  finishedAt DateTime? @map("finished_at")
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, startedAt(sort: Desc)])
+  @@index([capability, inputHash])
+  @@map("ai_actions")
+}
+
+/// Org-scoped key/value settings (§27) — AI endpoint, feature toggles, defaults. Values are JSON so
+/// a new setting needs no migration; validation lives with the reader, not the table.
+model WorkspaceSetting {
+  orgId     String   @map("org_id")
+  key       String   @db.VarChar(64)
+  value     Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedBy String?  @map("updated_by")
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@id([orgId, key])
+  @@map("workspace_settings")
 }

@@ -1072,4 +1072,92 @@
       box-shadow: var(--focus-ring-shadow);
     }
   }
+
+  /* ------------------------------------------------------------- responsive (§25)
+
+     Desktop is the primary scenario; below it there are three steps, not one
+     shrunken desktop:
+
+     - laptop (<= 1280px): the project rail narrows, nothing else moves.
+     - tablet (<= 1024px): the rail turns into a horizontal strip above the work
+       area so navigation stays reachable without a drawer, and the inspector is
+       capped so the canvas keeps the majority of the width.
+     - mobile (<= 720px): a separate layout. The canvas is full-bleed, the
+       inspector is a bottom sheet over it (the board is a single column), and
+       controls grow to 44px touch targets. `inline-size` is forced here because
+       the inspector column carries a user-resized inline width that is
+       meaningless on a phone. */
+
+  @media (max-width: 1280px) {
+    .nx-body {
+      --nx-rail-width: 200px;
+    }
+  }
+
+  @media (max-width: 1024px) {
+    .nx-body {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    .nx-rail {
+      display: flex;
+      gap: var(--nx-space-2);
+      padding: var(--nx-space-2);
+      border-right: 0;
+      border-bottom: 1px solid var(--border-subtle);
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    .nx-rail-item,
+    .nx-rail-row {
+      flex: 0 0 auto;
+      width: auto;
+      white-space: nowrap;
+    }
+
+    .nx-board-main > .nx-inspector {
+      max-inline-size: 40vw;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .nx-board-main {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .nx-board-main > .nx-inspector {
+      position: absolute;
+      inset: auto 0 0 0;
+      z-index: 5;
+      inline-size: 100%;
+      max-inline-size: none;
+      max-block-size: 60svh;
+      border-inline-start: 0;
+      border-top: 1px solid var(--border-strong);
+      border-radius: var(--nx-radius-3) var(--nx-radius-3) 0 0;
+      box-shadow: var(--nx-shadow-3);
+    }
+
+    /* The resize handle is a pointer affordance; a bottom sheet has no width to drag. */
+    .nx-board-main > .nx-inspector .nx-inspector-resize {
+      display: none;
+    }
+
+    .nx-board-bar {
+      flex-wrap: wrap;
+    }
+
+    .nx-zoom-cluster {
+      right: var(--nx-space-2);
+      bottom: var(--nx-space-2);
+    }
+
+    .nx-rail-row,
+    .nx-toolbar button,
+    .nx-board-bar button {
+      min-height: 44px;
+    }
+  }
 }
