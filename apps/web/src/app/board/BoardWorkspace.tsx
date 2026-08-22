@@ -161,7 +161,14 @@ export function BoardWorkspace() {
   const report = useCallback((message: string) => setNotice(message), []);
   const context = { doc, history, now, makeId: (): string => newId.board(), onNotice: report };
   const intentContext = useCallback(
-    () => ({ doc, history, now, makeId: (): string => newId.board(), onNotice: report }),
+    () => ({
+      doc,
+      history,
+      now,
+      makeId: (): string => newId.board(),
+      onNotice: report,
+      onEdgeCreated: (edgeId: string): void => setSelectedIds([edgeId]),
+    }),
     [doc, history, now, report],
   );
   // The relationship menus open at a world point; the screen position is only available inside the

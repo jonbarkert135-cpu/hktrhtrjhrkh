@@ -47,6 +47,11 @@ export interface IntentContext {
   makeId?: (() => string) | undefined;
   /** Refusals reach the analyst instead of vanishing: duplicates, self-loops, node budget. */
   onNotice?: ((message: string) => void) | undefined;
+  /**
+   * A freshly drawn relationship is selected, so the analyst can correct the guessed type and
+   * label in the inspector right where the gesture ended (07 §5.3).
+   */
+  onEdgeCreated?: ((edgeId: string) => void) | undefined;
 }
 
 /** Engine anchors carry `auto` plus the four sides; the document stores exactly the same words. */
@@ -228,6 +233,7 @@ function applyIntentToDoc(intent: Intent, context: IntentContext): boolean {
         },
         { origin: 'local:create', now },
       );
+      context.onEdgeCreated?.(edge.id);
       return true;
     }
 

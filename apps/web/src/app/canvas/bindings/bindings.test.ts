@@ -178,6 +178,23 @@ describe('applyIntent', () => {
     expect(listEdges(doc)).toHaveLength(0);
   });
 
+  it('hands the new relationship to the host so it opens in the inspector', () => {
+    const doc = board();
+    addNode(doc, makeNode({ id: 'n3', x: 0, y: 400 }, NOW), local);
+    const created: string[] = [];
+    applyIntent(
+      {
+        t: 'create-edge',
+        from: 'n1',
+        fromAnchor: { side: 'auto', t: 0.5 },
+        to: 'n3',
+        toAnchor: { side: 'auto', t: 0.5 },
+      },
+      { ...context(doc), onEdgeCreated: (id) => created.push(id) },
+    );
+    expect(created).toEqual(['x1']);
+  });
+
   it('creates and reconnects edges', () => {
     const doc = board();
     addNode(doc, makeNode({ id: 'n3', x: 0, y: 400 }, NOW), local);
