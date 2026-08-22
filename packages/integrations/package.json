@@ -11,7 +11,8 @@
     "./testkit": "./src/testkit/index.ts",
     "./builtin/expand-url": "./builtin/manifest.ts",
     "./github/jobs": "./github/jobs.ts",
-    "./github/client": "./github/client.ts"
+    "./github/client": "./github/client.ts",
+    "./github/handlers": "./github/handlers.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
