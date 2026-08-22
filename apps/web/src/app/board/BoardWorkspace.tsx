@@ -42,6 +42,8 @@ import { QuickAdd } from '../../capture/QuickAdd.tsx';
 import { PasteToast } from '../../capture/PasteToast.tsx';
 import { captureTransfer, usePaste, type CaptureResult } from '../../capture/usePaste.ts';
 import { useDropZone } from '../../capture/useDropZone.ts';
+import { useCopyCut } from '../../capture/useCopyCut.ts';
+import { groupSelected, ungroupSelected } from './groupCommands.ts';
 import { VersionHistory } from './VersionHistory.tsx';
 import { IntegrationsSurface } from '../../integrations/IntegrationsSurface.tsx';
 import { useRegisterCommands } from '../commands/useRegisterCommands.ts';
@@ -100,6 +102,14 @@ export function BoardWorkspace() {
   const captureTarget = useMemo(() => ({ doc, history, aim }), [doc, history, aim]);
 
   usePaste(captureTarget, setCapture);
+  // Ctrl+C / Ctrl+X over the canvas (§18); the selection lives in the engine, never in the doc.
+  const selectedIdsRef = useRef<readonly string[]>([]);
+  selectedIdsRef.current = selectedIds;
+  const copyTarget = useMemo(
+    () => ({ doc, history, selection: () => selectedIdsRef.current }),
+    [doc, history],
+  );
+  useCopyCut(copyTarget, setNotice);
   const dropZone = useDropZone(captureTarget, setCapture);
 
   // One store per document: cards subscribe per node id, so an edit re-renders one card (P4 §7).
@@ -248,6 +258,56 @@ export function BoardWorkspace() {
         ]
       : [],
   );
+
+  // Group / ungroup the selection (§19); the rules live in `groupCommands` (testable without a canvas).
+  const groupContext = useCallback(() => ({ doc, history, now }), [doc, history, now]);
+  const onGroup = useCallback(
+    () => setNotice(groupSelected(groupContext(), selectedIds)),
+    [groupContext, selectedIds],
+  );
+  const onUngroup = useCallback(
+    () => setNotice(ungroupSelected(groupContext(), selectedIds)),
+    [groupContext, selectedIds],
+  );
+
+  useRegisterCommands(
+    useMemo(
+      () => [
+        {
+          id: 'board.group',
+          title: 'Group selection',
+          group: 'board' as const,
+          keywords: ['group', 'cluster', 'frame', 'investigation'],
+          shortcut: 'Ctrl+G',
+          when: (ctx: { view: string }) => ctx.view === 'board',
+          run: onGroup,
+        },
+        {
+          id: 'board.ungroup',
+          title: 'Ungroup selection',
+          group: 'board' as const,
+          keywords: ['ungroup', 'split', 'frame'],
+          shortcut: 'Ctrl+Shift+G',
+          when: (ctx: { view: string }) => ctx.view === 'board',
+          run: onUngroup,
+        },
+      ],
+      [onGroup, onUngroup],
+    ),
+  );
+
+  // `Ctrl/⌘+G` and `Ctrl/⌘+Shift+G` — the canvas view keymap (03_UX.md §15.4).
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent): void => {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
+      if (event.key.toLowerCase() !== 'g') return;
+      event.preventDefault();
+      if (event.shiftKey) onUngroup();
+      else onGroup();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onGroup, onUngroup]);
 
   const addNote = useCallback(() => {
     if (nodeBudget(doc).blocked) {
