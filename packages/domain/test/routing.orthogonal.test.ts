@@ -98,7 +98,8 @@ describe('routeOrthogonal', () => {
     const from = { x: 0, y: 0 };
     const to = { x: 500, y: 0 };
     const grid = gridFor([wall], from, to);
-    const result = routeOrthogonal(grid, from, to);
+    // Frozen clock: a slow CI runner must not spend the wall-clock budget here.
+    const result = routeOrthogonal(grid, from, to, () => 0);
     expect(result.degraded).toBe(false);
     for (let i = 1; i < result.points.length; i += 1) {
       const a = result.points[i - 1] as Point;

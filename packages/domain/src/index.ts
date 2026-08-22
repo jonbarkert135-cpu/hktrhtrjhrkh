@@ -39,3 +39,4 @@ export * from './templates/boardTemplates.ts';
 export * from './projection/index.ts';
 export * from './auth/boardToken.ts';
 export * from './collab/awareness.ts';
+export * from './url/github.ts';
